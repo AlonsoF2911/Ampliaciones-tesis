@@ -10,45 +10,64 @@ st.set_page_config(
 # ==========================================
 # ESTILOS VISUALES PERSONALIZADOS (CSS)
 # ==========================================
-# Aquí creamos la franja verde, justificamos textos y cambiamos tamaños
 st.markdown("""
 <style>
+    /* CAMBIO DE FONDO: Le da un tono gris/verde muy suave a toda la app */
+    [data-testid="stAppViewContainer"] {
+        background-color: #F0F4F2; 
+    }
+    
     /* Franja superior verde con texto blanco */
     .franja-verde {
-        background-color: #1E7B44; /* Verde institucional */
+        background-color: #1E7B44;
         color: white;
         padding: 25px;
         border-radius: 8px;
         text-align: center;
         margin-bottom: 25px;
+        box-shadow: 0px 4px 6px rgba(0,0,0,0.1); /* Sombra para darle profundidad */
     }
+    
+    /* Cajas blancas para los textos y definiciones (contrasta con el fondo suave) */
+    .caja-blanca {
+        background-color: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0px 2px 4px rgba(0,0,0,0.05);
+        margin-bottom: 15px;
+    }
+
     /* Estilo para justificar textos y achicar la letra del propósito */
     .texto-justificado-chico {
         text-align: justify;
         font-size: 14px;
-        background-color: #F8F9F9; /* Fondo gris muy clarito para destacar */
+        background-color: white; 
         padding: 15px;
         border-radius: 5px;
-        border-left: 5px solid #1E7B44; /* Linea decorativa verde a la izquierda */
+        border-left: 5px solid #1E7B44; 
+        box-shadow: 0px 2px 4px rgba(0,0,0,0.05);
     }
+    
     .texto-justificado {
         text-align: justify;
         font-size: 16px;
         margin-bottom: 10px;
+        color: #333333;
     }
+    
     /* Diferenciación de letras para los Títulos de las leyes */
     .titulo-ley {
         color: #1E7B44;
         font-size: 22px;
         font-weight: bold;
-        margin-top: 25px;
-        margin-bottom: 5px;
+        margin-bottom: 8px;
     }
+    
     /* Estilo para los links */
     .link-documento {
         font-size: 14px;
         font-style: italic;
-        margin-bottom: 15px;
+        margin-top: 10px;
     }
     .link-documento a {
         color: #2980B9;
@@ -60,92 +79,95 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Menú de navegación principal en la barra lateral
-opcion = st.sidebar.radio(
-    "Navegación del Sistema",
-    [
-        "1. Presentación y Marco Normativo", 
-        "2. Glosario y Conceptos Clave", 
-        "3. Módulo de Ingreso de Datos"
-    ]
-)
+# ==========================================
+# BARRA LATERAL (SIDEBAR) LIMPIA
+# ==========================================
+with st.sidebar:
+    st.markdown("### ⚙️ Panel de Control")
+    st.info("El menú ha sido simplificado. Aquí se integrarán los módulos de cálculo en el futuro.")
 
 # ==========================================
 # SECCIÓN 1: PRESENTACIÓN Y MARCO NORMATIVO
 # ==========================================
-if opcion == "1. Presentación y Marco Normativo":
-    
-    # FRANJA SUPERIOR VERDE
-    st.markdown("""
-    <div class="franja-verde">
-        <h1 style="color: white; margin-bottom: 0px;">🏗️ Prototipo de Software para Validación Normativa de Ampliaciones Domiciliarias</h1>
-        <p style="font-size: 18px; color: white;">Comuna de San Miguel | Aplicación de OGUC, Ley N° 20.898 y Plan Regulador Comunal</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # PROPÓSITO ACADÉMICO (Chico y Justificado)
-    st.markdown("""
-    <div class="texto-justificado-chico">
-        <strong>Propósito Académico:</strong> Este software ha sido desarrollado como prototipo de titulación para la carrera de Ingeniería en Construcción. 
-        Su objetivo es actuar como un sistema de asistencia técnica y normativa en la etapa preliminar de diseño de ampliaciones 
-        residenciales, garantizando el cumplimiento de la reglamentación vigente en Chile y en la comuna de San Miguel.
-    </div>
-    <hr>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("### 📜 Pilares Normativos Integrados")
-    
-    # 1. OGUC (Vertical: Título -> Definición general justificada -> Link)
-    st.markdown('<div class="titulo-ley">1. Ordenanza General de Urbanismo y Construcciones (OGUC)</div>', unsafe_allow_html=True)
-    st.markdown("""
-    <div class="texto-justificado">
-    Es el reglamento rector que complementa y hace operativa la Ley General de Urbanismo y Construcciones en Chile. 
-    Establece las disposiciones normativas a nivel nacional técnico y administrativo para la planificación urbana, 
-    la urbanización de terrenos y las exigencias mínimas de diseño, seguridad y habitabilidad que debe cumplir 
-    toda obra de construcción o ampliación en el país.
-    </div>
-    """, unsafe_allow_html=True)
-    st.markdown('<div class="link-documento">🔗 <a href="https://www.bcn.cl/leychile/navegar?idNorma=13511" target="_blank">Ver documento oficial en la Biblioteca del Congreso Nacional de Chile (BCN)</a></div>', unsafe_allow_html=True)
-    
-    # 2. LEY 20.898 (Vertical: Título -> Definición justificada -> Link)
-    st.markdown('<div class="titulo-ley">2. Ley N° 20.898 (Procedimiento Simplificado)</div>', unsafe_allow_html=True)
-    st.markdown("""
-    <div class="texto-justificado">
-    Conocida comúnmente como "Ley del Mono", es un cuerpo legal transitorio que establece un procedimiento simplificado 
-    para la regularización de viviendas de autoconstrucción y ampliaciones que cumplen con metrajes y avalúos específicos. 
-    Permite obtener la recepción definitiva acreditando condiciones mínimas de habitabilidad y seguridad estructural mediante 
-    el patrocinio de un profesional competente.
-    </div>
-    """, unsafe_allow_html=True)
-    st.markdown('<div class="link-documento">🔗 <a href="https://www.bcn.cl/leychile/navegar?idNorma=1087195" target="_blank">Ver documento oficial en la Biblioteca del Congreso Nacional de Chile (BCN)</a></div>', unsafe_allow_html=True)
-    
-    # 3. PRC (Vertical: Título -> Definición justificada -> Link)
-    st.markdown('<div class="titulo-ley">3. Plan Regulador Comunal (PRC) - San Miguel</div>', unsafe_allow_html=True)
-    st.markdown("""
-    <div class="texto-justificado">
-    Es el instrumento de planificación territorial que regula el desarrollo físico de las áreas urbanas a nivel local. 
-    Define la zonificación de la comuna, los usos de suelo permitidos y las normas urbanísticas específicas (como coeficientes 
-    de constructibilidad, ocupación de suelo, distanciamientos y rasantes) que condicionan la forma y tamaño de las ampliaciones.
-    </div>
-    """, unsafe_allow_html=True)
-    # Nota: Los PRC dependen de la municipalidad, no de la Biblioteca Nacional, por eso el link apunta a la fuente comunal.
-    st.markdown('<div class="link-documento">🔗 <a href="https://www.sanmiguel.cl/plan-regulador-comunal/" target="_blank">Ver documentos oficiales en la Municipalidad de San Miguel</a></div>', unsafe_allow_html=True)
 
+# FRANJA SUPERIOR VERDE
+st.markdown("""
+<div class="franja-verde">
+    <h1 style="color: white; margin-bottom: 0px; font-size: 32px;">🏗️ Prototipo de Software para Validación Normativa de Ampliaciones Domiciliarias</h1>
+    <p style="font-size: 18px; color: #E8F8F5; margin-top: 10px;">Comuna de San Miguel | Aplicación de OGUC, Ley N° 20.898 y Plan Regulador Comunal</p>
+</div>
+""", unsafe_allow_html=True)
 
-# ==========================================
-# SECCIÓN 2: GLOSARIO Y CONCEPTOS CLAVE (Oculto por ahora para mantener corto el código)
-# ==========================================
-elif opcion == "2. Glosario y Conceptos Clave":
-    st.header("📚 Glosario de Términos Urbanísticos")
-    st.write("Aquí irá el contenido del glosario...")
+# PROPÓSITO ACADÉMICO 
+st.markdown("""
+<div class="texto-justificado-chico">
+    <strong>Propósito Académico:</strong> Este software ha sido desarrollado como prototipo de titulación para la carrera de Ingeniería en Construcción. 
+    Su objetivo es actuar como un sistema de asistencia técnica y normativa en la etapa preliminar de diseño de ampliaciones 
+    residenciales, garantizando el cumplimiento de la reglamentación vigente en Chile y en la comuna de San Miguel.
+</div>
+<br>
+""", unsafe_allow_html=True)
+
+st.markdown("### 📜 Pilares Normativos Integrados")
+
+# 1. OGUC
+st.markdown("""
+<div class="caja-blanca">
+    <div class="titulo-ley">1. Ordenanza General de Urbanismo y Construcciones (OGUC)</div>
+    <div class="texto-justificado">
+        Es el reglamento rector que complementa y hace operativa la Ley General de Urbanismo y Construcciones en Chile. 
+        Establece las disposiciones normativas a nivel nacional técnico y administrativo para la planificación urbana, 
+        la urbanización de terrenos y las exigencias mínimas de diseño, seguridad y habitabilidad que debe cumplir 
+        toda obra de construcción o ampliación en el país.
+    </div>
+    <div class="link-documento">🔗 <a href="https://www.bcn.cl/leychile/navegar?idNorma=13511" target="_blank">Ver documento oficial en la Biblioteca del Congreso Nacional de Chile (BCN)</a></div>
+</div>
+""", unsafe_allow_html=True)
+
+# 2. LEY 20.898
+st.markdown("""
+<div class="caja-blanca">
+    <div class="titulo-ley">2. Ley N° 20.898 (Procedimiento Simplificado)</div>
+    <div class="texto-justificado">
+        Conocida comúnmente como "Ley del Mono", es un cuerpo legal transitorio que establece un procedimiento simplificado 
+        para la regularización de viviendas de autoconstrucción y ampliaciones que cumplen con metrajes y avalúos específicos. 
+        Permite obtener la recepción definitiva acreditando condiciones mínimas de habitabilidad y seguridad estructural mediante 
+        el patrocinio de un profesional competente.
+    </div>
+    <div class="link-documento">🔗 <a href="https://www.bcn.cl/leychile/navegar?idNorma=1087285" target="_blank">Ver documento oficial en la Biblioteca del Congreso Nacional de Chile (BCN)</a></div>
+</div>
+""", unsafe_allow_html=True)
+
+# 3. PRC
+st.markdown("""
+<div class="caja-blanca">
+    <div class="titulo-ley">3. Plan Regulador Comunal (PRC) - San Miguel</div>
+    <div class="texto-justificado">
+        Es el instrumento de planificación territorial que regula el desarrollo físico de las áreas urbanas a nivel local. 
+        Define la zonificación de la comuna, los usos de suelo permitidos y las normas urbanísticas específicas (como coeficientes 
+        de constructibilidad, ocupación de suelo, distanciamientos y rasantes) que condicionan la forma y tamaño de las ampliaciones.
+    </div>
+    <div class="link-documento">🔗 <a href="https://web.sanmiguel.cl/doctos/ordenanzas/plan_regulador/2.pdf" target="_blank">Ver documento oficial en la Municipalidad de San Miguel</a></div>
+</div>
+""", unsafe_allow_html=True)
+
+st.markdown("<br>", unsafe_allow_html=True)
 
 # ==========================================
-# SECCIÓN 3: MÓDULO DE INGRESO DE DATOS (Oculto por ahora)
+# SECCIÓN 2: GLOSARIO Y CONCEPTOS BÁSICOS
 # ==========================================
-elif opcion == "3. Módulo de Ingreso de Datos":
-    st.header("📝 Módulo de Evaluación de Proyecto")
-    st.write("Aquí irán los inputs del usuario...")
-    
-    if st.button("Procesar Datos"):
-        total = sup_existente + sup_ampliacion
-        st.success(f"Superficie total registrada para análisis: {total} m²")
+st.markdown("### 📚 Glosario de Conceptos Urbanísticos")
+st.write("Haz clic en cada concepto para desplegar su definición técnica:")
+
+# Se usan "expanders" (cajas desplegables) para hacer la página interactiva
+with st.expander("📐 Coeficiente de Constructibilidad"):
+    st.write("Es el factor que, multiplicado por la superficie total del predio, determina la cantidad máxima de metros cuadrados que se permite construir en él. Las ampliaciones no deben sobrepasar el volumen total permitido por este coeficiente.")
+
+with st.expander("📍 Coeficiente de Ocupación de Suelo"):
+    st.write("Es el porcentaje máximo de la superficie del terreno que puede ser ocupado por la edificación en el primer piso. Define cuánto \"patio\" o área libre debe quedar obligatoriamente.")
+
+with st.expander("📏 Rasante y Distanciamiento"):
+    st.write("**Rasante:** Línea imaginaria inclinada que nace desde los deslindes del terreno e impone una envolvente máxima de altura para la edificación. \n\n**Distanciamiento:** Distancia mínima que debe existir entre la edificación y los deslindes del predio, variando según la altura de la construcción y si tiene o no ventanas.")
+
+with st.expander("🌡️ Zona Térmica"):
+    st.write("Clasificación geográfica que determina las exigencias mínimas de acondicionamiento térmico (aislación en techumbres, muros y pisos ventilados). La comuna de San Miguel se encuentra en la **Zona Térmica 3**, lo que exige materiales con una Transmitancia Térmica (U) específica según la OGUC.")
