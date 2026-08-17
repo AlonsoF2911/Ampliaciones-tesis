@@ -1,203 +1,173 @@
 import streamlit as st
 
-# ==========================================
-# CONFIGURACIÓN DE PÁGINA Y ESTILOS CSS
-# ==========================================
+# Configuración formal de la página
 st.set_page_config(
-    page_title="Validación Normativa de Ampliaciones - San Miguel",
+    page_title="Validador Normativo de Ampliaciones",
     page_icon="🏗️",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
-# Estilizado personalizado (Fondo gris-verdoso suave #F0F4F2 y tarjetas blancas)
+# ==========================================
+# ESTILOS VISUALES PERSONALIZADOS (CSS)
+# ==========================================
 st.markdown("""
-    <style>
-    /* Fondo principal */
-    .stApp {
-        background-color: #F0F4F2;
+<style>
+    /* CAMBIO DE FONDO: Le da un tono gris/verde muy suave a toda la app */
+    [data-testid="stAppViewContainer"] {
+        background-color: #F0F4F2; 
     }
-    /* Tarjetas/Contenedores */
+    
+    /* Franja superior verde con texto blanco */
+    .franja-verde {
+        background-color: #1E7B44;
+        color: white;
+        padding: 25px;
+        border-radius: 8px;
+        text-align: center;
+        margin-bottom: 25px;
+        box-shadow: 0px 4px 6px rgba(0,0,0,0.1); /* Sombra para darle profundidad */
+    }
+    
+    /* Cajas blancas para los textos y definiciones (contrasta con el fondo suave) */
     .caja-blanca {
-        background-color: #FFFFFF;
+        background-color: white;
         padding: 20px;
-        border-radius: 12px;
-        box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.05);
-        margin-bottom: 20px;
-    }
-    /* Encabezados y títulos */
-    h1, h2, h3 {
-        color: #1E3A2B;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-    /* Cajas de estado / Semáforo */
-    .alerta-exito {
-        background-color: #D4EDDA;
-        color: #155724;
-        padding: 15px;
         border-radius: 8px;
-        border-left: 6px solid #28A745;
-        font-weight: bold;
+        box-shadow: 0px 2px 4px rgba(0,0,0,0.05);
+        margin-bottom: 15px;
     }
-    .alerta-error {
-        background-color: #F8D7DA;
-        color: #721C24;
+
+    /* Estilo para justificar textos y achicar la letra del propósito */
+    .texto-justificado-chico {
+        text-align: justify;
+        font-size: 14px;
+        background-color: white; 
         padding: 15px;
-        border-radius: 8px;
-        border-left: 6px solid #DC3545;
-        font-weight: bold;
+        border-radius: 5px;
+        border-left: 5px solid #1E7B44; 
+        box-shadow: 0px 2px 4px rgba(0,0,0,0.05);
     }
-    .alerta-advertencia {
-        background-color: #FFF3CD;
-        color: #856404;
-        padding: 15px;
-        border-radius: 8px;
-        border-left: 6px solid #FFC107;
-        font-weight: bold;
+    
+    .texto-justificado {
+        text-align: justify;
+        font-size: 16px;
+        margin-bottom: 10px;
+        color: #333333;
     }
-    </style>
+    
+    /* Diferenciación de letras para los Títulos de las leyes */
+    .titulo-ley {
+        color: #1E7B44;
+        font-size: 22px;
+        font-weight: bold;
+        margin-bottom: 8px;
+    }
+    
+    /* Estilo para los links */
+    .link-documento {
+        font-size: 14px;
+        font-style: italic;
+        margin-top: 10px;
+    }
+    .link-documento a {
+        color: #2980B9;
+        text-decoration: none;
+    }
+    .link-documento a:hover {
+        text-decoration: underline;
+    }
+</style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# BARRA LATERAL (MENÚ)
+# BARRA LATERAL (SIDEBAR) LIMPIA
 # ==========================================
-st.sidebar.title("Menú")
-opcion_menu = st.sidebar.radio(
-    "Seleccione una sección:",
-    ["Inicio", "Datos de terreno"]
-)
+with st.sidebar:
+    st.markdown("### ⚙️ Panel de Control")
+    st.info("El menú ha sido simplificado. Aquí se integrarán los módulos de cálculo en el futuro.")
 
 # ==========================================
-# SECCIÓN 1: INICIO (PANTALLA PRINCIPAL ORIGINAL)
+# SECCIÓN 1: PRESENTACIÓN Y MARCO NORMATIVO
 # ==========================================
-if opcion_menu == "Inicio":
-    
-    # Encabezado principal
-    st.markdown("""
-        <div class="caja-blanca">
-            <h1>🏗️ Sistema de Validación Normativa para Ampliaciones Residenciales</h1>
-            <h3>Comuna de San Miguel | Región Metropolitana</h3>
-            <p>Herramienta digital de prefactibilidad técnica orientada a verificar el cumplimiento de la 
-            <b>Ley N° 20.898</b> (modificada por Ley N° 21.725), la <b>OGUC</b> (Zona Térmica 3) y el 
-            <b>Plan Regulador Comunal de San Miguel</b>.</p>
-        </div>
-    """, unsafe_allow_html=True)
 
-    # Bloque de Módulos de Entrada y Evaluación
-    col1, col2 = st.columns(2)
+# FRANJA SUPERIOR VERDE
+st.markdown("""
+<div class="franja-verde">
+    <h1 style="color: white; margin-bottom: 0px; font-size: 32px;">🏗️ Prototipo de Software para Validación Normativa de Ampliaciones Domiciliarias</h1>
+    <p style="font-size: 18px; color: #E8F8F5; margin-top: 10px;">Comuna de San Miguel | Aplicación de OGUC, Ley N° 20.898 y Plan Regulador Comunal</p>
+</div>
+""", unsafe_allow_html=True)
 
-    with col1:
-        st.markdown('<div class="caja-blanca">', unsafe_allow_html=True)
-        st.subheader("📋 Módulo 1: Regularización / Ley N° 20.898")
-        
-        tramo_ley = st.selectbox(
-            "Seleccione el Tramo de Aplicación:",
-            ["Vivienda Social (Hasta 90 m²)", "Vivienda hasta 140 m² (Avalúo hasta 1.000 UF)"]
-        )
-        
-        superficie_existente = st.number_input("Superficie construida previa (m²):", min_value=0.0, value=45.0, step=1.0)
-        superficie_ampliacion = st.number_input("Superficie proyectada de ampliación (m²):", min_value=0.0, value=25.0, step=1.0)
-        superficie_total = superficie_existente + superficie_ampliacion
-        
-        st.info(f"📐 **Superficie Total Resultante:** {superficie_total:.2f} m²")
-        st.markdown('</div>', unsafe_allow_html=True)
+# PROPÓSITO ACADÉMICO 
+st.markdown("""
+<div class="texto-justificado-chico">
+    <strong>Propósito Académico:</strong> Este software ha sido desarrollado como prototipo de titulación para la carrera de Ingeniería en Construcción. 
+    Su objetivo es actuar como un sistema de asistencia técnica y normativa en la etapa preliminar de diseño de ampliaciones 
+    residenciales, garantizando el cumplimiento de la reglamentación vigente en Chile y en la comuna de San Miguel.
+</div>
+<br>
+""", unsafe_allow_html=True)
 
-        st.markdown('<div class="caja-blanca">', unsafe_allow_html=True)
-        st.subheader("📐 Módulo 2: Urbanismo y Distanciamientos (PRC San Miguel / OGUC)")
-        
-        distanciamiento = st.number_input("Distanciamiento al deslinde vecino más cercano (m):", min_value=0.0, value=1.5, step=0.1)
-        posee_vanos = st.radio("¿La fachada hacia el deslinde cuenta con ventanas/vanos?", ["No (Muro ciego)", "Sí (Con ventanas)"])
-        altura_proyectada = st.number_input("Altura máxima de la ampliación (m):", min_value=0.0, value=3.5, step=0.1)
-        
-        st.markdown('</div>', unsafe_allow_html=True)
+st.markdown("### 📜 Pilares Normativos Integrados")
 
-    with col2:
-        st.markdown('<div class="caja-blanca">', unsafe_allow_html=True)
-        st.subheader("🌡️ Módulo 3: Acondicionamiento Térmico (OGUC Art. 4.1.10 - Zona 3)")
-        
-        aislacion_techumbre = st.number_input("Espesor de aislante en techumbre (Lana de vidrio mm):", min_value=0, value=80, step=5)
-        material_muro = st.selectbox(
-            "Estructura principal de muro exterior:",
-            ["Tabiquería liviana con Lana de Vidrio (>= 50 mm)", "Tabiquería sin aislación", "Albañilería / Hormigón armado sin aislante adicional"]
-        )
-        
-        st.markdown('</div>', unsafe_allow_html=True)
+# 1. OGUC
+st.markdown("""
+<div class="caja-blanca">
+    <div class="titulo-ley">1. Ordenanza General de Urbanismo y Construcciones (OGUC)</div>
+    <div class="texto-justificado">
+        Es el reglamento rector que complementa y hace operativa la Ley General de Urbanismo y Construcciones en Chile. 
+        Establece las disposiciones normativas a nivel nacional técnico y administrativo para la planificación urbana, 
+        la urbanización de terrenos y las exigencias mínimas de diseño, seguridad y habitabilidad que debe cumplir 
+        toda obra de construcción o ampliación en el país.
+    </div>
+    <div class="link-documento">🔗 <a href="https://www.bcn.cl/leychile/navegar?idNorma=13511" target="_blank">Ver documento oficial en la Biblioteca del Congreso Nacional de Chile (BCN)</a></div>
+</div>
+""", unsafe_allow_html=True)
 
-        st.markdown('<div class="caja-blanca">', unsafe_allow_html=True)
-        st.subheader("🔍 Evaluación de Prefactibilidad Normativa")
-        
-        # Lógica semáforo
-        limite_m2 = 90.0 if "90 m²" in tramo_ley else 140.0
-        cumple_superficie = superficie_total <= limite_m2
+# 2. LEY 20.898
+st.markdown("""
+<div class="caja-blanca">
+    <div class="titulo-ley">2. Ley N° 20.898 (Procedimiento Simplificado)</div>
+    <div class="texto-justificado">
+        Conocida comúnmente como "Ley del Mono", es un cuerpo legal transitorio que establece un procedimiento simplificado 
+        para la regularización de viviendas de autoconstrucción y ampliaciones que cumplen con metrajes y avalúos específicos. 
+        Permite obtener la recepción definitiva acreditando condiciones mínimas de habitabilidad y seguridad estructural mediante 
+        el patrocinio de un profesional competente.
+    </div>
+    <div class="link-documento">🔗 <a href="https://www.bcn.cl/leychile/navegar?idNorma=1087285" target="_blank">Ver documento oficial en la Biblioteca del Congreso Nacional de Chile (BCN)</a></div>
+</div>
+""", unsafe_allow_html=True)
 
-        dist_minimo = 3.0 if posee_vanos == "Sí (Con ventanas)" else 1.4
-        cumple_distanciamiento = distanciamiento >= dist_minimo
+# 3. PRC
+st.markdown("""
+<div class="caja-blanca">
+    <div class="titulo-ley">3. Plan Regulador Comunal (PRC) - San Miguel</div>
+    <div class="texto-justificado">
+        Es el instrumento de planificación territorial que regula el desarrollo físico de las áreas urbanas a nivel local. 
+        Define la zonificación de la comuna, los usos de suelo permitidos y las normas urbanísticas específicas (como coeficientes 
+        de constructibilidad, ocupación de suelo, distanciamientos y rasantes) que condicionan la forma y tamaño de las ampliaciones.
+    </div>
+    <div class="link-documento">🔗 <a href="https://web.sanmiguel.cl/doctos/ordenanzas/plan_regulador/2.pdf" target="_blank">Ver documento oficial en la Municipalidad de San Miguel</a></div>
+</div>
+""", unsafe_allow_html=True)
 
-        cumple_termico = aislacion_techumbre >= 80 and "Lana de Vidrio (>= 50 mm)" in material_muro
-
-        if cumple_superficie and cumple_distanciamiento and cumple_termico:
-            st.markdown("""
-                <div class="alerta-exito">
-                    ✅ PROYECTO PRE-APROBADO: Cumple con los requisitos normativos verificados para la comuna de San Miguel.
-                </div>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown("""
-                <div class="alerta-error">
-                    ❌ REVISIÓN REQUERIDA: El diseño preliminar presenta observaciones técnicas que deben ser corregidas antes de ingresar la carpeta a la DOM.
-                </div>
-            """, unsafe_allow_html=True)
-
-        st.write("---")
-        st.write("**Detalle por parámetro evaluado:**")
-        st.write(f"- Metraje y Tramo Ley 20.898: {'✅ Aprobado' if cumple_superficie else f'❌ Excede límite de {limite_m2} m²'}")
-        st.write(f"- Distanciamiento mínimo a deslinde: {'✅ Aprobado' if cumple_distanciamiento else f'❌ Requiere mínimo {dist_minimo} m'}")
-        st.write(f"- Exigencia Térmica OGUC (Zona 3): {'✅ Aprobado' if cumple_termico else '❌ Aislación insuficiente para muros o techumbre'}")
-
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    # Glosario Informativo
-    st.markdown('<div class="caja-blanca">', unsafe_allow_html=True)
-    st.subheader("📚 Glosario Normativo e Información Técnica")
-
-    with st.expander("📄 Ley N° 20.898 (Ley del Mono / Modificada por Ley N° 21.725)"):
-        st.write("""
-        Establece un procedimiento simplificado para la regularización de viviendas unifamiliares. 
-        La modificación mediante la Ley N° 21.725 extendió la vigencia para el ingreso de solicitudes ante la DOM hasta el **31 de diciembre de 2027**.
-        """)
-
-    with st.expander("📐 Distanciamientos y Rasantes (OGUC Art. 2.6.3 / PRC San Miguel)"):
-        st.write("""
-        Los distanciamientos corresponden a la distancia mínima horizontal entre la edificación y los deslindes del predio. 
-        Para muros ciegos (sin ventanas), el distanciamiento mínimo general es de 1,4 m, mientras que para muros con vanos o ventanas se exige al menos 3,0 m.
-        """)
-
-    with st.expander("🌡️ Exigencias de Acondicionamiento Térmico (OGUC Art. 4.1.10)"):
-        st.write("""
-        La comuna de San Miguel se ubica en la **Zona Térmica 3** (Región Metropolitana). 
-        Exige valores máximos de Transmitancia Térmica ($U$) para limitar las pérdidas de calor:
-        - **Techumbre:** $U \le 0,38 \text{ W/m}^2\text{K}$ (Aprox. $\ge 80 \text{ mm}$ de lana de vidrio o equivalente).
-        - **Muros Exteriores:** $U \le 1,90 \text{ W/m}^2\text{K}$ (Requiere aislación continua en estructura liviana).
-        """)
-
-    with st.expander("🔗 Enlaces a Fuentes y Documentos Oficiales"):
-        st.markdown("- [Biblioteca del Congreso Nacional - Ley 20.898](https://www.bcn.cl/leychile/navegar?idNorma=1087221)")
-        st.markdown("- [Ministerio de Vivienda y Urbanismo (MINVU)](https://www.minwu.gob.cl)")
-        st.markdown("- [Portal de Transparencia del Estado de Chile](https://www.portaltransparencia.cl)")
-
-    st.markdown('</div>', unsafe_allow_html=True)
-
+st.markdown("<br>", unsafe_allow_html=True)
 
 # ==========================================
-# SECCIÓN 2: DATOS DE TERRENO
+# SECCIÓN 2: GLOSARIO Y CONCEPTOS BÁSICOS
 # ==========================================
-elif opcion_menu == "Datos de terreno":
-    
-    st.markdown("""
-        <div class="caja-blanca">
-            <h2>📐 Módulo: Datos de Terreno</h2>
-            <p>Ingrese los antecedentes geométricos del predio según las escrituras o Certificado de Informaciones Previas (CIP) para verificar coeficientes de ocupación de suelo.</p>
-        </div>
-    """, unsafe_allow_html=True)
+st.markdown("### 📚 Glosario de Conceptos Urbanísticos")
+st.write("Haz clic en cada concepto para desplegar su definición técnica:")
 
-    col_terreno1, col_terreno2 = st.columns(2)
+# Se usan "expanders" (cajas desplegables) para hacer la página interactiva
+with st.expander("📐 Coeficiente de Constructibilidad"):
+    st.write("Es el factor que, multiplicado por la superficie total del predio, determina la cantidad máxima de metros cuadrados que se permite construir en él. Las ampliaciones no deben sobrepasar el volumen total permitido por este coeficiente.")
+
+with st.expander("📍 Coeficiente de Ocupación de Suelo"):
+    st.write("Es el porcentaje máximo de la superficie del terreno que puede ser ocupado por la edificación en el primer piso. Define cuánto \"patio\" o área libre debe quedar obligatoriamente.")
+
+with st.expander("📏 Rasante y Distanciamiento"):
+    st.write("**Rasante:** Línea imaginaria inclinada que nace desde los deslindes del terreno e impone una envolvente máxima de altura para la edificación. \n\n**Distanciamiento:** Distancia mínima que debe existir entre la edificación y los deslindes del predio, variando según la altura de la construcción y si tiene o no ventanas.")
+
+with st.expander("🌡️ Zona Térmica"):
+    st.write("Clasificación geográfica que determina las exigencias mínimas de acondicionamiento térmico (aislación en techumbres, muros y pisos ventilados). La comuna de San Miguel se encuentra en la **Zona Térmica 3**, lo que exige materiales con una Transmitancia Térmica (U) específica según la OGUC.")
