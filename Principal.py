@@ -1,4 +1,5 @@
 import streamlit as st
+import base64  # <- Nueva librería agregada para poder leer y mostrar el PDF
 
 # Configuración formal de la página
 st.set_page_config(
@@ -189,21 +190,50 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
     st.markdown("Por favor, ingrese la información de la propiedad para comenzar con la validación normativa.")
     st.markdown("---")
 
-    # Usamos cajas blancas para mantener la consistencia del diseño
     st.markdown('<div class="caja-blanca">', unsafe_allow_html=True)
     st.markdown("### 📍 1. Ubicación de la Propiedad")
+    
+    st.info("🗺️ **¿No estás seguro de cuál es tu zona?** Abre el plano oficial aquí mismo antes de seleccionar tu zona.")
+    
+    # --- VISOR DEL PLANO PDF INCORPORADO ---
+    with st.expander("🗺️ Haz clic aquí para abrir el Plano de Zonificación (PDF)"):
+        try:
+            # Abrimos el archivo que subiste
+            with open("Plano Comunal San Miguel.pdf", "rb") as file:
+                pdf_bytes = file.read()
+                
+                # 1. Botón opcional para descargar
+                st.download_button(
+                    label="📥 Descargar Plano en PDF",
+                    data=pdf_bytes,
+                    file_name="Plano_Comunal_San_Miguel.pdf",
+                    mime="application/pdf"
+                )
+                
+                st.write("---")
+                
+                # 2. Truco visual: Incrustar el PDF en pantalla usando HTML y Base64
+                base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
+                pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="600" type="application/pdf"></iframe>'
+                st.markdown(pdf_display, unsafe_allow_html=True)
+                
+        except FileNotFoundError:
+            st.error("⚠️ No se encontró el archivo 'Plano Comunal San Miguel.pdf'. Asegúrate de que el PDF esté guardado exactamente con ese nombre en la misma carpeta que tu código de Python.")
+    
+    st.write("") # Espacio en blanco
     
     col1, col2 = st.columns(2)
     with col1:
         sector_casa = st.selectbox(
-            "Zona según Plan Regulador (PRC San Miguel):",
+            "Zona según Plan Regulador:",
             [
                 "Seleccione una zona...",
-                "Zona ZU-1 (Eje Gran Avenida / Mixta)",
-                "Zona ZU-2 (Residencial Mixta Alta Densidad)",
-                "Zona ZU-3 (Residencial Media Densidad)",
-                "Zona ZU-4 (Barrio El Llano / Conservación)",
-                "Otra"
+                "Zona 1 (ZU-1)",
+                "Zona 2 (ZU-2)",
+                "Zona 3 (ZU-3)",
+                "Zona 4 (ZU-4)",
+                "Zona 5 (ZU-5)",
+                "Zona 6 (ZU-6)"
             ]
         )
     with col2:
