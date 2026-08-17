@@ -1,4 +1,5 @@
 import streamlit as st
+import os
 
 # Configuración formal de la página
 st.set_page_config(
@@ -157,100 +158,4 @@ if menu_seleccionado == "🏠 Inicio":
             Es el instrumento de planificación territorial que regula el desarrollo físico de las áreas urbanas a nivel local. 
             Define la zonificación de la comuna, los usos de suelo permitidos y las normas urbanísticas específicas.
         </div>
-        <div class="link-documento">🔗 <a href="https://web.sanmiguel.cl/doctos/ordenanzas/plan_regulador/2.pdf" target="_blank">Ver documento oficial en la Municipalidad de San Miguel</a></div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # GLOSARIO
-    st.markdown("### 📚 Glosario de Conceptos Urbanísticos")
-    st.write("Haz clic en cada concepto para desplegar su definición técnica:")
-
-    with st.expander("📐 Coeficiente de Constructibilidad"):
-        st.write("Es el factor que, multiplicado por la superficie total del predio, determina la cantidad máxima de metros cuadrados que se permite construir en él. Las ampliaciones no deben sobrepasar el volumen total permitido por este coeficiente.")
-
-    with st.expander("📍 Coeficiente de Ocupación de Suelo"):
-        st.write("Es el porcentaje máximo de la superficie del terreno que puede ser ocupado por la edificación en el primer piso. Define cuánto \"patio\" o área libre debe quedar obligatoriamente.")
-
-    with st.expander("📏 Rasante y Distanciamiento"):
-        st.write("**Rasante:** Línea imaginaria inclinada que nace desde los deslindes del terreno e impone una envolvente máxima de altura para la edificación. \n\n**Distanciamiento:** Distancia mínima que debe existir entre la edificación y los deslindes del predio, variando según la altura de la construcción y si tiene o no ventanas.")
-
-    with st.expander("🌡️ Zona Térmica"):
-        st.write("Clasificación geográfica que determina las exigencias mínimas de acondicionamiento térmico (aislación en techumbres, muros y pisos ventilados). La comuna de San Miguel se encuentra en la **Zona Térmica 3**, lo que exige materiales con una Transmitancia Térmica (U) específica según la OGUC.")
-
-# ------------------------------------------
-# PANTALLA 2: DATOS DEL TERRENO
-# ------------------------------------------
-elif menu_seleccionado == "🏡 Datos del Terreno":
-    
-    st.markdown("## 🏡 Ingreso de Datos del Terreno")
-    st.markdown("Por favor, ingrese la información de la propiedad para comenzar con la validación normativa.")
-    st.markdown("---")
-
-    st.markdown('<div class="caja-blanca">', unsafe_allow_html=True)
-    st.markdown("### 📍 1. Ubicación de la Propiedad")
-    
-    # --- VISOR VISUAL DEL PLANO EN PANTALLA (SIN DESCARGAS) ---
-    with st.expander("🗺️ Ver Plano de Zonificación Comunal (San Miguel)"):
-        try:
-            st.image("plano.png", caption="Plano Regulador Comunal - San Miguel", use_container_width=True)
-        except FileNotFoundError:
-            st.warning("⚠️ **Aviso:** Para visualizar el plano directamente aquí, coloca una imagen llamada **'plano.png'** en la misma carpeta de este script. Si no la tienes, el software funcionará igual para el ingreso de datos.")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        sector_casa = st.selectbox(
-            "Zona según Plan Regulador (PRC San Miguel):",
-            [
-                "Seleccione una zona...",
-                "Zona ZU-1 (Eje Gran Avenida / Mixta)",
-                "Zona ZU-2 (Residencial Mixta Alta Densidad)",
-                "Zona ZU-3 (Residencial Media Densidad)",
-                "Zona ZU-4 (Barrio El Llano / Conservación)",
-                "Otra"
-            ]
-        )
-    with col2:
-        direccion_casa = st.text_input(
-            "Dirección o Referencia del inmueble:",
-            placeholder="Ej: Av. El Llano Subercaseaux 1234"
-        )
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('<div class="caja-blanca">', unsafe_allow_html=True)
-    st.markdown("### 📏 2. Mediciones del Lote")
-    
-    col3, col4 = st.columns(2)
-    
-    with col3:
-        superficie_terreno = st.number_input(
-            "Superficie Total del Terreno (m²):",
-            min_value=0.0,
-            value=0.0,
-            step=5.0
-        )
-        frente_terreno = st.number_input(
-            "Frente del Terreno (m):",
-            min_value=0.0,
-            value=0.0,
-            step=0.5
-        )
-        
-    with col4:
-        superficie_existente = st.number_input(
-            "Superficie Construida Existente (m²):",
-            min_value=0.0,
-            value=0.0,
-            step=5.0
-        )
-        fondo_terreno = st.number_input(
-            "Fondo del Terreno (m):",
-            min_value=0.0,
-            value=0.0,
-            step=0.5
-        )
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    if st.button("Guardar Datos y Continuar"):
-        st.success("¡Datos guardados correctamente en la memoria temporal del software!")
+        <div class="link-documento">🔗 <a href="https://web.sanmiguel.cl/doctos/ordenanzas/plan_regulador/2.pdf" target="_blank">Ver documento
