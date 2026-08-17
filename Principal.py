@@ -1,173 +1,265 @@
 import streamlit as st
 
-# Configuración formal de la página
+# ==========================================
+# CONFIGURACIÓN DE PÁGINA Y ESTILOS CSS
+# ==========================================
 st.set_page_config(
-    page_title="Validador Normativo de Ampliaciones",
+    page_title="Validación Normativa de Ampliaciones - San Miguel",
     page_icon="🏗️",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded" # Activamos la barra lateral desplegada
 )
 
-# ==========================================
-# ESTILOS VISUALES PERSONALIZADOS (CSS)
-# ==========================================
+# Estilizado personalizado (Fondo gris-verdoso suave #F0F4F2 y tarjetas blancas)
 st.markdown("""
-<style>
-    /* CAMBIO DE FONDO: Le da un tono gris/verde muy suave a toda la app */
-    [data-testid="stAppViewContainer"] {
-        background-color: #F0F4F2; 
+    <style>
+    /* Fondo principal */
+    .stApp {
+        background-color: #F0F4F2;
     }
-    
-    /* Franja superior verde con texto blanco */
-    .franja-verde {
-        background-color: #1E7B44;
-        color: white;
-        padding: 25px;
-        border-radius: 8px;
-        text-align: center;
-        margin-bottom: 25px;
-        box-shadow: 0px 4px 6px rgba(0,0,0,0.1); /* Sombra para darle profundidad */
-    }
-    
-    /* Cajas blancas para los textos y definiciones (contrasta con el fondo suave) */
+    /* Tarjetas/Contenedores */
     .caja-blanca {
-        background-color: white;
+        background-color: #FFFFFF;
         padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0px 2px 4px rgba(0,0,0,0.05);
-        margin-bottom: 15px;
+        border-radius: 12px;
+        box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.05);
+        margin-bottom: 20px;
     }
-
-    /* Estilo para justificar textos y achicar la letra del propósito */
-    .texto-justificado-chico {
-        text-align: justify;
-        font-size: 14px;
-        background-color: white; 
+    /* Encabezados y títulos */
+    h1, h2, h3 {
+        color: #1E3A2B;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    /* Cajas de estado / Semáforo */
+    .alerta-exito {
+        background-color: #D4EDDA;
+        color: #155724;
         padding: 15px;
-        border-radius: 5px;
-        border-left: 5px solid #1E7B44; 
-        box-shadow: 0px 2px 4px rgba(0,0,0,0.05);
-    }
-    
-    .texto-justificado {
-        text-align: justify;
-        font-size: 16px;
-        margin-bottom: 10px;
-        color: #333333;
-    }
-    
-    /* Diferenciación de letras para los Títulos de las leyes */
-    .titulo-ley {
-        color: #1E7B44;
-        font-size: 22px;
+        border-radius: 8px;
+        border-left: 6px solid #28A745;
         font-weight: bold;
-        margin-bottom: 8px;
     }
+    .alerta-error {
+        background-color: #F8D7DA;
+        color: #721C24;
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 6px solid #DC3545;
+        font-weight: bold;
+    }
+    .alerta-advertencia {
+        background-color: #FFF3CD;
+        color: #856404;
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 6px solid #FFC107;
+        font-weight: bold;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# ==========================================
+# BARRA LATERAL (NAVEGACIÓN Y MENÚ)
+# ==========================================
+st.sidebar.image("https://img.icons8.com/color/96/construction.png", width=70)
+st.sidebar.title("Navegación")
+
+opcion_menu = st.sidebar.radio(
+    "Seleccione una sección:",
+    ["🏠 Inicio", "📐 Datos de Terreno", "📋 Validación Normativa"]
+)
+
+st.sidebar.markdown("---")
+st.sidebar.info("**Comuna:** San Miguel\n\n**Normativas aplicadas:**\n- OGUC (Zona 3)\n- Ley N° 20.898 / Ley N° 21.725\n- PRC San Miguel")
+
+
+# ==========================================
+# PÁGINA 1: INICIO
+# ==========================================
+if opcion_menu == "🏠 Inicio":
+    st.markdown("""
+        <div class="caja-blanca">
+            <h1>🏗️ Plataforma de Pre-factibilidad Normativa para Ampliaciones</h1>
+            <h3>Ilustre Municipalidad de San Miguel | Región Metropolitana</h3>
+            <p>Bienvenido al sistema digital interactivo diseñado para orientar a propietarios y proyectistas en la verificación preliminar de proyectos de ampliación y regularización residencial.</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("""
+            <div class="caja-blanca">
+                <h4>🎯 Objetivo de la Herramienta</h4>
+                <p>Facilitar la autoevaluación técnica de proyectos de ampliación de vivienda unifamiliar antes del ingreso formal de carpetas en la Dirección de Obras Municipales (DOM), reduciendo tasas de rechazo y tiempos de tramitación.</p>
+            </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("""
+            <div class="caja-blanca">
+                <h4>📌 Módulos de Evaluación</h4>
+                <ul>
+                    <li><b>Datos de Terreno:</b> Verificación de límites urbanísticos y ocupación de suelo.</li>
+                    <li><b>Límite de Metraje:</b> Verificación según Ley N° 20.898.</li>
+                    <li><b>Acondicionamiento Térmico:</b> Exigencias de la OGUC para Zona Térmica 3.</li>
+                </ul>
+            </div>
+        """, unsafe_allow_html=True)
+
+    # Glosario Informativo
+    st.markdown('<div class="caja-blanca">', unsafe_allow_html=True)
+    st.subheader("📚 Marco Normativo y Glosario")
+
+    with st.expander("📄 Ley N° 20.898 (Modificada por Ley N° 21.725)"):
+        st.write("""
+        Establece un procedimiento simplificado de regularización de viviendas unifamiliares. 
+        La Ley N° 21.725 extendió la vigencia de ingreso de solicitudes ante la DOM hasta el **31 de diciembre de 2027**.
+        """)
+
+    with st.expander("📐 Distanciamientos y Rasantes (OGUC Art. 2.6.3 / PRC San Miguel)"):
+        st.write("""
+        Normas que regulan las distancias mínimas a deslindes vecinos y la altura máxima de la edificación según sus ángulos de rasante.
+        """)
+
+    with st.expander("🌡️ Acondicionamiento Térmico (OGUC Art. 4.1.10 - Zona 3)"):
+        st.write("""
+        San Miguel pertenece a la **Zona Térmica 3** (RM). Exige una transmitancia térmica máxima de $U \le 0,38 \text{ W/m}^2\text{K}$ en techumbre y $U \le 1,90 \text{ W/m}^2\text{K}$ en muros exteriores.
+        """)
+
+    with st.expander("🔗 Enlaces a Fuentes Oficiales"):
+        st.markdown("- [Biblioteca del Congreso Nacional - Ley 20.898](https://www.bcn.cl/leychile/navegar?idNorma=1087221)")
+        st.markdown("- [Ministerio de Vivienda y Urbanismo (MINVU)](https://www.minwu.gob.cl)")
+        st.markdown("- [Portal de Transparencia del Estado de Chile](https://www.portaltransparencia.cl)")
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+
+# ==========================================
+# PÁGINA 2: DATOS DE TERRENO
+# ==========================================
+elif opcion_menu == "📐 Datos de Terreno":
+    st.markdown("""
+        <div class="caja-blanca">
+            <h2>📐 Módulo: Antecedentes y Datos del Terreno</h2>
+            <p>Ingrese los parámetros geométricos del predio según sus escrituras o Certificado de Informaciones Previas (CIP) otorgado por la DOM de San Miguel.</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    col_terreno1, col_terreno2 = st.columns(2)
+
+    with col_terreno1:
+        st.markdown('<div class="caja-blanca">', unsafe_allow_html=True)
+        st.subheader("📝 Dimensiones del Predio")
+        
+        superficie_predio = st.number_input(
+            "Superficie Total del Terreno (m²):", 
+            min_value=50.0, value=200.0, step=5.0,
+            help="Superficie total consignada en el rol o título de dominio."
+        )
+        
+        frente_predio = st.number_input(
+            "Ancho del Frente / Línea Oficial (m):", 
+            min_value=5.0, value=10.0, step=0.5
+        )
+        
+        fondo_predio = st.number_input(
+            "Profundidad / Fondo del Predio (m):", 
+            min_value=5.0, value=20.0, step=0.5
+        )
+
+        antejardin = st.number_input(
+            "Ancho de Antejardín existente o exigido (m):", 
+            min_value=0.0, value=3.0, step=0.5,
+            help="Distancia desde la Línea Oficial hasta la edificación."
+        )
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with col_terreno2:
+        st.markdown('<div class="caja-blanca">', unsafe_allow_html=True)
+        st.subheader("🏛️ Indicadores Urbanísticos (PRC San Miguel)")
+        
+        zona_prc = st.selectbox(
+            "Zona del Plan Regulador Comunal:",
+            ["Zona Residencial Mixta (Z-2)", "Zona Residencial Consolidada (Z-3)", "Otras Zonas Residenciales"]
+        )
+        
+        coef_ocupacion = st.slider(
+            "Coeficiente Máximo de Ocupación del Suelo (%):", 
+            min_value=30, max_value=80, value=60, step=5,
+            help="Porcentaje del terreno que puede ser ocupado por construcciones en primer piso."
+        )
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # ------------------------------------
+    # CÁLCULOS Y RESUMEN DEL TERRENO
+    # ------------------------------------
+    sup_ocupacion_max = superficie_predio * (coef_ocupacion / 100.0)
     
-    /* Estilo para los links */
-    .link-documento {
-        font-size: 14px;
-        font-style: italic;
-        margin-top: 10px;
-    }
-    .link-documento a {
-        color: #2980B9;
-        text-decoration: none;
-    }
-    .link-documento a:hover {
-        text-decoration: underline;
-    }
-</style>
-""", unsafe_allow_html=True)
+    st.markdown('<div class="caja-blanca">', unsafe_allow_html=True)
+    st.subheader("📊 Capacidad Máxima de Ocupación en Primer Piso")
+    
+    c_res1, c_res2, c_res3 = st.columns(3)
+    c_res1.metric("Superficie del Terreno", f"{superficie_predio:.1f} m²")
+    c_res2.metric("Ocupación Suelo Permitida (%)", f"{coef_ocupacion}%")
+    c_res3.metric("Ocupación Máxima en 1er Piso", f"{sup_ocupacion_max:.1f} m²")
+
+    st.caption("ℹ️ *Nota: La superficie máxima edificable en primer nivel no podrá superar el valor indicado en la métrica superior para no infringir el Coeficiente de Ocupación de Suelo.*")
+    st.markdown('</div>', unsafe_allow_html=True)
+
 
 # ==========================================
-# BARRA LATERAL (SIDEBAR) LIMPIA
+# PÁGINA 3: VALIDACIÓN NORMATIVA
 # ==========================================
-with st.sidebar:
-    st.markdown("### ⚙️ Panel de Control")
-    st.info("El menú ha sido simplificado. Aquí se integrarán los módulos de cálculo en el futuro.")
+elif opcion_menu == "📋 Validación Normativa":
+    st.markdown("""
+        <div class="caja-blanca">
+            <h2>📋 Módulo: Validación Normativa y Térmica</h2>
+            <p>Evalúe las condiciones específicas de su proyecto de ampliación (superficie, distanciamientos y aislación térmica).</p>
+        </div>
+    """, unsafe_allow_html=True)
 
-# ==========================================
-# SECCIÓN 1: PRESENTACIÓN Y MARCO NORMATIVO
-# ==========================================
+    col1, col2 = st.columns(2)
 
-# FRANJA SUPERIOR VERDE
-st.markdown("""
-<div class="franja-verde">
-    <h1 style="color: white; margin-bottom: 0px; font-size: 32px;">🏗️ Prototipo de Software para Validación Normativa de Ampliaciones Domiciliarias</h1>
-    <p style="font-size: 18px; color: #E8F8F5; margin-top: 10px;">Comuna de San Miguel | Aplicación de OGUC, Ley N° 20.898 y Plan Regulador Comunal</p>
-</div>
-""", unsafe_allow_html=True)
+    with col1:
+        st.markdown('<div class="caja-blanca">', unsafe_allow_html=True)
+        st.subheader("📋 Ley N° 20.898 / Tramo")
+        tramo_ley = st.selectbox(
+            "Seleccione el Tramo de Aplicación:",
+            ["Vivienda Social (Hasta 90 m²)", "Vivienda hasta 140 m² (Avalúo hasta 1.000 UF)"]
+        )
+        superficie_existente = st.number_input("Superficie construida previa (m²):", min_value=0.0, value=45.0, step=1.0)
+        superficie_ampliacion = st.number_input("Superficie proyectada de ampliación (m²):", min_value=0.0, value=25.0, step=1.0)
+        superficie_total = superficie_existente + superficie_ampliacion
+        st.info(f"📐 **Superficie Total Resultante:** {superficie_total:.2f} m²")
+        st.markdown('</div>', unsafe_allow_html=True)
 
-# PROPÓSITO ACADÉMICO 
-st.markdown("""
-<div class="texto-justificado-chico">
-    <strong>Propósito Académico:</strong> Este software ha sido desarrollado como prototipo de titulación para la carrera de Ingeniería en Construcción. 
-    Su objetivo es actuar como un sistema de asistencia técnica y normativa en la etapa preliminar de diseño de ampliaciones 
-    residenciales, garantizando el cumplimiento de la reglamentación vigente en Chile y en la comuna de San Miguel.
-</div>
-<br>
-""", unsafe_allow_html=True)
+        st.markdown('<div class="caja-blanca">', unsafe_allow_html=True)
+        st.subheader("📐 Distanciamientos y Fachadas")
+        distanciamiento = st.number_input("Distanciamiento al deslinde vecino (m):", min_value=0.0, value=1.5, step=0.1)
+        posee_vanos = st.radio("¿La fachada cuenta con ventanas/vanos?", ["No (Muro ciego)", "Sí (Con ventanas)"])
+        st.markdown('</div>', unsafe_allow_html=True)
 
-st.markdown("### 📜 Pilares Normativos Integrados")
+    with col2:
+        st.markdown('<div class="caja-blanca">', unsafe_allow_html=True)
+        st.subheader("🌡️ Acondicionamiento Térmico (OGUC Zona 3)")
+        aislacion_techumbre = st.number_input("Espesor lana de vidrio en techumbre (mm):", min_value=0, value=80, step=5)
+        material_muro = st.selectbox(
+            "Estructura de muro exterior:",
+            ["Tabiquería liviana con Lana de Vidrio (>= 50 mm)", "Tabiquería sin aislación", "Albañilería / Hormigón armado sin aislante"]
+        )
+        st.markdown('</div>', unsafe_allow_html=True)
 
-# 1. OGUC
-st.markdown("""
-<div class="caja-blanca">
-    <div class="titulo-ley">1. Ordenanza General de Urbanismo y Construcciones (OGUC)</div>
-    <div class="texto-justificado">
-        Es el reglamento rector que complementa y hace operativa la Ley General de Urbanismo y Construcciones en Chile. 
-        Establece las disposiciones normativas a nivel nacional técnico y administrativo para la planificación urbana, 
-        la urbanización de terrenos y las exigencias mínimas de diseño, seguridad y habitabilidad que debe cumplir 
-        toda obra de construcción o ampliación en el país.
-    </div>
-    <div class="link-documento">🔗 <a href="https://www.bcn.cl/leychile/navegar?idNorma=13511" target="_blank">Ver documento oficial en la Biblioteca del Congreso Nacional de Chile (BCN)</a></div>
-</div>
-""", unsafe_allow_html=True)
+        # Validación
+        cumple_superficie = superficie_total <= (90.0 if "90 m²" in tramo_ley else 140.0)
+        cumple_distanciamiento = distanciamiento >= (3.0 if posee_vanos == "Sí (Con ventanas)" else 1.4)
+        cumple_termico = aislacion_techumbre >= 80 and "Lana de Vidrio (>= 50 mm)" in material_muro
 
-# 2. LEY 20.898
-st.markdown("""
-<div class="caja-blanca">
-    <div class="titulo-ley">2. Ley N° 20.898 (Procedimiento Simplificado)</div>
-    <div class="texto-justificado">
-        Conocida comúnmente como "Ley del Mono", es un cuerpo legal transitorio que establece un procedimiento simplificado 
-        para la regularización de viviendas de autoconstrucción y ampliaciones que cumplen con metrajes y avalúos específicos. 
-        Permite obtener la recepción definitiva acreditando condiciones mínimas de habitabilidad y seguridad estructural mediante 
-        el patrocinio de un profesional competente.
-    </div>
-    <div class="link-documento">🔗 <a href="https://www.bcn.cl/leychile/navegar?idNorma=1087285" target="_blank">Ver documento oficial en la Biblioteca del Congreso Nacional de Chile (BCN)</a></div>
-</div>
-""", unsafe_allow_html=True)
-
-# 3. PRC
-st.markdown("""
-<div class="caja-blanca">
-    <div class="titulo-ley">3. Plan Regulador Comunal (PRC) - San Miguel</div>
-    <div class="texto-justificado">
-        Es el instrumento de planificación territorial que regula el desarrollo físico de las áreas urbanas a nivel local. 
-        Define la zonificación de la comuna, los usos de suelo permitidos y las normas urbanísticas específicas (como coeficientes 
-        de constructibilidad, ocupación de suelo, distanciamientos y rasantes) que condicionan la forma y tamaño de las ampliaciones.
-    </div>
-    <div class="link-documento">🔗 <a href="https://web.sanmiguel.cl/doctos/ordenanzas/plan_regulador/2.pdf" target="_blank">Ver documento oficial en la Municipalidad de San Miguel</a></div>
-</div>
-""", unsafe_allow_html=True)
-
-st.markdown("<br>", unsafe_allow_html=True)
-
-# ==========================================
-# SECCIÓN 2: GLOSARIO Y CONCEPTOS BÁSICOS
-# ==========================================
-st.markdown("### 📚 Glosario de Conceptos Urbanísticos")
-st.write("Haz clic en cada concepto para desplegar su definición técnica:")
-
-# Se usan "expanders" (cajas desplegables) para hacer la página interactiva
-with st.expander("📐 Coeficiente de Constructibilidad"):
-    st.write("Es el factor que, multiplicado por la superficie total del predio, determina la cantidad máxima de metros cuadrados que se permite construir en él. Las ampliaciones no deben sobrepasar el volumen total permitido por este coeficiente.")
-
-with st.expander("📍 Coeficiente de Ocupación de Suelo"):
-    st.write("Es el porcentaje máximo de la superficie del terreno que puede ser ocupado por la edificación en el primer piso. Define cuánto \"patio\" o área libre debe quedar obligatoriamente.")
-
-with st.expander("📏 Rasante y Distanciamiento"):
-    st.write("**Rasante:** Línea imaginaria inclinada que nace desde los deslindes del terreno e impone una envolvente máxima de altura para la edificación. \n\n**Distanciamiento:** Distancia mínima que debe existir entre la edificación y los deslindes del predio, variando según la altura de la construcción y si tiene o no ventanas.")
-
-with st.expander("🌡️ Zona Térmica"):
-    st.write("Clasificación geográfica que determina las exigencias mínimas de acondicionamiento térmico (aislación en techumbres, muros y pisos ventilados). La comuna de San Miguel se encuentra en la **Zona Térmica 3**, lo que exige materiales con una Transmitancia Térmica (U) específica según la OGUC.")
+        st.markdown('<div class="caja-blanca">', unsafe_allow_html=True)
+        st.subheader("🔍 Resultado del Análisis")
+        if cumple_superficie and cumple_distanciamiento and cumple_termico:
+            st.markdown('<div class="alerta-exito">✅ PROYECTO PRE-APROBADO: Cumple con la normativa.</div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="alerta-error">❌ REVISIÓN REQUERIDA: Presenta observaciones normativas.</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
