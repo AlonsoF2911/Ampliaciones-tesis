@@ -1,5 +1,5 @@
 import streamlit as st
-import base64  # <- Nueva librería agregada para poder leer y mostrar el PDF
+import base64  # Necesario para mostrar el PDF en pantalla
 
 # Configuración formal de la página
 st.set_page_config(
@@ -86,7 +86,6 @@ st.markdown("""
 with st.sidebar:
     st.markdown("### ⚙️ Panel de Navegación")
     
-    # Este es el menú que cambiará la pantalla principal
     menu_seleccionado = st.radio(
         "Seleccione un módulo:",
         ("🏠 Inicio", "🏡 Datos del Terreno")
@@ -198,11 +197,11 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
     # --- VISOR DEL PLANO PDF INCORPORADO ---
     with st.expander("🗺️ Haz clic aquí para abrir el Plano de Zonificación (PDF)"):
         try:
-            # Abrimos el archivo que subiste
-            with open("Plano Comunal San Miguel.pdf", "rb") as file:
+            # Busca el archivo plano.pdf en la misma carpeta
+            with open("plano.pdf", "rb") as file:
                 pdf_bytes = file.read()
                 
-                # 1. Botón opcional para descargar
+                # Botón de descarga opcional
                 st.download_button(
                     label="📥 Descargar Plano en PDF",
                     data=pdf_bytes,
@@ -212,13 +211,13 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
                 
                 st.write("---")
                 
-                # 2. Truco visual: Incrustar el PDF en pantalla usando HTML y Base64
+                # Incrustar el PDF en pantalla
                 base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
                 pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="600" type="application/pdf"></iframe>'
                 st.markdown(pdf_display, unsafe_allow_html=True)
                 
         except FileNotFoundError:
-            st.error("⚠️ No se encontró el archivo 'Plano Comunal San Miguel.pdf'. Asegúrate de que el PDF esté guardado exactamente con ese nombre en la misma carpeta que tu código de Python.")
+            st.error("⚠️ **¡Atención!** No se encontró el archivo **'plano.pdf'** en la carpeta. Asegúrate de renombrar tu archivo a 'plano.pdf' y guárdalo exactamente en la misma carpeta donde tienes este script de Python.")
     
     st.write("") # Espacio en blanco
     
