@@ -99,7 +99,7 @@ with st.sidebar:
 # ==========================================
 
 # ------------------------------------------
-# PANTALLA 1: INICIO (Tu diseño original intacto)
+# PANTALLA 1: INICIO
 # ------------------------------------------
 if menu_seleccionado == "🏠 Inicio":
     
@@ -197,29 +197,26 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
     # --- VISOR DEL PLANO PDF INCORPORADO ---
     with st.expander("🗺️ Haz clic aquí para abrir el Plano de Zonificación (PDF)"):
         try:
-            # Busca el archivo plano.pdf en la misma carpeta
             with open("plano.pdf", "rb") as file:
                 pdf_bytes = file.read()
                 
-                # Botón de descarga opcional
-                st.download_button(
-                    label="📥 Descargar Plano en PDF",
-                    data=pdf_bytes,
-                    file_name="Plano_Comunal_San_Miguel.pdf",
-                    mime="application/pdf"
-                )
-                
-                st.write("---")
-                
-                # Incrustar el PDF en pantalla
-                base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
-                pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="600" type="application/pdf"></iframe>'
-                st.markdown(pdf_display, unsafe_allow_html=True)
-                
+            st.download_button(
+                label="📥 Descargar Plano en PDF",
+                data=pdf_bytes,
+                file_name="Plano_Comunal_San_Miguel.pdf",
+                mime="application/pdf"
+            )
+            
+            st.write("---")
+            
+            base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
+            pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="600" type="application/pdf"></iframe>'
+            st.markdown(pdf_display, unsafe_allow_html=True)
+            
         except FileNotFoundError:
             st.error("⚠️ **¡Atención!** No se encontró el archivo **'plano.pdf'** en la carpeta. Asegúrate de renombrar tu archivo a 'plano.pdf' y guárdalo exactamente en la misma carpeta donde tienes este script de Python.")
     
-    st.write("") # Espacio en blanco
+    st.write("") 
     
     col1, col2 = st.columns(2)
     with col1:
@@ -276,6 +273,5 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
         )
     st.markdown('</div>', unsafe_allow_html=True)
     
-    # Botón visual de confirmación
     if st.button("Guardar Datos y Continuar"):
         st.success("¡Datos guardados correctamente en la memoria temporal del software!")
