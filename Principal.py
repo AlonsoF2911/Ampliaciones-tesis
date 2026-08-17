@@ -85,7 +85,6 @@ st.markdown("""
 with st.sidebar:
     st.markdown("### ⚙️ Panel de Navegación")
     
-    # Este es el menú que cambiará la pantalla principal
     menu_seleccionado = st.radio(
         "Seleccione un módulo:",
         ("🏠 Inicio", "🏡 Datos del Terreno")
@@ -99,7 +98,7 @@ with st.sidebar:
 # ==========================================
 
 # ------------------------------------------
-# PANTALLA 1: INICIO (Tu diseño original intacto)
+# PANTALLA 1: INICIO
 # ------------------------------------------
 if menu_seleccionado == "🏠 Inicio":
     
@@ -189,9 +188,15 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
     st.markdown("Por favor, ingrese la información de la propiedad para comenzar con la validación normativa.")
     st.markdown("---")
 
-    # Usamos cajas blancas para mantener la consistencia del diseño
     st.markdown('<div class="caja-blanca">', unsafe_allow_html=True)
     st.markdown("### 📍 1. Ubicación de la Propiedad")
+    
+    # --- VISOR VISUAL DEL PLANO EN PANTALLA (SIN DESCARGAS) ---
+    with st.expander("🗺️ Ver Plano de Zonificación Comunal (San Miguel)"):
+        try:
+            st.image("plano.png", caption="Plano Regulador Comunal - San Miguel", use_container_width=True)
+        except FileNotFoundError:
+            st.warning("⚠️ **Aviso:** Para visualizar el plano directamente aquí, coloca una imagen llamada **'plano.png'** en la misma carpeta de este script. Si no la tienes, el software funcionará igual para el ingreso de datos.")
     
     col1, col2 = st.columns(2)
     with col1:
@@ -247,6 +252,5 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
         )
     st.markdown('</div>', unsafe_allow_html=True)
     
-    # Botón visual de confirmación
     if st.button("Guardar Datos y Continuar"):
         st.success("¡Datos guardados correctamente en la memoria temporal del software!")
