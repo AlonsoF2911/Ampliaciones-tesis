@@ -80,11 +80,66 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# BARRA LATERAL (SIDEBAR) LIMPIA
+# BARRA LATERAL (SIDEBAR): DATOS DEL TERRENO
 # ==========================================
 with st.sidebar:
     st.markdown("### ⚙️ Panel de Control")
-    st.info("El menú ha sido simplificado. Aquí se integrarán los módulos de cálculo en el futuro.")
+    st.markdown("---")
+    
+    st.markdown("### 🏡 Datos del Terreno")
+    st.caption("Ingrese la ubicación y las mediciones de la propiedad:")
+    
+    # 1. Ubicación / Sector dentro de San Miguel
+    sector_casa = st.selectbox(
+        "📍 Zona / Sector (PRC San Miguel):",
+        [
+            "Zona ZU-1 (Eje Gran Avenida / Mixta)",
+            "Zona ZU-2 (Residencial Mixta Alta Densidad)",
+            "Zona ZU-3 (Residencial Media Densidad)",
+            "Zona ZU-4 (Barrio El Llano / Conservación)",
+            "Otro Sector de San Miguel"
+        ]
+    )
+    
+    direccion_casa = st.text_input(
+        "📌 Dirección o Referencia del inmueble:",
+        placeholder="Ej: Av. El Llano Subercaseaux 1234"
+    )
+    
+    st.markdown("---")
+    
+    # 2. Mediciones del Terreno
+    st.markdown("#### 📏 Mediciones del Terreno")
+    
+    superficie_terreno = st.number_input(
+        "Superficie Total del Terreno (m²):",
+        min_value=10.0,
+        value=160.0,
+        step=5.0
+    )
+    
+    superficie_existente = st.number_input(
+        "Superficie Construida Existente (m²):",
+        min_value=0.0,
+        value=70.0,
+        step=5.0
+    )
+    
+    frente_terreno = st.number_input(
+        "Ancho / Frente del Terreno (m):",
+        min_value=1.0,
+        value=10.0,
+        step=0.5
+    )
+    
+    fondo_terreno = st.number_input(
+        "Fondo / Largo del Terreno (m):",
+        min_value=1.0,
+        value=16.0,
+        step=0.5
+    )
+    
+    st.success("✅ Datos del terreno listos para evaluación.")
 
 # ==========================================
 # SECCIÓN 1: PRESENTACIÓN Y MARCO NORMATIVO
