@@ -1,5 +1,4 @@
 import streamlit as st
-import os
 
 # Configuración formal de la página
 st.set_page_config(
@@ -13,7 +12,7 @@ st.set_page_config(
 # ==========================================
 st.markdown("""
 <style>
-    /* CAMBIO DE FONDO: Tono gris/verde muy suave */
+    /* CAMBIO DE FONDO: Le da un tono gris/verde muy suave a toda la app */
     [data-testid="stAppViewContainer"] {
         background-color: #F0F4F2; 
     }
@@ -56,7 +55,7 @@ st.markdown("""
         color: #333333;
     }
     
-    /* Títulos de las leyes */
+    /* Diferenciación de letras para los Títulos de las leyes */
     .titulo-ley {
         color: #1E7B44;
         font-size: 22px;
@@ -64,7 +63,7 @@ st.markdown("""
         margin-bottom: 8px;
     }
     
-    /* Links */
+    /* Estilo para los links */
     .link-documento {
         font-size: 14px;
         font-style: italic;
@@ -86,6 +85,7 @@ st.markdown("""
 with st.sidebar:
     st.markdown("### ⚙️ Panel de Navegación")
     
+    # Este es el menú que cambiará la pantalla principal
     menu_seleccionado = st.radio(
         "Seleccione un módulo:",
         ("🏠 Inicio", "🏡 Datos del Terreno")
@@ -99,10 +99,11 @@ with st.sidebar:
 # ==========================================
 
 # ------------------------------------------
-# PANTALLA 1: INICIO (Intacta)
+# PANTALLA 1: INICIO (Tu diseño original intacto)
 # ------------------------------------------
 if menu_seleccionado == "🏠 Inicio":
     
+    # FRANJA SUPERIOR VERDE
     st.markdown("""
     <div class="franja-verde">
         <h1 style="color: white; margin-bottom: 0px; font-size: 32px;">🏗️ Prototipo de Software para Validación Normativa de Ampliaciones Domiciliarias</h1>
@@ -110,6 +111,7 @@ if menu_seleccionado == "🏠 Inicio":
     </div>
     """, unsafe_allow_html=True)
 
+    # PROPÓSITO ACADÉMICO 
     st.markdown("""
     <div class="texto-justificado-chico">
         <strong>Propósito Académico:</strong> Este software ha sido desarrollado como prototipo de titulación para la carrera de Ingeniería en Construcción. 
@@ -162,6 +164,7 @@ if menu_seleccionado == "🏠 Inicio":
 
     st.markdown("<br>", unsafe_allow_html=True)
 
+    # GLOSARIO
     st.markdown("### 📚 Glosario de Conceptos Urbanísticos")
     st.write("Haz clic en cada concepto para desplegar su definición técnica:")
 
@@ -178,7 +181,7 @@ if menu_seleccionado == "🏠 Inicio":
         st.write("Clasificación geográfica que determina las exigencias mínimas de acondicionamiento térmico (aislación en techumbres, muros y pisos ventilados). La comuna de San Miguel se encuentra en la **Zona Térmica 3**, lo que exige materiales con una Transmitancia Térmica (U) específica según la OGUC.")
 
 # ------------------------------------------
-# PANTALLA 2: DATOS DEL TERRENO (Con descarga segura de PDF)
+# PANTALLA 2: DATOS DEL TERRENO
 # ------------------------------------------
 elif menu_seleccionado == "🏡 Datos del Terreno":
     
@@ -186,26 +189,9 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
     st.markdown("Por favor, ingrese la información de la propiedad para comenzar con la validación normativa.")
     st.markdown("---")
 
+    # Usamos cajas blancas para mantener la consistencia del diseño
     st.markdown('<div class="caja-blanca">', unsafe_allow_html=True)
     st.markdown("### 📍 1. Ubicación de la Propiedad")
-    
-    # --- SECCIÓN DE DESCARGA DIRECTA SEGURA (Sin errores) ---
-    st.markdown("#### 📄 Documentación Oficial de Apoyo")
-    st.write("Si necesitas descargar el documento PDF del Plan Regulador Comunal para respaldar tu memoria o uso del software, hazlo aquí:")
-    
-    archivo_pdf = "plano.pdf"
-    if os.path.exists(archivo_pdf):
-        with open(archivo_pdf, "rb") as f:
-            st.download_button(
-                label="📥 Descargar Plano Regulador de San Miguel (PDF)",
-                data=f,
-                file_name="Plano_Regulador_San_Miguel.pdf",
-                mime="application/pdf"
-            )
-    else:
-        st.info("💡 *Nota: Para habilitar el botón de descarga automática, asegúrate de colocar tu archivo PDF bajo el nombre exacto de **plano.pdf** en la misma carpeta de tu proyecto.*")
-    
-    st.markdown("---")
     
     col1, col2 = st.columns(2)
     with col1:
@@ -261,5 +247,6 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
         )
     st.markdown('</div>', unsafe_allow_html=True)
     
+    # Botón visual de confirmación
     if st.button("Guardar Datos y Continuar"):
         st.success("¡Datos guardados correctamente en la memoria temporal del software!")
