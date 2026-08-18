@@ -89,7 +89,6 @@ st.markdown("""
 with st.sidebar:
     st.markdown("### ⚙️ Panel de Navegación")
     
-    # Este es el menú que cambiará la pantalla principal
     menu_seleccionado = st.radio(
         "Seleccione un módulo:",
         ("🏠 Inicio", "🏡 Datos del Terreno")
@@ -259,22 +258,17 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
     # PLANO COMUNAL DE SAN MIGUEL
     # ==========================================
 
-    # Ubicación de la carpeta donde se encuentra Principal.py
     carpeta_proyecto = Path(__file__).resolve().parent
 
-    # Nombre EXACTO del archivo PDF guardado en GitHub
     ruta_plano = carpeta_proyecto / "Plano_Comunal_San_Miguel.pdf"
 
 
-    # Comprobamos si existe el archivo
     if ruta_plano.exists():
 
-        # Abrimos el PDF en modo binario
         with open(ruta_plano, "rb") as archivo_pdf:
 
             datos_pdf = archivo_pdf.read()
 
-            # Botón para descargar el Plano Comunal
             st.download_button(
                 label="📥 Descargar Plano Comunal de San Miguel",
                 data=datos_pdf,
@@ -327,53 +321,134 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
 
 
     # ==========================================
-    # 2. MEDICIONES DEL LOTE
+    # 2. MEDICIONES DEL TERRENO Y VIVIENDA
     # ==========================================
     st.markdown('<div class="caja-blanca">', unsafe_allow_html=True)
 
-    st.markdown("### 📏 2. Mediciones del Lote")
+    st.markdown("### 📏 2. Mediciones del Terreno y Vivienda")
+
+    st.write(
+        "Ingrese las dimensiones principales del terreno. "
+        "El software calculará automáticamente su superficie total."
+    )
+
+    st.caption(
+        "ℹ️ El cálculo automático considera un terreno de forma rectangular "
+        "o aproximadamente rectangular."
+    )
 
 
+    # ==========================================
+    # DIMENSIONES DEL TERRENO
+    # ==========================================
     col3, col4 = st.columns(2)
 
 
     with col3:
 
-        superficie_terreno = st.number_input(
-            "Superficie Total del Terreno (m²):",
+        largo_terreno = st.number_input(
+            "Largo del Terreno (m):",
             min_value=0.0,
             value=0.0,
-            step=5.0
-        )
-
-
-        frente_terreno = st.number_input(
-            "Frente del Terreno (m):",
-            min_value=0.0,
-            value=0.0,
-            step=0.5
+            step=0.5,
+            format="%.2f"
         )
 
 
     with col4:
 
-        superficie_existente = st.number_input(
-            "Superficie Construida Existente (m²):",
+        ancho_terreno = st.number_input(
+            "Ancho del Terreno (m):",
             min_value=0.0,
             value=0.0,
-            step=5.0
+            step=0.5,
+            format="%.2f"
         )
 
 
-        fondo_terreno = st.number_input(
-            "Fondo del Terreno (m):",
-            min_value=0.0,
-            value=0.0,
-            step=0.5
+    # ==========================================
+    # CÁLCULO AUTOMÁTICO DE SUPERFICIE
+    # ==========================================
+    superficie_terreno = largo_terreno * ancho_terreno
+
+
+    st.markdown("#### 📐 Superficie Total Calculada del Terreno")
+
+    st.metric(
+        label="Superficie del Terreno",
+        value=f"{superficie_terreno:.2f} m²"
+    )
+
+
+    # Mostrar operación cuando existan dimensiones
+    if largo_terreno > 0 and ancho_terreno > 0:
+
+        st.success(
+            f"✅ Cálculo realizado: "
+            f"{largo_terreno:.2f} m × {ancho_terreno:.2f} m "
+            f"= **{superficie_terreno:.2f} m²**"
+        )
+
+
+    st.markdown("---")
+
+
+    # ==========================================
+    # SUPERFICIE CONSTRUIDA DE LA VIVIENDA
+    # ==========================================
+    st.markdown("#### 🏠 Superficie Actual de la Vivienda")
+
+    st.write(
+        "Ingrese la superficie total actualmente construida de la vivienda. "
+        "Este dato será utilizado posteriormente para realizar los cálculos "
+        "normativos de la ampliación."
+    )
+
+
+    superficie_existente = st.number_input(
+        "Superficie Construida Actual de la Vivienda (m²):",
+        min_value=0.0,
+        value=0.0,
+        step=1.0,
+        format="%.2f"
+    )
+
+
+    # Mostrar resumen
+    if superficie_existente > 0:
+
+        st.info(
+            f"🏠 Superficie construida declarada: "
+            f"**{superficie_existente:.2f} m²**"
         )
 
 
     st.markdown('</div>', unsafe_allow_html=True)
+
+
+
+    # ==========================================
+    # RESUMEN PRELIMINAR
+    # ==========================================
+    if superficie_terreno > 0 or superficie_existente > 0:
+
+        st.markdown("### 📋 Resumen de Datos Ingresados")
+
+        resumen1, resumen2 = st.columns(2)
+
+        with resumen1:
+
+            st.metric(
+                "Superficie Total del Terreno",
+                f"{superficie_terreno:.2f} m²"
+            )
+
+        with resumen2:
+
+            st.metric(
+                "Superficie Construida de la Vivienda",
+                f"{superficie_existente:.2f} m²"
+            )
 
 
 
