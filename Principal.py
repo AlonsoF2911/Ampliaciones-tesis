@@ -1,4 +1,5 @@
 import streamlit as st
+from pathlib import Path
 
 # Configuración formal de la página
 st.set_page_config(
@@ -69,10 +70,12 @@ st.markdown("""
         font-style: italic;
         margin-top: 10px;
     }
+
     .link-documento a {
         color: #2980B9;
         text-decoration: none;
     }
+
     .link-documento a:hover {
         text-decoration: underline;
     }
@@ -92,22 +95,30 @@ with st.sidebar:
     )
     
     st.markdown("---")
-    st.info("Utilice este menú para navegar por las distintas etapas de la validación normativa.")
+    st.info(
+        "Utilice este menú para navegar por las distintas etapas "
+        "de la validación normativa."
+    )
 
 # ==========================================
 # LÓGICA DE CAMBIO DE PANTALLAS
 # ==========================================
 
 # ------------------------------------------
-# PANTALLA 1: INICIO (Tu diseño original intacto)
+# PANTALLA 1: INICIO
+# NO SE MODIFICA
 # ------------------------------------------
 if menu_seleccionado == "🏠 Inicio":
     
     # FRANJA SUPERIOR VERDE
     st.markdown("""
     <div class="franja-verde">
-        <h1 style="color: white; margin-bottom: 0px; font-size: 32px;">🏗️ Prototipo de Software para Validación Normativa de Ampliaciones Domiciliarias</h1>
-        <p style="font-size: 18px; color: #E8F8F5; margin-top: 10px;">Comuna de San Miguel | Aplicación de OGUC, Ley N° 20.898 y Plan Regulador Comunal</p>
+        <h1 style="color: white; margin-bottom: 0px; font-size: 32px;">
+            🏗️ Prototipo de Software para Validación Normativa de Ampliaciones Domiciliarias
+        </h1>
+        <p style="font-size: 18px; color: #E8F8F5; margin-top: 10px;">
+            Comuna de San Miguel | Aplicación de OGUC, Ley N° 20.898 y Plan Regulador Comunal
+        </p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -133,7 +144,10 @@ if menu_seleccionado == "🏠 Inicio":
             la urbanización de terrenos y las exigencias mínimas de diseño, seguridad y habitabilidad que debe cumplir 
             toda obra de construcción o ampliación en el país.
         </div>
-        <div class="link-documento">🔗 <a href="https://www.bcn.cl/leychile/navegar?idNorma=13511" target="_blank">Ver documento oficial en la BCN</a></div>
+        <div class="link-documento">
+            🔗 <a href="https://www.bcn.cl/leychile/navegar?idNorma=13511" target="_blank">
+            Ver documento oficial en la BCN</a>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -146,7 +160,10 @@ if menu_seleccionado == "🏠 Inicio":
             para la regularización de viviendas de autoconstrucción y ampliaciones que cumplen con metrajes y avalúos específicos. 
             Permite obtener la recepción definitiva acreditando condiciones mínimas de habitabilidad y seguridad estructural.
         </div>
-        <div class="link-documento">🔗 <a href="https://www.bcn.cl/leychile/navegar?idNorma=1087285" target="_blank">Ver documento oficial en la BCN</a></div>
+        <div class="link-documento">
+            🔗 <a href="https://www.bcn.cl/leychile/navegar?idNorma=1087285" target="_blank">
+            Ver documento oficial en la BCN</a>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -158,7 +175,10 @@ if menu_seleccionado == "🏠 Inicio":
             Es el instrumento de planificación territorial que regula el desarrollo físico de las áreas urbanas a nivel local. 
             Define la zonificación de la comuna, los usos de suelo permitidos y las normas urbanísticas específicas.
         </div>
-        <div class="link-documento">🔗 <a href="https://web.sanmiguel.cl/doctos/ordenanzas/plan_regulador/2.pdf" target="_blank">Ver documento oficial en la Municipalidad de San Miguel</a></div>
+        <div class="link-documento">
+            🔗 <a href="https://web.sanmiguel.cl/doctos/ordenanzas/plan_regulador/2.pdf" target="_blank">
+            Ver documento oficial en la Municipalidad de San Miguel</a>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -169,16 +189,38 @@ if menu_seleccionado == "🏠 Inicio":
     st.write("Haz clic en cada concepto para desplegar su definición técnica:")
 
     with st.expander("📐 Coeficiente de Constructibilidad"):
-        st.write("Es el factor que, multiplicado por la superficie total del predio, determina la cantidad máxima de metros cuadrados que se permite construir en él. Las ampliaciones no deben sobrepasar el volumen total permitido por este coeficiente.")
+        st.write(
+            "Es el factor que, multiplicado por la superficie total del predio, "
+            "determina la cantidad máxima de metros cuadrados que se permite "
+            "construir en él. Las ampliaciones no deben sobrepasar el volumen "
+            "total permitido por este coeficiente."
+        )
 
     with st.expander("📍 Coeficiente de Ocupación de Suelo"):
-        st.write("Es el porcentaje máximo de la superficie del terreno que puede ser ocupado por la edificación en el primer piso. Define cuánto \"patio\" o área libre debe quedar obligatoriamente.")
+        st.write(
+            "Es el porcentaje máximo de la superficie del terreno que puede ser "
+            "ocupado por la edificación en el primer piso. Define cuánto "
+            "\"patio\" o área libre debe quedar obligatoriamente."
+        )
 
     with st.expander("📏 Rasante y Distanciamiento"):
-        st.write("**Rasante:** Línea imaginaria inclinada que nace desde los deslindes del terreno e impone una envolvente máxima de altura para la edificación. \n\n**Distanciamiento:** Distancia mínima que debe existir entre la edificación y los deslindes del predio, variando según la altura de la construcción y si tiene o no ventanas.")
+        st.write(
+            "**Rasante:** Línea imaginaria inclinada que nace desde los deslindes "
+            "del terreno e impone una envolvente máxima de altura para la edificación. "
+            "\n\n**Distanciamiento:** Distancia mínima que debe existir entre la "
+            "edificación y los deslindes del predio, variando según la altura de "
+            "la construcción y si tiene o no ventanas."
+        )
 
     with st.expander("🌡️ Zona Térmica"):
-        st.write("Clasificación geográfica que determina las exigencias mínimas de acondicionamiento térmico (aislación en techumbres, muros y pisos ventilados). La comuna de San Miguel se encuentra en la **Zona Térmica 3**, lo que exige materiales con una Transmitancia Térmica (U) específica según la OGUC.")
+        st.write(
+            "Clasificación geográfica que determina las exigencias mínimas de "
+            "acondicionamiento térmico (aislación en techumbres, muros y pisos "
+            "ventilados). La comuna de San Miguel se encuentra en la "
+            "**Zona Térmica 3**, lo que exige materiales con una Transmitancia "
+            "Térmica (U) específica según la OGUC."
+        )
+
 
 # ------------------------------------------
 # PANTALLA 2: DATOS DEL TERRENO
@@ -186,33 +228,86 @@ if menu_seleccionado == "🏠 Inicio":
 elif menu_seleccionado == "🏡 Datos del Terreno":
     
     st.markdown("## 🏡 Ingreso de Datos del Terreno")
-    st.markdown("Por favor, ingrese la información de la propiedad para comenzar con la validación normativa.")
+    st.markdown(
+        "Por favor, ingrese la información de la propiedad para comenzar "
+        "con la validación normativa."
+    )
     st.markdown("---")
 
-    # Usamos cajas blancas para mantener la consistencia del diseño
+    # ==========================================
+    # 1. UBICACIÓN DE LA PROPIEDAD
+    # ==========================================
     st.markdown('<div class="caja-blanca">', unsafe_allow_html=True)
     st.markdown("### 📍 1. Ubicación de la Propiedad")
+
+    # ------------------------------------------
+    # AYUDA PARA IDENTIFICAR LA ZONA DEL PRC
+    # ------------------------------------------
+    st.info(
+        "🗺️ **¿No sabes en qué zona se encuentra tu propiedad?** "
+        "Descarga el Plano Comunal de San Miguel, identifica la ubicación "
+        "del inmueble y luego selecciona la zona correspondiente."
+    )
+
+    # Buscamos automáticamente el PDF dentro de la carpeta del proyecto.
+    # De esta forma funciona aunque el archivo tenga nombres como:
+    # "Plano Comunal San Miguel - copia.pdf"
+    # "Plano Comunal San Miguel - copia(1).pdf"
+    # "Plano Comunal San Miguel - copia(2).pdf"
     
+    carpeta_proyecto = Path(__file__).resolve().parent
+    archivos_plano = list(carpeta_proyecto.glob("Plano Comunal San Miguel*.pdf"))
+
+    if archivos_plano:
+        ruta_plano = archivos_plano[0]
+
+        with open(ruta_plano, "rb") as archivo_pdf:
+            st.download_button(
+                label="📥 Descargar Plano Comunal de San Miguel",
+                data=archivo_pdf.read(),
+                file_name="Plano_Comunal_San_Miguel.pdf",
+                mime="application/pdf",
+                use_container_width=False
+            )
+    else:
+        st.warning(
+            "⚠️ El Plano Comunal no se encuentra en la carpeta del software. "
+            "Agrega el archivo PDF del plano en la misma carpeta donde está Principal.py."
+        )
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ------------------------------------------
+    # ZONA PRC + DIRECCIÓN
+    # ------------------------------------------
     col1, col2 = st.columns(2)
+
     with col1:
         sector_casa = st.selectbox(
-            "Zona según Plan Regulador (PRC San Miguel):",
+            "Zona según Plan Regulador Comunal de San Miguel:",
             [
                 "Seleccione una zona...",
-                "Zona ZU-1 (Eje Gran Avenida / Mixta)",
-                "Zona ZU-2 (Residencial Mixta Alta Densidad)",
-                "Zona ZU-3 (Residencial Media Densidad)",
-                "Zona ZU-4 (Barrio El Llano / Conservación)",
-                "Otra"
+                "ZU-1 - Comercial Preferente y Residencial",
+                "ZU-2 - Residencial de Renovación",
+                "ZU-3 - Industrial Exclusiva",
+                "ZU-4 - Industrial Mixta",
+                "ZU-5 - Equipamiento Regional de Salud",
+                "ZU-6 - Ferroviaria"
             ]
         )
+
     with col2:
         direccion_casa = st.text_input(
             "Dirección o Referencia del inmueble:",
             placeholder="Ej: Av. El Llano Subercaseaux 1234"
         )
+
     st.markdown('</div>', unsafe_allow_html=True)
 
+
+    # ==========================================
+    # 2. MEDICIONES DEL LOTE
+    # ==========================================
     st.markdown('<div class="caja-blanca">', unsafe_allow_html=True)
     st.markdown("### 📏 2. Mediciones del Lote")
     
@@ -225,6 +320,7 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
             value=0.0,
             step=5.0
         )
+
         frente_terreno = st.number_input(
             "Frente del Terreno (m):",
             min_value=0.0,
@@ -239,14 +335,21 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
             value=0.0,
             step=5.0
         )
+
         fondo_terreno = st.number_input(
             "Fondo del Terreno (m):",
             min_value=0.0,
             value=0.0,
             step=0.5
         )
+
     st.markdown('</div>', unsafe_allow_html=True)
     
-    # Botón visual de confirmación
+
+    # ==========================================
+    # BOTÓN DE CONFIRMACIÓN
+    # ==========================================
     if st.button("Guardar Datos y Continuar"):
-        st.success("¡Datos guardados correctamente en la memoria temporal del software!")
+        st.success(
+            "¡Datos guardados correctamente en la memoria temporal del software!"
+        )
