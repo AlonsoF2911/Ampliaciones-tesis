@@ -88,11 +88,9 @@ st.markdown("""
 # VARIABLES TEMPORALES PARA HABITACIONES
 # ==========================================
 
-# El Piso 1 comienza con un sector/habitación
 if "cantidad_habitaciones_piso1" not in st.session_state:
     st.session_state.cantidad_habitaciones_piso1 = 1
 
-# El Piso 2 también comenzará con un sector cuando sea activado
 if "cantidad_habitaciones_piso2" not in st.session_state:
     st.session_state.cantidad_habitaciones_piso2 = 1
 
@@ -103,10 +101,6 @@ if "cantidad_habitaciones_piso2" not in st.session_state:
 
 @st.cache_data
 def cargar_base_normativa():
-    """
-    Carga la base normativa desde el archivo Excel
-    almacenado en la misma carpeta que Principal.py.
-    """
 
     carpeta_proyecto = Path(__file__).resolve().parent
 
@@ -123,11 +117,8 @@ def cargar_base_normativa():
         sheet_name="Coeficientes_PRC"
     )
 
-    # Eliminar espacios accidentales de los nombres
-    # de las columnas
     base.columns = base.columns.str.strip()
 
-    # Columnas numéricas de la base
     columnas_numericas = [
         "Superficie_Desde_m2",
         "Superficie_Hasta_m2",
@@ -136,9 +127,6 @@ def cargar_base_normativa():
         "Coef_Ocupacion_Sobre3_Pisos"
     ]
 
-    # Convertir valores numéricos.
-    # Si existe una celda vacía o con un espacio,
-    # se transforma automáticamente en NaN.
     for columna in columnas_numericas:
 
         if columna in base.columns:
@@ -148,7 +136,6 @@ def cargar_base_normativa():
                 errors="coerce"
             )
 
-    # Limpiar columnas de texto
     columnas_texto = [
         "Zona",
         "Nombre_Zona",
@@ -178,17 +165,10 @@ def buscar_norma_residencial(
     zona,
     superficie_terreno
 ):
-    """
-    Busca automáticamente el tramo normativo
-    correspondiente a una vivienda según:
-    - Zona PRC
-    - Superficie del terreno
-    """
 
     if base is None:
         return None
 
-    # Filtrar la zona seleccionada
     datos_zona = base[
         base["Zona"].str.upper() == zona.upper()
     ].copy()
@@ -196,7 +176,6 @@ def buscar_norma_residencial(
     if datos_zona.empty:
         return None
 
-    # Solo buscamos reglas aplicables al uso residencial
     datos_residenciales = datos_zona[
         (
             datos_zona["Residencial_General"]
@@ -212,25 +191,19 @@ def buscar_norma_residencial(
     if datos_residenciales.empty:
         return None
 
-    # Ordenar los tramos desde el menor
     datos_residenciales = (
         datos_residenciales
         .sort_values("Superficie_Desde_m2")
     )
 
-    # Buscar el tramo correspondiente
     for _, fila in datos_residenciales.iterrows():
 
         desde = fila["Superficie_Desde_m2"]
         hasta = fila["Superficie_Hasta_m2"]
 
-        # Si el límite inferior está vacío,
-        # se considera desde 0
         if pd.isna(desde):
             desde = 0
 
-        # Si el límite superior está vacío,
-        # significa "en adelante"
         if pd.isna(hasta):
 
             if superficie_terreno >= desde:
@@ -249,18 +222,22 @@ def buscar_norma_residencial(
 
 
 # ==========================================
-# BARRA LATERAL (SIDEBAR) - MENÚ DE NAVEGACIÓN
+# BARRA LATERAL (SIDEBAR)
 # ==========================================
 with st.sidebar:
+
     st.markdown("### ⚙️ Panel de Navegación")
-    
-    # Este es el menú que cambiará la pantalla principal
+
     menu_seleccionado = st.radio(
         "Seleccione un módulo:",
-        ("🏠 Inicio", "🏡 Datos del Terreno")
+        (
+            "🏠 Inicio",
+            "🏡 Datos del Terreno"
+        )
     )
-    
+
     st.markdown("---")
+
     st.info(
         "Utilice este menú para navegar por las distintas "
         "etapas de la validación normativa."
@@ -268,12 +245,8 @@ with st.sidebar:
 
 
 # ==========================================
-# LÓGICA DE CAMBIO DE PANTALLAS
-# ==========================================
-
-# ------------------------------------------
 # PANTALLA 1: INICIO
-# ------------------------------------------
+# ==========================================
 if menu_seleccionado == "🏠 Inicio":
     
     # FRANJA SUPERIOR VERDE
@@ -335,10 +308,16 @@ if menu_seleccionado == "🏠 Inicio":
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown(
+        "<br>",
+        unsafe_allow_html=True
+    )
 
     # GLOSARIO
-    st.markdown("### 📚 Glosario de Conceptos Urbanísticos")
+    st.markdown(
+        "### 📚 Glosario de Conceptos Urbanísticos"
+    )
+
     st.write(
         "Haz clic en cada concepto para desplegar "
         "su definición técnica:"
@@ -347,55 +326,56 @@ if menu_seleccionado == "🏠 Inicio":
     with st.expander(
         "📐 Coeficiente de Constructibilidad"
     ):
+
         st.write(
-            "Es el factor que, multiplicado por la superficie "
-            "total del predio, determina la cantidad máxima de "
-            "metros cuadrados que se permite construir en él. "
-            "Las ampliaciones no deben sobrepasar el volumen "
-            "total permitido por este coeficiente."
+            "Es el factor que, multiplicado por la superficie total "
+            "del predio, determina la cantidad máxima de metros cuadrados "
+            "que se permite construir en él. Las ampliaciones no deben "
+            "sobrepasar el volumen total permitido por este coeficiente."
         )
 
     with st.expander(
         "📍 Coeficiente de Ocupación de Suelo"
     ):
+
         st.write(
-            "Es el porcentaje máximo de la superficie del "
-            "terreno que puede ser ocupado por la edificación "
-            "en el primer piso. Define cuánto \"patio\" o área "
-            "libre debe quedar obligatoriamente."
+            "Es el porcentaje máximo de la superficie del terreno que "
+            "puede ser ocupado por la edificación en el primer piso. "
+            "Define cuánto \"patio\" o área libre debe quedar "
+            "obligatoriamente."
         )
 
     with st.expander(
         "📏 Rasante y Distanciamiento"
     ):
+
         st.write(
-            "**Rasante:** Línea imaginaria inclinada que nace "
-            "desde los deslindes del terreno e impone una "
-            "envolvente máxima de altura para la edificación. "
-            "\n\n**Distanciamiento:** Distancia mínima que debe "
-            "existir entre la edificación y los deslindes del "
-            "predio, variando según la altura de la construcción "
-            "y si tiene o no ventanas."
+            "**Rasante:** Línea imaginaria inclinada que nace desde los "
+            "deslindes del terreno e impone una envolvente máxima de altura "
+            "para la edificación. \n\n"
+            "**Distanciamiento:** Distancia mínima que debe existir entre "
+            "la edificación y los deslindes del predio, variando según la "
+            "altura de la construcción y si tiene o no ventanas."
         )
 
     with st.expander(
         "🌡️ Zona Térmica"
     ):
+
         st.write(
-            "Clasificación geográfica que determina las "
-            "exigencias mínimas de acondicionamiento térmico "
-            "(aislación en techumbres, muros y pisos ventilados). "
-            "La comuna de San Miguel se encuentra en la "
+            "Clasificación geográfica que determina las exigencias mínimas "
+            "de acondicionamiento térmico (aislación en techumbres, muros y "
+            "pisos ventilados). La comuna de San Miguel se encuentra en la "
             "**Zona Térmica 3**, lo que exige materiales con una "
             "Transmitancia Térmica (U) específica según la OGUC."
         )
 
 
-# ------------------------------------------
+# ==========================================
 # PANTALLA 2: DATOS DEL TERRENO
-# ------------------------------------------
+# ==========================================
 elif menu_seleccionado == "🏡 Datos del Terreno":
-    
+
     st.markdown(
         "## 🏡 Ingreso de Datos del Terreno"
     )
@@ -411,6 +391,7 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
     # ==========================================
     # 1. UBICACIÓN DE LA PROPIEDAD
     # ==========================================
+
     st.markdown(
         '<div class="caja-blanca">',
         unsafe_allow_html=True
@@ -420,21 +401,12 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
         "### 📍 1. Ubicación de la Propiedad"
     )
 
-
-    # ==========================================
-    # AYUDA PARA IDENTIFICAR LA ZONA PRC
-    # ==========================================
     st.info(
         "🗺️ **¿No sabes en qué zona se encuentra tu propiedad?** "
-        "Descarga el Plano Comunal de San Miguel, identifica "
-        "la ubicación de tu inmueble y luego selecciona la "
-        "zona correspondiente."
+        "Descarga el Plano Comunal de San Miguel, identifica la "
+        "ubicación de tu inmueble y luego selecciona la zona correspondiente."
     )
 
-
-    # ==========================================
-    # PLANO COMUNAL DE SAN MIGUEL
-    # ==========================================
     carpeta_proyecto = (
         Path(__file__).resolve().parent
     )
@@ -454,14 +426,9 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
             datos_pdf = archivo_pdf.read()
 
             st.download_button(
-                label=(
-                    "📥 Descargar Plano Comunal "
-                    "de San Miguel"
-                ),
+                label="📥 Descargar Plano Comunal de San Miguel",
                 data=datos_pdf,
-                file_name=(
-                    "Plano_Comunal_San_Miguel.pdf"
-                ),
+                file_name="Plano_Comunal_San_Miguel.pdf",
                 mime="application/pdf"
             )
 
@@ -479,17 +446,13 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
     )
 
 
-    # ==========================================
-    # SELECCIÓN DE ZONA Y DIRECCIÓN
-    # ==========================================
     col1, col2 = st.columns(2)
 
 
     with col1:
 
         sector_casa = st.selectbox(
-            "Zona según Plan Regulador "
-            "Comunal de San Miguel:",
+            "Zona según Plan Regulador Comunal de San Miguel:",
             [
                 "Seleccione una zona...",
                 "ZU-1 - Comercial Preferente y Residencial",
@@ -506,9 +469,7 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
 
         direccion_casa = st.text_input(
             "Dirección o Referencia del inmueble:",
-            placeholder=(
-                "Ej: Av. El Llano Subercaseaux 1234"
-            )
+            placeholder="Ej: Av. El Llano Subercaseaux 1234"
         )
 
 
@@ -518,10 +479,10 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
     )
 
 
-
     # ==========================================
     # 2. MEDICIONES DEL TERRENO Y VIVIENDA
     # ==========================================
+
     st.markdown(
         '<div class="caja-blanca">',
         unsafe_allow_html=True
@@ -541,6 +502,7 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
     # ==========================================
     # DIMENSIONES DEL TERRENO
     # ==========================================
+
     st.markdown(
         "#### 🌳 Dimensiones del Terreno"
     )
@@ -601,6 +563,7 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
     # ==========================================
     # MEDICIÓN DE LA VIVIENDA
     # ==========================================
+
     st.markdown(
         "#### 🏠 Superficie Construida de la Vivienda"
     )
@@ -618,22 +581,19 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
 
 
     # ==========================================
-    # COLUMNA IZQUIERDA
+    # PISO 1
     # ==========================================
+
     with columna_mediciones:
 
-
-        # ==========================================
-        # PISO 1
-        # ==========================================
         st.markdown(
             "### 🏠 Piso 1"
         )
 
         st.caption(
-            "Ingrese el largo y ancho de cada habitación "
-            "o sector. Si el piso tiene una forma irregular, "
-            "puede agregar más sectores."
+            "Ingrese el largo y ancho de cada habitación o sector. "
+            "Si el piso tiene una forma irregular, puede agregar "
+            "más sectores."
         )
 
 
@@ -641,20 +601,15 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
 
 
         for i in range(
-            st.session_state
-            .cantidad_habitaciones_piso1
+            st.session_state.cantidad_habitaciones_piso1
         ):
 
             st.markdown(
                 f"**Habitación / Sector {i + 1}**"
             )
 
-            (
-                col_largo,
-                col_ancho,
-                col_area
-            ) = st.columns(
-                [1, 1, 1]
+            col_largo, col_ancho, col_area = (
+                st.columns([1, 1, 1])
             )
 
 
@@ -698,10 +653,9 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
                 )
 
 
-        (
-            botones_p1_col1,
-            botones_p1_col2
-        ) = st.columns(2)
+        botones_p1_col1, botones_p1_col2 = (
+            st.columns(2)
+        )
 
 
         with botones_p1_col1:
@@ -711,10 +665,7 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
                 key="agregar_habitacion_piso1"
             ):
 
-                (
-                    st.session_state
-                    .cantidad_habitaciones_piso1
-                ) += 1
+                st.session_state.cantidad_habitaciones_piso1 += 1
 
                 st.rerun()
 
@@ -722,8 +673,7 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
         with botones_p1_col2:
 
             if (
-                st.session_state
-                .cantidad_habitaciones_piso1
+                st.session_state.cantidad_habitaciones_piso1
                 > 1
             ):
 
@@ -732,10 +682,7 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
                     key="quitar_habitacion_piso1"
                 ):
 
-                    (
-                        st.session_state
-                        .cantidad_habitaciones_piso1
-                    ) -= 1
+                    st.session_state.cantidad_habitaciones_piso1 -= 1
 
                     st.rerun()
 
@@ -752,6 +699,7 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
         # ==========================================
         # PISO 2
         # ==========================================
+
         st.markdown(
             "### 🏘️ Piso 2"
         )
@@ -769,27 +717,22 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
         if tiene_piso2:
 
             st.caption(
-                "Ingrese el largo y ancho de cada habitación "
-                "o sector del segundo piso. Puede agregar "
-                "sectores adicionales cuando sea necesario."
+                "Ingrese el largo y ancho de cada habitación o "
+                "sector del segundo piso. Puede agregar sectores "
+                "adicionales cuando sea necesario."
             )
 
 
             for i in range(
-                st.session_state
-                .cantidad_habitaciones_piso2
+                st.session_state.cantidad_habitaciones_piso2
             ):
 
                 st.markdown(
                     f"**Habitación / Sector {i + 1}**"
                 )
 
-                (
-                    col_largo2,
-                    col_ancho2,
-                    col_area2
-                ) = st.columns(
-                    [1, 1, 1]
+                col_largo2, col_ancho2, col_area2 = (
+                    st.columns([1, 1, 1])
                 )
 
 
@@ -833,10 +776,9 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
                     )
 
 
-            (
-                botones_p2_col1,
-                botones_p2_col2
-            ) = st.columns(2)
+            botones_p2_col1, botones_p2_col2 = (
+                st.columns(2)
+            )
 
 
             with botones_p2_col1:
@@ -846,10 +788,7 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
                     key="agregar_habitacion_piso2"
                 ):
 
-                    (
-                        st.session_state
-                        .cantidad_habitaciones_piso2
-                    ) += 1
+                    st.session_state.cantidad_habitaciones_piso2 += 1
 
                     st.rerun()
 
@@ -857,8 +796,7 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
             with botones_p2_col2:
 
                 if (
-                    st.session_state
-                    .cantidad_habitaciones_piso2
+                    st.session_state.cantidad_habitaciones_piso2
                     > 1
                 ):
 
@@ -867,10 +805,7 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
                         key="quitar_habitacion_piso2"
                     ):
 
-                        (
-                            st.session_state
-                            .cantidad_habitaciones_piso2
-                        ) -= 1
+                        st.session_state.cantidad_habitaciones_piso2 -= 1
 
                         st.rerun()
 
@@ -884,16 +819,15 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
         else:
 
             st.info(
-                "Si la vivienda posee un segundo piso, "
-                "marque la casilla para ingresar sus "
-                "dimensiones."
+                "Si la vivienda posee un segundo piso, marque "
+                "la casilla para ingresar sus dimensiones."
             )
 
 
+    # ==========================================
+    # RECOMENDACIÓN DE MEDICIÓN
+    # ==========================================
 
-    # ==========================================
-    # COLUMNA DERECHA - AYUDA DE MEDICIÓN
-    # ==========================================
     with columna_recomendacion:
 
         st.info(
@@ -913,8 +847,9 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
 
 
     # ==========================================
-    # SUPERFICIE TOTAL DE LA VIVIENDA
+    # SUPERFICIE TOTAL VIVIENDA
     # ==========================================
+
     superficie_total_vivienda = (
         superficie_piso1 +
         superficie_piso2
@@ -926,11 +861,9 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
     )
 
 
-    (
-        resumen_p1,
-        resumen_p2,
-        resumen_total
-    ) = st.columns(3)
+    resumen_p1, resumen_p2, resumen_total = (
+        st.columns(3)
+    )
 
 
     with resumen_p1:
@@ -960,8 +893,8 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
     if superficie_total_vivienda > 0:
 
         st.success(
-            f"✅ La superficie construida total "
-            f"calculada de la vivienda es de "
+            f"✅ La superficie construida total calculada "
+            f"de la vivienda es de "
             f"**{superficie_total_vivienda:.2f} m²**."
         )
 
@@ -972,58 +905,259 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
     )
 
 
+    # ==========================================
+    # 3. DISTANCIAMIENTOS Y EMPLAZAMIENTO
+    # ==========================================
 
-    # ==========================================
-    # 3. VALIDACIÓN AUTOMÁTICA PRC
-    # ==========================================
     st.markdown(
         '<div class="caja-blanca">',
         unsafe_allow_html=True
     )
 
     st.markdown(
-        "### 🧾 3. Validación Automática según PRC"
+        "### 📐 3. Distanciamientos y Emplazamiento"
     )
 
     st.write(
-        "A partir de la zona seleccionada y de la "
-        "superficie del terreno, el software consulta "
-        "automáticamente la base normativa del Plan "
-        "Regulador Comunal de San Miguel."
+        "Ingrese las distancias actuales entre la vivienda y "
+        "los límites del terreno. Estos antecedentes permitirán "
+        "evaluar posteriormente las posibilidades de ampliación "
+        "hacia los deslindes del predio."
     )
 
 
-    # Intentar cargar la base normativa
+    st.info(
+        "📏 **¿Cómo realizar esta medición?** "
+        "Mida horizontalmente desde la cara exterior del muro de "
+        "la vivienda hasta el límite del terreno correspondiente. "
+        "Si la vivienda se encuentra construida directamente sobre "
+        "el deslinde, marque la opción **Adosada al deslinde**."
+    )
+
+
+    # ==========================================
+    # DESLINDE IZQUIERDO
+    # ==========================================
+
+    deslinde_col1, deslinde_col2, deslinde_col3 = (
+        st.columns(3)
+    )
+
+
+    with deslinde_col1:
+
+        st.markdown(
+            "#### ⬅️ Deslinde Izquierdo"
+        )
+
+        adosado_izquierdo = st.checkbox(
+            "Adosada al deslinde izquierdo",
+            key="adosado_izquierdo"
+        )
+
+        distancia_izquierda = st.number_input(
+            "Distancia al deslinde izquierdo (m):",
+            min_value=0.0,
+            value=0.0,
+            step=0.10,
+            format="%.2f",
+            disabled=adosado_izquierdo,
+            key="distancia_izquierda"
+        )
+
+        if adosado_izquierdo:
+            distancia_izquierda = 0.0
+
+
+    # ==========================================
+    # DESLINDE DERECHO
+    # ==========================================
+
+    with deslinde_col2:
+
+        st.markdown(
+            "#### ➡️ Deslinde Derecho"
+        )
+
+        adosado_derecho = st.checkbox(
+            "Adosada al deslinde derecho",
+            key="adosado_derecho"
+        )
+
+        distancia_derecha = st.number_input(
+            "Distancia al deslinde derecho (m):",
+            min_value=0.0,
+            value=0.0,
+            step=0.10,
+            format="%.2f",
+            disabled=adosado_derecho,
+            key="distancia_derecha"
+        )
+
+        if adosado_derecho:
+            distancia_derecha = 0.0
+
+
+    # ==========================================
+    # DESLINDE POSTERIOR
+    # ==========================================
+
+    with deslinde_col3:
+
+        st.markdown(
+            "#### ⬆️ Deslinde Posterior"
+        )
+
+        adosado_posterior = st.checkbox(
+            "Adosada al deslinde posterior",
+            key="adosado_posterior"
+        )
+
+        distancia_posterior = st.number_input(
+            "Distancia al deslinde posterior (m):",
+            min_value=0.0,
+            value=0.0,
+            step=0.10,
+            format="%.2f",
+            disabled=adosado_posterior,
+            key="distancia_posterior"
+        )
+
+        if adosado_posterior:
+            distancia_posterior = 0.0
+
+
+    st.markdown("---")
+
+
+    # ==========================================
+    # ANTEJARDÍN
+    # ==========================================
+
+    st.markdown(
+        "#### 🌿 Antejardín"
+    )
+
+    st.caption(
+        "Mida la distancia entre la línea frontal del terreno "
+        "y la parte más cercana de la vivienda."
+    )
+
+
+    ante_col1, ante_col2 = st.columns(2)
+
+
+    with ante_col1:
+
+        antejardin_actual = st.number_input(
+            "Distancia actual de antejardín (m):",
+            min_value=0.0,
+            value=0.0,
+            step=0.10,
+            format="%.2f"
+        )
+
+
+    with ante_col2:
+
+        via_frente = st.selectbox(
+            "Vía que enfrenta la propiedad:",
+            [
+                "Seleccione una opción...",
+                "Otra calle de San Miguel",
+                "Gran Avenida José Miguel Carrera",
+                "Avenida Santa Rosa",
+                "Avenida / Callejón Lo Ovalle",
+                "No estoy seguro/a"
+            ]
+        )
+
+
+    st.info(
+        "ℹ️ La exigencia normativa de antejardín puede variar "
+        "según la ubicación y la vía que enfrenta el predio. "
+        "Por este motivo, el valor ingresado corresponde por ahora "
+        "a la **medición existente**, que posteriormente será "
+        "comparada con la exigencia normativa aplicable."
+    )
+
+
+    st.markdown(
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+
+    # ==========================================
+    # VARIABLES PARA RESULTADOS NORMATIVOS
+    # ==========================================
+
+    superficie_maxima_ocupacion = None
+    superficie_maxima_construible = None
+
+    margen_primer_piso = None
+    margen_constructibilidad = None
+
+    coef_ocupacion = None
+    coef_constructibilidad = None
+
+    norma = None
+
+
+    # ==========================================
+    # 4. VALIDACIÓN AUTOMÁTICA PRC
+    # ==========================================
+
+    st.markdown(
+        '<div class="caja-blanca">',
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        "### 🧾 4. Validación Automática según PRC"
+    )
+
+    st.write(
+        "A partir de la zona seleccionada y de la superficie "
+        "del terreno, el software consulta automáticamente la "
+        "base normativa del Plan Regulador Comunal de San Miguel."
+    )
+
+
+    base_normativa = None
+    error_base = None
+
+
     try:
 
         base_normativa = cargar_base_normativa()
 
     except Exception as error:
 
-        base_normativa = None
+        error_base = error
+
+
+    if error_base is not None:
 
         st.error(
-            "❌ Ocurrió un problema al leer la base "
-            "normativa."
+            "❌ Ocurrió un problema al leer la base normativa."
         )
 
         st.caption(
-            f"Detalle técnico: {error}"
+            f"Detalle técnico: {error_base}"
         )
 
 
-    # Si el Excel no está disponible
-    if base_normativa is None:
+    elif base_normativa is None:
 
         st.warning(
             "⚠️ No se encontró el archivo "
             "`Base_Normativa_PRC_San_Miguel.xlsx`. "
-            "Verifique que se encuentre en la misma "
-            "carpeta que `Principal.py`."
+            "Verifique que se encuentre en la misma carpeta "
+            "que `Principal.py`."
         )
 
 
-    # Si todavía no selecciona una zona
     elif (
         sector_casa ==
         "Seleccione una zona..."
@@ -1035,27 +1169,23 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
         )
 
 
-    # Si todavía no ingresa dimensiones del terreno
     elif superficie_terreno <= 0:
 
         st.info(
-            "Ingrese el largo y ancho del terreno "
-            "para calcular su superficie y realizar "
-            "la validación normativa."
+            "Ingrese el largo y ancho del terreno para "
+            "calcular su superficie y realizar la "
+            "validación normativa."
         )
 
 
     else:
 
-        # Obtener código simple:
-        # "ZU-1 - Comercial..." -> "ZU-1"
         zona_codigo = (
             sector_casa
             .split(" - ")[0]
         )
 
 
-        # Buscar normas de la zona
         filas_zona = base_normativa[
             base_normativa["Zona"]
             .str.upper()
@@ -1064,15 +1194,11 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
         ]
 
 
-        # ==========================================
-        # ZONA SIN USO RESIDENCIAL GENERAL
-        # ==========================================
         if filas_zona.empty:
 
             st.warning(
-                "⚠️ No se encontraron antecedentes "
-                "normativos para esta zona en la "
-                "base de datos."
+                "⚠️ No se encontraron antecedentes normativos "
+                "para esta zona en la base de datos."
             )
 
 
@@ -1097,11 +1223,9 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
 
 
             st.warning(
-                f"⚠️ **{zona_codigo} - "
-                f"{nombre_zona}** no se encuentra "
-                f"registrada como una zona de uso "
-                f"residencial general en la base "
-                f"normativa del software."
+                f"⚠️ **{zona_codigo} - {nombre_zona}** "
+                f"no se encuentra registrada como una zona "
+                f"de uso residencial general en la base normativa."
             )
 
 
@@ -1114,17 +1238,13 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
 
 
             st.error(
-                "Para evitar entregar un resultado "
-                "incorrecto, el software no realizará "
-                "el cálculo residencial de ocupación "
-                "de suelo ni constructibilidad para "
-                "esta zona."
+                "Para evitar entregar un resultado incorrecto, "
+                "el software no realizará el cálculo residencial "
+                "de ocupación de suelo ni constructibilidad "
+                "para esta zona."
             )
 
 
-        # ==========================================
-        # ZONA CON USO RESIDENCIAL
-        # ==========================================
         else:
 
             norma = buscar_norma_residencial(
@@ -1137,10 +1257,9 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
             if norma is None:
 
                 st.warning(
-                    "⚠️ La zona admite uso residencial, "
-                    "pero la superficie ingresada no "
-                    "coincide con ningún tramo disponible "
-                    "en la base normativa."
+                    "⚠️ La zona admite uso residencial, pero "
+                    "la superficie ingresada no coincide con "
+                    "ningún tramo disponible en la base normativa."
                 )
 
 
@@ -1171,20 +1290,15 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
                 )
 
 
-                # ==========================================
-                # MOSTRAR NORMA IDENTIFICADA
-                # ==========================================
                 st.success(
                     f"✅ Norma identificada automáticamente: "
                     f"**{zona_codigo} - {nombre_zona}**"
                 )
 
 
-                (
-                    norma_col1,
-                    norma_col2,
-                    norma_col3
-                ) = st.columns(3)
+                norma_col1, norma_col2, norma_col3 = (
+                    st.columns(3)
+                )
 
 
                 with norma_col1:
@@ -1234,12 +1348,11 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
 
 
                 st.caption(
-                    "ℹ️ Como el prototipo actualmente "
-                    "considera viviendas de hasta dos pisos, "
-                    "para la ocupación de suelo se utiliza "
-                    "el coeficiente correspondiente a "
-                    "edificaciones de 1 a 3 pisos cuando "
-                    "la zona establece esa distinción."
+                    "ℹ️ Como el prototipo actualmente considera "
+                    "viviendas de hasta dos pisos, para la ocupación "
+                    "de suelo se utiliza el coeficiente correspondiente "
+                    "a edificaciones de 1 a 3 pisos cuando la zona "
+                    "establece esa distinción."
                 )
 
 
@@ -1268,6 +1381,21 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
                     )
 
 
+                    # ==========================================
+                    # RESTAS SOLICITADAS
+                    # ==========================================
+
+                    margen_primer_piso = (
+                        superficie_maxima_ocupacion -
+                        superficie_piso1
+                    )
+
+                    margen_constructibilidad = (
+                        superficie_maxima_construible -
+                        superficie_total_vivienda
+                    )
+
+
                     st.markdown(
                         "#### 🧮 Resultados Normativos"
                     )
@@ -1282,10 +1410,7 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
 
                         st.metric(
                             "Máxima ocupación de suelo",
-                            (
-                                f"{superficie_maxima_ocupacion:.2f} "
-                                "m²"
-                            )
+                            f"{superficie_maxima_ocupacion:.2f} m²"
                         )
 
                         st.caption(
@@ -1298,16 +1423,76 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
 
                         st.metric(
                             "Máxima superficie construible",
-                            (
-                                f"{superficie_maxima_construible:.2f} "
-                                "m²"
-                            )
+                            f"{superficie_maxima_construible:.2f} m²"
                         )
 
                         st.caption(
                             f"{superficie_terreno:.2f} m² "
                             f"× {coef_constructibilidad:.2f}"
                         )
+
+
+                    # ==========================================
+                    # SUPERFICIE DISPONIBLE
+                    # ==========================================
+
+                    st.markdown(
+                        "#### 🏗️ Superficie Disponible Preliminar"
+                    )
+
+
+                    disponible_col1, disponible_col2 = (
+                        st.columns(2)
+                    )
+
+
+                    with disponible_col1:
+
+                        if margen_primer_piso >= 0:
+
+                            st.success(
+                                f"✅ **Disponible en primer piso:** "
+                                f"{margen_primer_piso:.2f} m²"
+                            )
+
+                            st.caption(
+                                f"{superficie_maxima_ocupacion:.2f} m² "
+                                f"máximos − {superficie_piso1:.2f} m² "
+                                f"existentes"
+                            )
+
+                        else:
+
+                            st.error(
+                                f"❌ **La ocupación actual supera el "
+                                f"máximo en "
+                                f"{abs(margen_primer_piso):.2f} m².**"
+                            )
+
+
+                    with disponible_col2:
+
+                        if margen_constructibilidad >= 0:
+
+                            st.success(
+                                f"✅ **Constructibilidad restante:** "
+                                f"{margen_constructibilidad:.2f} m²"
+                            )
+
+                            st.caption(
+                                f"{superficie_maxima_construible:.2f} m² "
+                                f"máximos − "
+                                f"{superficie_total_vivienda:.2f} m² "
+                                f"existentes"
+                            )
+
+                        else:
+
+                            st.error(
+                                f"❌ **La superficie construida actual "
+                                f"supera la constructibilidad máxima en "
+                                f"{abs(margen_constructibilidad):.2f} m².**"
+                            )
 
 
                     # ==========================================
@@ -1321,17 +1506,7 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
                         )
 
 
-                        # ------------------------------
-                        # OCUPACIÓN DE SUELO
-                        # Se compara con Piso 1
-                        # ------------------------------
-                        diferencia_ocupacion = (
-                            superficie_maxima_ocupacion -
-                            superficie_piso1
-                        )
-
-
-                        if diferencia_ocupacion >= 0:
+                        if margen_primer_piso >= 0:
 
                             st.success(
                                 f"✅ **Ocupación de suelo:** "
@@ -1339,9 +1514,7 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
                                 f"({superficie_piso1:.2f} m²) "
                                 f"se encuentra dentro del máximo "
                                 f"preliminar permitido "
-                                f"({superficie_maxima_ocupacion:.2f} m²). "
-                                f"Existe un margen aproximado de "
-                                f"**{diferencia_ocupacion:.2f} m²**."
+                                f"({superficie_maxima_ocupacion:.2f} m²)."
                             )
 
                         else:
@@ -1350,59 +1523,39 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
                                 f"❌ **Ocupación de suelo:** "
                                 f"El Piso 1 calculado "
                                 f"({superficie_piso1:.2f} m²) "
-                                f"supera el máximo preliminar "
-                                f"permitido "
-                                f"({superficie_maxima_ocupacion:.2f} m²) "
-                                f"en aproximadamente "
-                                f"**{abs(diferencia_ocupacion):.2f} m²**."
+                                f"supera el máximo preliminar permitido "
+                                f"({superficie_maxima_ocupacion:.2f} m²)."
                             )
 
 
-                        # ------------------------------
-                        # CONSTRUCTIBILIDAD
-                        # Se compara con Piso 1 + Piso 2
-                        # ------------------------------
-                        diferencia_constructibilidad = (
-                            superficie_maxima_construible -
-                            superficie_total_vivienda
-                        )
-
-
-                        if (
-                            diferencia_constructibilidad
-                            >= 0
-                        ):
+                        if margen_constructibilidad >= 0:
 
                             st.success(
                                 f"✅ **Constructibilidad:** "
-                                f"La superficie total calculada "
-                                f"de la vivienda "
+                                f"La superficie total calculada de la "
+                                f"vivienda "
                                 f"({superficie_total_vivienda:.2f} m²) "
                                 f"se encuentra dentro del máximo "
                                 f"preliminar permitido "
-                                f"({superficie_maxima_construible:.2f} m²). "
-                                f"Existe un margen aproximado de "
-                                f"**{diferencia_constructibilidad:.2f} m²**."
+                                f"({superficie_maxima_construible:.2f} m²)."
                             )
 
                         else:
 
                             st.error(
                                 f"❌ **Constructibilidad:** "
-                                f"La superficie total calculada "
-                                f"de la vivienda "
+                                f"La superficie total calculada de la "
+                                f"vivienda "
                                 f"({superficie_total_vivienda:.2f} m²) "
-                                f"supera el máximo preliminar "
-                                f"permitido "
-                                f"({superficie_maxima_construible:.2f} m²) "
-                                f"en aproximadamente "
-                                f"**{abs(diferencia_constructibilidad):.2f} m²**."
+                                f"supera el máximo preliminar permitido "
+                                f"({superficie_maxima_construible:.2f} m²)."
                             )
 
 
                     # ==========================================
-                    # TRAZABILIDAD NORMATIVA
+                    # TRAZABILIDAD
                     # ==========================================
+
                     with st.expander(
                         "📚 Ver información normativa utilizada"
                     ):
@@ -1422,16 +1575,15 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
                         )
 
                         st.write(
-                            f"**Coeficiente de ocupación "
-                            f"de suelo:** "
+                            f"**Coeficiente de ocupación de suelo:** "
                             f"{coef_ocupacion:.2f}"
                         )
 
                         st.write(
-                            f"**Coeficiente de "
-                            f"constructibilidad:** "
+                            f"**Coeficiente de constructibilidad:** "
                             f"{coef_constructibilidad:.2f}"
                         )
+
 
                         if norma["Observacion"]:
 
@@ -1440,11 +1592,11 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
                                 f"{norma['Observacion']}"
                             )
 
+
                         if norma["Fuente"]:
 
                             st.write(
-                                f"**Fuente registrada "
-                                f"en la base normativa:** "
+                                f"**Fuente registrada en la base normativa:** "
                                 f"{norma['Fuente']}"
                             )
 
@@ -1452,9 +1604,9 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
                 else:
 
                     st.warning(
-                        "⚠️ La base normativa no contiene "
-                        "todos los coeficientes necesarios "
-                        "para realizar el cálculo automático."
+                        "⚠️ La base normativa no contiene todos "
+                        "los coeficientes necesarios para realizar "
+                        "el cálculo automático."
                     )
 
 
@@ -1464,59 +1616,183 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
     )
 
 
-
     # ==========================================
-    # RESUMEN GENERAL
+    # RESUMEN GENERAL DE LA PROPIEDAD
     # ==========================================
-    if (
-        superficie_terreno > 0
-        or
-        superficie_total_vivienda > 0
-    ):
 
-        st.markdown(
-            "### 📋 Resumen de la Propiedad"
-        )
-
-
-        resumen1, resumen2 = (
-            st.columns(2)
-        )
-
-
-        with resumen1:
-
-            st.metric(
-                "🌳 Superficie Total del Terreno",
-                f"{superficie_terreno:.2f} m²"
-            )
-
-
-        with resumen2:
-
-            st.metric(
-                "🏠 Superficie Construida Total",
-                f"{superficie_total_vivienda:.2f} m²"
-            )
-
-
-
-    # ==========================================
-    # AVISO SOBRE ALCANCE DEL RESULTADO
-    # ==========================================
-    st.info(
-        "ℹ️ **Importante:** Los resultados entregados corresponden "
-        "a una validación preliminar basada en los coeficientes "
-        "incorporados en la base normativa. La factibilidad definitiva "
-        "de una ampliación también puede depender de otras exigencias "
-        "urbanísticas y técnicas aplicables al predio."
+    st.markdown(
+        "### 📋 Resumen de la Propiedad"
     )
 
 
+    resumen_col1, resumen_col2, resumen_col3, resumen_col4 = (
+        st.columns(4)
+    )
+
+
+    with resumen_col1:
+
+        st.metric(
+            "🌳 Superficie del Terreno",
+            f"{superficie_terreno:.2f} m²"
+        )
+
+
+    with resumen_col2:
+
+        st.metric(
+            "🏠 Vivienda Construida",
+            f"{superficie_total_vivienda:.2f} m²"
+        )
+
+
+    with resumen_col3:
+
+        if margen_primer_piso is None:
+
+            st.metric(
+                "🏗️ Disponible 1er Piso",
+                "Pendiente"
+            )
+
+        elif margen_primer_piso >= 0:
+
+            st.metric(
+                "🏗️ Disponible 1er Piso",
+                f"{margen_primer_piso:.2f} m²"
+            )
+
+        else:
+
+            st.metric(
+                "🏗️ Disponible 1er Piso",
+                f"Excede {abs(margen_primer_piso):.2f} m²"
+            )
+
+
+    with resumen_col4:
+
+        if margen_constructibilidad is None:
+
+            st.metric(
+                "📐 Constructibilidad Restante",
+                "Pendiente"
+            )
+
+        elif margen_constructibilidad >= 0:
+
+            st.metric(
+                "📐 Constructibilidad Restante",
+                f"{margen_constructibilidad:.2f} m²"
+            )
+
+        else:
+
+            st.metric(
+                "📐 Constructibilidad Restante",
+                f"Excede {abs(margen_constructibilidad):.2f} m²"
+            )
+
+
+    st.markdown(
+        "#### 📍 Emplazamiento Medido"
+    )
+
+
+    emplaza_col1, emplaza_col2, emplaza_col3, emplaza_col4 = (
+        st.columns(4)
+    )
+
+
+    with emplaza_col1:
+
+        st.metric(
+            "🌿 Antejardín Actual",
+            f"{antejardin_actual:.2f} m"
+        )
+
+
+    with emplaza_col2:
+
+        if adosado_izquierdo:
+
+            st.metric(
+                "⬅️ Deslinde Izquierdo",
+                "Adosado"
+            )
+
+        else:
+
+            st.metric(
+                "⬅️ Deslinde Izquierdo",
+                f"{distancia_izquierda:.2f} m"
+            )
+
+
+    with emplaza_col3:
+
+        if adosado_derecho:
+
+            st.metric(
+                "➡️ Deslinde Derecho",
+                "Adosado"
+            )
+
+        else:
+
+            st.metric(
+                "➡️ Deslinde Derecho",
+                f"{distancia_derecha:.2f} m"
+            )
+
+
+    with emplaza_col4:
+
+        if adosado_posterior:
+
+            st.metric(
+                "⬆️ Deslinde Posterior",
+                "Adosado"
+            )
+
+        else:
+
+            st.metric(
+                "⬆️ Deslinde Posterior",
+                f"{distancia_posterior:.2f} m"
+            )
+
+
+    if (
+        via_frente !=
+        "Seleccione una opción..."
+    ):
+
+        st.caption(
+            f"🛣️ **Vía que enfrenta la propiedad:** "
+            f"{via_frente}"
+        )
+
 
     # ==========================================
-    # BOTÓN GUARDAR DATOS
+    # AVISO DE ALCANCE
     # ==========================================
+
+    st.info(
+        "ℹ️ **Importante:** La superficie disponible calculada "
+        "corresponde a un máximo preliminar derivado de los "
+        "coeficientes urbanísticos. Esto no significa necesariamente "
+        "que toda esa superficie pueda materializarse como ampliación "
+        "en cualquier sector del terreno. También deben verificarse "
+        "antejardines, distanciamientos, adosamientos, rasantes y "
+        "demás exigencias aplicables."
+    )
+
+
+    # ==========================================
+    # BOTÓN GUARDAR
+    # ==========================================
+
     if st.button(
         "Guardar Datos y Continuar"
     ):
