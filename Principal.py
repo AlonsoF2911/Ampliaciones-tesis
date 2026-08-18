@@ -82,6 +82,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+
 # ==========================================
 # BARRA LATERAL (SIDEBAR) - MENÚ DE NAVEGACIÓN
 # ==========================================
@@ -100,13 +101,13 @@ with st.sidebar:
         "de la validación normativa."
     )
 
+
 # ==========================================
 # LÓGICA DE CAMBIO DE PANTALLAS
 # ==========================================
 
 # ------------------------------------------
 # PANTALLA 1: INICIO
-# NO SE MODIFICA
 # ------------------------------------------
 if menu_seleccionado == "🏠 Inicio":
     
@@ -232,57 +233,73 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
         "Por favor, ingrese la información de la propiedad para comenzar "
         "con la validación normativa."
     )
+
     st.markdown("---")
+
 
     # ==========================================
     # 1. UBICACIÓN DE LA PROPIEDAD
     # ==========================================
     st.markdown('<div class="caja-blanca">', unsafe_allow_html=True)
+
     st.markdown("### 📍 1. Ubicación de la Propiedad")
 
-    # ------------------------------------------
-    # AYUDA PARA IDENTIFICAR LA ZONA DEL PRC
-    # ------------------------------------------
+
+    # ==========================================
+    # AYUDA PARA IDENTIFICAR LA ZONA PRC
+    # ==========================================
     st.info(
         "🗺️ **¿No sabes en qué zona se encuentra tu propiedad?** "
         "Descarga el Plano Comunal de San Miguel, identifica la ubicación "
-        "del inmueble y luego selecciona la zona correspondiente."
+        "de tu inmueble y luego selecciona la zona correspondiente."
     )
 
-    # Buscamos automáticamente el PDF dentro de la carpeta del proyecto.
-    # De esta forma funciona aunque el archivo tenga nombres como:
-    # "Plano Comunal San Miguel - copia.pdf"
-    # "Plano Comunal San Miguel - copia(1).pdf"
-    # "Plano Comunal San Miguel - copia(2).pdf"
-    
+
+    # ==========================================
+    # PLANO COMUNAL DE SAN MIGUEL
+    # ==========================================
+
+    # Ubicación de la carpeta donde se encuentra Principal.py
     carpeta_proyecto = Path(__file__).resolve().parent
-    archivos_plano = list(carpeta_proyecto.glob("Plano Comunal San Miguel*.pdf"))
 
-    if archivos_plano:
-        ruta_plano = archivos_plano[0]
+    # Nombre EXACTO del archivo PDF guardado en GitHub
+    ruta_plano = carpeta_proyecto / "Plano_Comunal_San_Miguel.pdf"
 
+
+    # Comprobamos si existe el archivo
+    if ruta_plano.exists():
+
+        # Abrimos el PDF en modo binario
         with open(ruta_plano, "rb") as archivo_pdf:
+
+            datos_pdf = archivo_pdf.read()
+
+            # Botón para descargar el Plano Comunal
             st.download_button(
                 label="📥 Descargar Plano Comunal de San Miguel",
-                data=archivo_pdf.read(),
+                data=datos_pdf,
                 file_name="Plano_Comunal_San_Miguel.pdf",
-                mime="application/pdf",
-                use_container_width=False
+                mime="application/pdf"
             )
+
     else:
+
         st.warning(
-            "⚠️ El Plano Comunal no se encuentra en la carpeta del software. "
-            "Agrega el archivo PDF del plano en la misma carpeta donde está Principal.py."
+            "⚠️ El Plano Comunal de San Miguel no se encuentra disponible."
         )
+
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # ------------------------------------------
-    # ZONA PRC + DIRECCIÓN
-    # ------------------------------------------
+
+    # ==========================================
+    # SELECCIÓN DE ZONA Y DIRECCIÓN
+    # ==========================================
     col1, col2 = st.columns(2)
 
+
     with col1:
+
         sector_casa = st.selectbox(
             "Zona según Plan Regulador Comunal de San Miguel:",
             [
@@ -296,24 +313,32 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
             ]
         )
 
+
     with col2:
+
         direccion_casa = st.text_input(
             "Dirección o Referencia del inmueble:",
             placeholder="Ej: Av. El Llano Subercaseaux 1234"
         )
 
+
     st.markdown('</div>', unsafe_allow_html=True)
+
 
 
     # ==========================================
     # 2. MEDICIONES DEL LOTE
     # ==========================================
     st.markdown('<div class="caja-blanca">', unsafe_allow_html=True)
+
     st.markdown("### 📏 2. Mediciones del Lote")
-    
+
+
     col3, col4 = st.columns(2)
-    
+
+
     with col3:
+
         superficie_terreno = st.number_input(
             "Superficie Total del Terreno (m²):",
             min_value=0.0,
@@ -321,20 +346,24 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
             step=5.0
         )
 
+
         frente_terreno = st.number_input(
             "Frente del Terreno (m):",
             min_value=0.0,
             value=0.0,
             step=0.5
         )
-        
+
+
     with col4:
+
         superficie_existente = st.number_input(
             "Superficie Construida Existente (m²):",
             min_value=0.0,
             value=0.0,
             step=5.0
         )
+
 
         fondo_terreno = st.number_input(
             "Fondo del Terreno (m):",
@@ -343,13 +372,16 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
             step=0.5
         )
 
+
     st.markdown('</div>', unsafe_allow_html=True)
-    
+
+
 
     # ==========================================
-    # BOTÓN DE CONFIRMACIÓN
+    # BOTÓN GUARDAR DATOS
     # ==========================================
     if st.button("Guardar Datos y Continuar"):
+
         st.success(
             "¡Datos guardados correctamente en la memoria temporal del software!"
         )
