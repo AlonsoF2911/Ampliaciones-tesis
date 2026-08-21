@@ -5,6 +5,8 @@ from matplotlib.patches import Rectangle, Patch
 from pathlib import Path
 from io import BytesIO
 
+# VERSION: PUZZLE_EDITABLE_2026_08_21
+
 # ==========================================
 # CONFIGURACIÓN DE LA PÁGINA
 # ==========================================
@@ -99,6 +101,10 @@ if "cantidad_modulos_ampliacion" not in st.session_state:
 
 if "propuesta_ampliacion" not in st.session_state:
     st.session_state.propuesta_ampliacion = None
+
+# Posiciones editables de los módulos en el editor tipo puzle.
+if "posiciones_puzzle" not in st.session_state:
+    st.session_state.posiciones_puzzle = {}
 
 # ==========================================
 # BASE NORMATIVA PRC SAN MIGUEL
@@ -550,6 +556,762 @@ def crear_croquis_preliminar(datos, modulos):
         buffer_png,
         format="png",
         dpi=200,
+        bbox_inches="tight"
+    )
+    buffer_png.seek(0)
+
+    return fig, validaciones, buffer_png
+
+
+
+
+# ==========================================
+# CROQUIS AUTOMÁTICO PRELIMINAR - PISO 2
+# ==========================================
+def crear_croquis_piso2(datos, modulos):
+    """
+    Crea una planta esquemática del segundo piso.
+
+    La huella del Piso 1 se utiliza únicamente como referencia y la forma
+    exacta del Piso 2 sigue siendo aproximada hasta incorporar el editor
+    gráfico tipo puzle.
+    """
+
+    ancho_terreno = float(datos.get("ancho_terreno", 0) or 0)
+    largo_terreno = float(datos.get("largo_terreno", 0) or 0)
+
+    if ancho_terreno <= 0 or largo_terreno <= 0:
+        return None, [], None
+
+    izquierda = (
+        0.0
+        if datos.get("adosado_izquierdo", False)
+        else float(datos.get("distancia_izquierda", 0) or 0)
+    )
+    derecha = (
+        0.0
+        if datos.get("adosado_derecho", False)
+        else float(datos.get("distancia_derecha", 0) or 0)
+    )
+    posterior = (
+        0.0
+        if datos.get("adosado_posterior", False)
+        else float(datos.get("distancia_posterior", 0) or 0)
+    )
+    antejardin = float(datos.get("antejardin_actual", 0) or 0)
+
+    # Huella aproximada de la vivienda en Piso 1, usada como referencia.
+    casa_x = izquierda
+    casa_y = antejardin
+    casa_ancho = ancho_terreno - izquierda - derecha
+    casa_largo = largo_terreno - antejardin - posterior
+
+    if casa_ancho <= 0 or casa_largo <= 0:
+        superficie_p1 = max(float(datos.get("superficie_piso1", 0) or 0), 1.0)
+        casa_ancho = min(ancho_terreno * 0.60, max(1.0, ancho_terreno - 0.5))
+        casa_largo = min(largo_terreno * 0.55, max(1.0, superficie_p1 / casa_ancho))
+        casa_x = max((ancho_terreno - casa_ancho) / 2, 0)
+        casa_y = min(max(antejardin, 0), max(largo_terreno - casa_largo, 0))
+
+    fig, ax = plt.subplots(figsize=(8, 10))
+
+    # Terreno como marco de referencia.
+    ax.add_patch(
+        Rectangle(
+            (0, 0),
+            ancho_terreno,
+            largo_terreno,
+            fill=False,
+            linewidth=2.2,
+            edgecolor="#263238"
+        )
+    )
+
+    # Calle / frente.
+    alto_calle = max(largo_terreno * 0.08, 1.2)
+    ax.add_patch(
+        Rectangle(
+            (0, -alto_calle),
+            ancho_terreno,
+            alto_calle,
+            facecolor="#d7dbdd",
+            edgecolor="#7b7d7d",
+            linewidth=1.0
+        )
+    )
+    ax.text(
+        ancho_terreno / 2,
+        -alto_calle / 2,
+        "CALLE / FRENTE DEL PREDIO",
+        ha="center",
+        va="center",
+        fontsize=9,
+        weight="bold"
+    )
+
+    # Huella Piso 1 como referencia, sin afirmar que sea la forma real.
+    ax.add_patch(
+        Rectangle(
+            (casa_x, casa_y),
+            casa_ancho,
+            casa_largo,
+            facecolor="#ebedef",
+            edgecolor="#5d6d7e",
+            linewidth=1.5,
+            linestyle="--",
+            alpha=0.70
+        )
+    )
+    ax.text(
+        casa_x + casa_ancho / 2,
+        casa_y + casa_largo * 0.08,
+        "HUELLA PISO 1\n(referencia)",
+        ha="center",
+        va="center",
+        fontsize=8
+    )
+
+    # Representación aproximada del Piso 2 existente usando su superficie.
+    superficie_p2_actual = float(datos.get("superficie_piso2", 0) or 0)
+    area_huella = max(casa_ancho * casa_largo, 0)
+
+    if superficie_p2_actual > 0 and area_huella > 0:
+        area_objetivo = min(superficie_p2_actual, area_huella)
+        proporcion = casa_ancho / casa_largo if casa_largo > 0 else 1.0
+
+        piso2_ancho = min(casa_ancho, max(0.5, (area_objetivo * proporcion) ** 0.5))
+        piso2_largo = area_objetivo / piso2_ancho if piso2_ancho > 0 else 0
+
+        if piso2_largo > casa_largo:
+            piso2_largo = casa_largo
+            piso2_ancho = area_objetivo / piso2_largo if piso2_largo > 0 else 0
+
+        piso2_ancho = min(piso2_ancho, casa_ancho)
+        piso2_largo = min(piso2_largo, casa_largo)
+
+        piso2_x = casa_x + (casa_ancho - piso2_ancho) / 2
+        piso2_y = casa_y + (casa_largo - piso2_largo) / 2
+
+        ax.add_patch(
+            Rectangle(
+                (piso2_x, piso2_y),
+                piso2_ancho,
+                piso2_largo,
+                facecolor="#85c1e9",
+                edgecolor="#1b4f72",
+                linewidth=1.8,
+                alpha=0.80
+            )
+        )
+        ax.text(
+            piso2_x + piso2_ancho / 2,
+            piso2_y + piso2_largo / 2,
+            f"PISO 2 ACTUAL\n{superficie_p2_actual:.2f} m² aprox.",
+            ha="center",
+            va="center",
+            fontsize=8,
+            weight="bold"
+        )
+    else:
+        ax.text(
+            casa_x + casa_ancho / 2,
+            casa_y + casa_largo / 2,
+            "SIN PISO 2 EXISTENTE\nregistrado",
+            ha="center",
+            va="center",
+            fontsize=9,
+            style="italic"
+        )
+
+    # Módulos proyectados en Piso 2. Se acomodan automáticamente sobre la
+    # huella de referencia para visualizar si caben esquemáticamente.
+    modulos_piso2 = [
+        modulo
+        for modulo in modulos
+        if modulo.get("piso") == "Piso 2"
+        and float(modulo.get("superficie", 0) or 0) > 0
+    ]
+
+    validaciones = []
+    cursor_x = casa_x
+    cursor_y = casa_y
+    alto_fila = 0.0
+    separacion = max(min(ancho_terreno, largo_terreno) * 0.01, 0.10)
+
+    for modulo in modulos_piso2:
+        numero = modulo.get("numero", "")
+        modulo_ancho = float(modulo.get("ancho", 0) or 0)
+        modulo_largo = float(modulo.get("largo", 0) or 0)
+
+        # Si el módulo no cabe horizontalmente en la fila, inicia una nueva.
+        if cursor_x + modulo_ancho > casa_x + casa_ancho + 1e-9:
+            cursor_x = casa_x
+            cursor_y += alto_fila + separacion
+            alto_fila = 0.0
+
+        x = cursor_x
+        y = cursor_y
+
+        dentro_huella = (
+            x >= casa_x - 1e-9
+            and y >= casa_y - 1e-9
+            and (x + modulo_ancho) <= casa_x + casa_ancho + 1e-9
+            and (y + modulo_largo) <= casa_y + casa_largo + 1e-9
+        )
+
+        color_modulo = "#f8c471" if dentro_huella else "#f1948a"
+        borde_modulo = "#935116" if dentro_huella else "#922b21"
+
+        ax.add_patch(
+            Rectangle(
+                (x, y),
+                modulo_ancho,
+                modulo_largo,
+                facecolor=color_modulo,
+                edgecolor=borde_modulo,
+                linewidth=1.8,
+                alpha=0.86
+            )
+        )
+
+        ax.text(
+            x + modulo_ancho / 2,
+            y + modulo_largo / 2,
+            f"AMPL. {numero}\n{modulo_ancho:.2f} × {modulo_largo:.2f} m",
+            ha="center",
+            va="center",
+            fontsize=8,
+            weight="bold"
+        )
+
+        if dentro_huella:
+            mensaje = (
+                "El módulo cabe dentro de la huella aproximada utilizada como referencia. "
+                "Debe verificarse estructuralmente su ubicación real."
+            )
+        else:
+            mensaje = (
+                "El módulo no cabe completamente dentro de la huella aproximada de referencia "
+                "con esta disposición automática."
+            )
+
+        validaciones.append(
+            {
+                "numero": numero,
+                "cumple": dentro_huella,
+                "mensaje": mensaje
+            }
+        )
+
+        cursor_x += modulo_ancho + separacion
+        alto_fila = max(alto_fila, modulo_largo)
+
+    margen_cota = max(min(ancho_terreno, largo_terreno) * 0.06, 0.6)
+
+    ax.text(
+        ancho_terreno / 2,
+        largo_terreno + margen_cota * 0.25,
+        "DESLINDE POSTERIOR",
+        ha="center",
+        va="bottom",
+        fontsize=8
+    )
+    ax.text(
+        -margen_cota * 0.15,
+        largo_terreno / 2,
+        "DESLINDE IZQUIERDO",
+        ha="right",
+        va="center",
+        rotation=90,
+        fontsize=7
+    )
+    ax.text(
+        ancho_terreno + margen_cota * 0.15,
+        largo_terreno / 2,
+        "DESLINDE DERECHO",
+        ha="left",
+        va="center",
+        rotation=90,
+        fontsize=7
+    )
+
+    leyenda = [
+        Patch(facecolor="#85c1e9", edgecolor="#1b4f72", label="Piso 2 existente (aprox.)"),
+        Patch(facecolor="#ebedef", edgecolor="#5d6d7e", label="Huella Piso 1 de referencia"),
+        Patch(facecolor="#f8c471", edgecolor="#935116", label="Ampliación Piso 2 en referencia"),
+        Patch(facecolor="#f1948a", edgecolor="#922b21", label="Módulo fuera de referencia")
+    ]
+
+    ax.legend(
+        handles=leyenda,
+        loc="upper left",
+        bbox_to_anchor=(1.02, 1.0),
+        borderaxespad=0,
+        fontsize=8
+    )
+
+    ax.set_aspect("equal", adjustable="box")
+    ax.set_xlim(-margen_cota * 2.0, ancho_terreno + margen_cota * 2.0)
+    ax.set_ylim(-alto_calle - margen_cota * 0.4, largo_terreno + margen_cota * 1.7)
+    ax.axis("off")
+    ax.set_title(
+        "Croquis Preliminar de Emplazamiento – Piso 2",
+        fontsize=13,
+        weight="bold",
+        pad=18
+    )
+
+    fig.tight_layout()
+
+    buffer_png = BytesIO()
+    fig.savefig(
+        buffer_png,
+        format="png",
+        dpi=200,
+        bbox_inches="tight"
+    )
+    buffer_png.seek(0)
+
+    return fig, validaciones, buffer_png
+
+
+
+# ==========================================
+# EDITOR TIPO PUZLE - FUNCIONES AUXILIARES
+# ==========================================
+def obtener_geometria_referencia(datos):
+    """Devuelve la geometría base utilizada por los croquis y el editor."""
+
+    ancho_terreno = float(datos.get("ancho_terreno", 0) or 0)
+    largo_terreno = float(datos.get("largo_terreno", 0) or 0)
+
+    izquierda = (
+        0.0
+        if datos.get("adosado_izquierdo", False)
+        else float(datos.get("distancia_izquierda", 0) or 0)
+    )
+    derecha = (
+        0.0
+        if datos.get("adosado_derecho", False)
+        else float(datos.get("distancia_derecha", 0) or 0)
+    )
+    posterior = (
+        0.0
+        if datos.get("adosado_posterior", False)
+        else float(datos.get("distancia_posterior", 0) or 0)
+    )
+    antejardin = float(datos.get("antejardin_actual", 0) or 0)
+
+    casa_x = izquierda
+    casa_y = antejardin
+    casa_ancho = ancho_terreno - izquierda - derecha
+    casa_largo = largo_terreno - antejardin - posterior
+
+    # Respaldo esquemático si las distancias generan una geometría imposible.
+    if casa_ancho <= 0 or casa_largo <= 0:
+        superficie_p1 = max(float(datos.get("superficie_piso1", 0) or 0), 1.0)
+        casa_ancho = min(ancho_terreno * 0.60, max(1.0, ancho_terreno - 0.5))
+        casa_largo = min(
+            largo_terreno * 0.55,
+            max(1.0, superficie_p1 / casa_ancho)
+        )
+        casa_x = max((ancho_terreno - casa_ancho) / 2, 0)
+        casa_y = min(max(antejardin, 0), max(largo_terreno - casa_largo, 0))
+
+    return {
+        "ancho_terreno": ancho_terreno,
+        "largo_terreno": largo_terreno,
+        "antejardin": antejardin,
+        "casa_x": casa_x,
+        "casa_y": casa_y,
+        "casa_ancho": casa_ancho,
+        "casa_largo": casa_largo,
+    }
+
+
+def clave_modulo_puzzle(modulo):
+    piso = str(modulo.get("piso", "Piso 1")).replace(" ", "_")
+    numero = modulo.get("numero", 0)
+    return f"{piso}_modulo_{numero}"
+
+
+def calcular_posicion_inicial_puzzle(datos, modulo):
+    """Calcula una posición inicial razonable para una pieza del puzle."""
+
+    g = obtener_geometria_referencia(datos)
+
+    numero = int(modulo.get("numero", 1) or 1)
+    piso = modulo.get("piso", "Piso 1")
+    rotado = bool(modulo.get("rotado", False))
+
+    ancho_modulo = float(modulo.get("ancho", 0) or 0)
+    largo_modulo = float(modulo.get("largo", 0) or 0)
+
+    if rotado:
+        ancho_modulo, largo_modulo = largo_modulo, ancho_modulo
+
+    separacion = max(min(g["ancho_terreno"], g["largo_terreno"]) * 0.015, 0.15)
+    desplazamiento = (numero - 1) * separacion
+
+    if piso == "Piso 2":
+        # Se inicia sobre la huella aproximada del primer piso.
+        x = g["casa_x"] + desplazamiento
+        y = g["casa_y"] + desplazamiento
+    else:
+        ubicacion = modulo.get("ubicacion", "")
+
+        if ubicacion == "Lado izquierdo de la vivienda":
+            x = g["casa_x"] - ancho_modulo
+            y = g["casa_y"] + desplazamiento
+
+        elif ubicacion == "Lado derecho de la vivienda":
+            x = g["casa_x"] + g["casa_ancho"]
+            y = g["casa_y"] + desplazamiento
+
+        elif ubicacion == "Parte posterior de la vivienda":
+            x = g["casa_x"] + desplazamiento
+            y = g["casa_y"] + g["casa_largo"]
+
+        else:
+            x = g["casa_x"]
+            y = g["casa_y"]
+
+    return {
+        "x": float(x),
+        "y": float(y),
+        "rotado": rotado,
+    }
+
+
+def asegurar_posiciones_puzzle(datos, modulos):
+    """Inicializa las piezas nuevas sin borrar las posiciones ya editadas."""
+
+    posiciones = {
+        k: dict(v)
+        for k, v in st.session_state.posiciones_puzzle.items()
+    }
+
+    for modulo in modulos:
+        if float(modulo.get("superficie", 0) or 0) <= 0:
+            continue
+
+        clave = clave_modulo_puzzle(modulo)
+
+        if clave not in posiciones:
+            posiciones[clave] = calcular_posicion_inicial_puzzle(datos, modulo)
+
+    st.session_state.posiciones_puzzle = posiciones
+
+
+def mover_pieza_puzzle(clave, dx=0.0, dy=0.0):
+    posiciones = {
+        k: dict(v)
+        for k, v in st.session_state.posiciones_puzzle.items()
+    }
+
+    if clave not in posiciones:
+        return
+
+    posiciones[clave]["x"] = float(posiciones[clave].get("x", 0)) + float(dx)
+    posiciones[clave]["y"] = float(posiciones[clave].get("y", 0)) + float(dy)
+
+    st.session_state.posiciones_puzzle = posiciones
+
+
+def rotar_pieza_puzzle(clave):
+    posiciones = {
+        k: dict(v)
+        for k, v in st.session_state.posiciones_puzzle.items()
+    }
+
+    if clave not in posiciones:
+        return
+
+    posiciones[clave]["rotado"] = not bool(posiciones[clave].get("rotado", False))
+    st.session_state.posiciones_puzzle = posiciones
+
+
+def reiniciar_pieza_puzzle(datos, modulo):
+    posiciones = {
+        k: dict(v)
+        for k, v in st.session_state.posiciones_puzzle.items()
+    }
+
+    clave = clave_modulo_puzzle(modulo)
+    posiciones[clave] = calcular_posicion_inicial_puzzle(datos, modulo)
+    st.session_state.posiciones_puzzle = posiciones
+
+
+def crear_croquis_puzzle(datos, modulos, piso, posiciones, modulo_seleccionado=None):
+    """
+    Dibuja el editor tipo puzle utilizando las posiciones almacenadas.
+
+    En Piso 1 se valida que cada pieza permanezca dentro del terreno y no
+    invada el antejardín medido. En Piso 2 se revisa que permanezca dentro
+    de la huella aproximada del Piso 1. Son validaciones preliminares.
+    """
+
+    g = obtener_geometria_referencia(datos)
+
+    if g["ancho_terreno"] <= 0 or g["largo_terreno"] <= 0:
+        return None, [], None
+
+    fig, ax = plt.subplots(figsize=(7.2, 8.5))
+
+    # Cuadrícula métrica de referencia.
+    paso_grilla = 1.0
+    x = 0.0
+    while x <= g["ancho_terreno"] + 1e-9:
+        ax.plot(
+            [x, x],
+            [0, g["largo_terreno"]],
+            linewidth=0.35,
+            alpha=0.18,
+            zorder=0
+        )
+        x += paso_grilla
+
+    y = 0.0
+    while y <= g["largo_terreno"] + 1e-9:
+        ax.plot(
+            [0, g["ancho_terreno"]],
+            [y, y],
+            linewidth=0.35,
+            alpha=0.18,
+            zorder=0
+        )
+        y += paso_grilla
+
+    # Terreno.
+    ax.add_patch(
+        Rectangle(
+            (0, 0),
+            g["ancho_terreno"],
+            g["largo_terreno"],
+            fill=False,
+            linewidth=2.2,
+            zorder=4
+        )
+    )
+
+    alto_calle = max(g["largo_terreno"] * 0.07, 1.0)
+    ax.add_patch(
+        Rectangle(
+            (0, -alto_calle),
+            g["ancho_terreno"],
+            alto_calle,
+            alpha=0.22,
+            zorder=0
+        )
+    )
+    ax.text(
+        g["ancho_terreno"] / 2,
+        -alto_calle / 2,
+        "CALLE / FRENTE",
+        ha="center",
+        va="center",
+        fontsize=8,
+        weight="bold"
+    )
+
+    if piso == "Piso 1":
+        if 0 < g["antejardin"] < g["largo_terreno"]:
+            ax.add_patch(
+                Rectangle(
+                    (0, 0),
+                    g["ancho_terreno"],
+                    g["antejardin"],
+                    alpha=0.12,
+                    zorder=0
+                )
+            )
+            ax.text(
+                g["ancho_terreno"] / 2,
+                g["antejardin"] / 2,
+                f"ANTEJARDÍN {g['antejardin']:.2f} m",
+                ha="center",
+                va="center",
+                fontsize=7
+            )
+
+        ax.add_patch(
+            Rectangle(
+                (g["casa_x"], g["casa_y"]),
+                g["casa_ancho"],
+                g["casa_largo"],
+                facecolor="#85c1e9",
+                edgecolor="#1b4f72",
+                linewidth=1.8,
+                alpha=0.70,
+                zorder=1
+            )
+        )
+        ax.text(
+            g["casa_x"] + g["casa_ancho"] / 2,
+            g["casa_y"] + g["casa_largo"] / 2,
+            "VIVIENDA ACTUAL\n(referencia)",
+            ha="center",
+            va="center",
+            fontsize=8,
+            weight="bold"
+        )
+
+    else:
+        # Huella de Piso 1 como límite de referencia del Piso 2.
+        ax.add_patch(
+            Rectangle(
+                (g["casa_x"], g["casa_y"]),
+                g["casa_ancho"],
+                g["casa_largo"],
+                facecolor="#ebedef",
+                edgecolor="#5d6d7e",
+                linewidth=1.5,
+                linestyle="--",
+                alpha=0.65,
+                zorder=1
+            )
+        )
+        ax.text(
+            g["casa_x"] + g["casa_ancho"] / 2,
+            g["casa_y"] + g["casa_largo"] * 0.08,
+            "HUELLA PISO 1 (referencia)",
+            ha="center",
+            va="center",
+            fontsize=7
+        )
+
+    validaciones = []
+
+    for modulo in modulos:
+        if modulo.get("piso") != piso:
+            continue
+
+        if float(modulo.get("superficie", 0) or 0) <= 0:
+            continue
+
+        clave = clave_modulo_puzzle(modulo)
+        posicion = posiciones.get(clave)
+
+        if posicion is None:
+            continue
+
+        rotado = bool(posicion.get("rotado", False))
+        ancho_modulo = float(modulo.get("ancho", 0) or 0)
+        largo_modulo = float(modulo.get("largo", 0) or 0)
+
+        if rotado:
+            ancho_modulo, largo_modulo = largo_modulo, ancho_modulo
+
+        px = float(posicion.get("x", 0) or 0)
+        py = float(posicion.get("y", 0) or 0)
+
+        dentro_terreno = (
+            px >= -1e-9
+            and py >= -1e-9
+            and px + ancho_modulo <= g["ancho_terreno"] + 1e-9
+            and py + largo_modulo <= g["largo_terreno"] + 1e-9
+        )
+
+        if piso == "Piso 1":
+            respeta_antejardin = py >= g["antejardin"] - 1e-9
+            cumple = dentro_terreno and respeta_antejardin
+
+            if not dentro_terreno:
+                mensaje = "La pieza sale fuera del terreno."
+            elif not respeta_antejardin:
+                mensaje = "La pieza invade el antejardín medido."
+            else:
+                mensaje = "La pieza está dentro del terreno y fuera del antejardín medido."
+
+        else:
+            dentro_huella = (
+                px >= g["casa_x"] - 1e-9
+                and py >= g["casa_y"] - 1e-9
+                and px + ancho_modulo <= g["casa_x"] + g["casa_ancho"] + 1e-9
+                and py + largo_modulo <= g["casa_y"] + g["casa_largo"] + 1e-9
+            )
+            cumple = dentro_terreno and dentro_huella
+
+            if not dentro_terreno:
+                mensaje = "La pieza sale fuera del terreno."
+            elif not dentro_huella:
+                mensaje = "La pieza sale de la huella aproximada utilizada como referencia."
+            else:
+                mensaje = "La pieza está dentro de la huella aproximada de referencia."
+
+        seleccionado = clave == modulo_seleccionado
+
+        facecolor = "#f8c471" if cumple else "#f1948a"
+        edgecolor = "#6c3483" if seleccionado else ("#935116" if cumple else "#922b21")
+        linewidth = 3.0 if seleccionado else 1.8
+
+        ax.add_patch(
+            Rectangle(
+                (px, py),
+                ancho_modulo,
+                largo_modulo,
+                facecolor=facecolor,
+                edgecolor=edgecolor,
+                linewidth=linewidth,
+                alpha=0.88,
+                zorder=3
+            )
+        )
+
+        ax.text(
+            px + ancho_modulo / 2,
+            py + largo_modulo / 2,
+            f"MÓD. {modulo.get('numero', '')}\n{ancho_modulo:.2f} × {largo_modulo:.2f} m",
+            ha="center",
+            va="center",
+            fontsize=7,
+            weight="bold",
+            zorder=5
+        )
+
+        validaciones.append(
+            {
+                "numero": modulo.get("numero", ""),
+                "clave": clave,
+                "cumple": cumple,
+                "mensaje": mensaje,
+                "x": px,
+                "y": py,
+                "ancho": ancho_modulo,
+                "largo": largo_modulo,
+                "rotado": rotado,
+            }
+        )
+
+    margen = max(min(g["ancho_terreno"], g["largo_terreno"]) * 0.05, 0.5)
+
+    ax.text(
+        g["ancho_terreno"] / 2,
+        g["largo_terreno"] + margen * 0.20,
+        "DESLINDE POSTERIOR",
+        ha="center",
+        va="bottom",
+        fontsize=7
+    )
+
+    ax.set_aspect("equal", adjustable="box")
+    ax.set_xlim(-margen, g["ancho_terreno"] + margen)
+    ax.set_ylim(-alto_calle - margen * 0.2, g["largo_terreno"] + margen)
+    ax.axis("off")
+    ax.set_title(
+        f"Editor tipo Puzle – {piso}",
+        fontsize=12,
+        weight="bold",
+        pad=12
+    )
+
+    fig.tight_layout()
+
+    buffer_png = BytesIO()
+    fig.savefig(
+        buffer_png,
+        format="png",
+        dpi=180,
         bbox_inches="tight"
     )
     buffer_png.seek(0)
@@ -1548,6 +2310,7 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
 
             # Si cambian los datos base, la propuesta anterior se invalida.
             st.session_state.propuesta_ampliacion = None
+            st.session_state.posiciones_puzzle = {}
 
             st.success(
                 "✅ **Datos guardados correctamente.** La información de la propiedad ya está disponible "
@@ -1929,16 +2692,21 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
         st.markdown("### 🗺️ 5. Croquis Preliminar de la Propuesta")
 
         st.info(
-            "🧩 **Primera versión del croquis automático:** el rectángulo exterior representa el terreno. "
-            "La vivienda actual se muestra mediante una **envolvente rectangular aproximada** calculada con "
-            "el antejardín y las distancias a los deslindes que guardaste. Los módulos de ampliación del "
-            "Piso 1 se ubican automáticamente según el lado seleccionado."
+            "🧩 El croquis representa de forma **preliminar y esquemática** el terreno, "
+            "la vivienda existente y los módulos de ampliación. Puedes cambiar entre "
+            "la planta de **Piso 1**, **Piso 2** o visualizar **Ambos** al mismo tiempo."
         )
 
         st.warning(
-            "⚠️ Este dibujo es **preliminar y esquemático**. Como todavía no hemos indicado la posición exacta "
-            "de cada sector de la vivienda existente, el contorno azul no corresponde necesariamente a la forma "
-            "real de la casa. En la siguiente etapa reemplazaremos esta aproximación por el editor tipo puzle."
+            "⚠️ Como todavía no se ha definido gráficamente la posición exacta de cada sector de la vivienda, "
+            "las plantas utilizan envolventes aproximadas. La próxima etapa será el editor tipo puzle."
+        )
+
+        # Selector solicitado para no tener que bajar entre croquis grandes.
+        vista_croquis = st.selectbox(
+            "👁️ Vista del croquis:",
+            ["Piso 1", "Piso 2", "Ambos"],
+            key="vista_croquis"
         )
 
         distancias_sin_definir = (
@@ -1963,55 +2731,426 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
             if modulo["superficie"] > 0
         ]
 
-        figura_croquis, validaciones_croquis, imagen_croquis = crear_croquis_preliminar(
+        figura_piso1, validaciones_piso1, imagen_piso1 = crear_croquis_preliminar(
             datos,
             modulos_para_croquis
         )
 
-        if figura_croquis is None:
+        figura_piso2, validaciones_piso2, imagen_piso2 = crear_croquis_piso2(
+            datos,
+            modulos_para_croquis
+        )
+
+        def mostrar_validaciones_croquis(validaciones, piso):
+            if not validaciones:
+                return
+
+            st.markdown(f"#### 🔎 Revisión geométrica automática – {piso}")
+
+            for revision in validaciones:
+                if revision["cumple"]:
+                    st.success(
+                        f"✅ **Módulo {revision['numero']}:** {revision['mensaje']}"
+                    )
+                else:
+                    st.error(
+                        f"❌ **Módulo {revision['numero']}:** {revision['mensaje']}"
+                    )
+
+        if figura_piso1 is None or figura_piso2 is None:
             st.error(
-                "❌ No fue posible generar el croquis porque faltan las dimensiones del terreno."
+                "❌ No fue posible generar los croquis porque faltan las dimensiones del terreno."
             )
-        else:
-            st.pyplot(figura_croquis)
+
+        elif vista_croquis == "Piso 1":
+            st.pyplot(figura_piso1)
 
             st.caption(
-                "Orientación del dibujo: la calle se representa en la parte inferior; "
-                "el deslinde posterior se encuentra en la parte superior."
+                "Piso 1: la calle se representa en la parte inferior y el deslinde posterior en la parte superior."
             )
 
-            if validaciones_croquis:
-                st.markdown("#### 🔎 Revisión geométrica automática del croquis")
+            mostrar_validaciones_croquis(
+                validaciones_piso1,
+                "Piso 1"
+            )
 
-                for revision in validaciones_croquis:
-                    if revision["cumple"]:
-                        st.success(
-                            f"✅ **Módulo {revision['numero']}:** {revision['mensaje']}"
-                        )
-                    else:
-                        st.error(
-                            f"❌ **Módulo {revision['numero']}:** {revision['mensaje']}"
-                        )
+            if imagen_piso1 is not None:
+                st.download_button(
+                    "📥 Descargar croquis Piso 1",
+                    data=imagen_piso1,
+                    file_name="Croquis_Preliminar_Piso_1.png",
+                    mime="image/png",
+                    key="descargar_croquis_piso1"
+                )
 
-            modulos_piso2_croquis = [
-                m for m in modulos_para_croquis if m["piso"] == "Piso 2"
+        elif vista_croquis == "Piso 2":
+            st.pyplot(figura_piso2)
+
+            st.caption(
+                "Piso 2: se muestra la huella del primer piso como referencia. "
+                "La ubicación de la ampliación es todavía esquemática y requiere revisión estructural."
+            )
+
+            modulos_piso2 = [
+                m for m in modulos_para_croquis
+                if m.get("piso") == "Piso 2"
             ]
 
-            if modulos_piso2_croquis:
+            if not modulos_piso2:
                 st.info(
-                    "🏘️ Los módulos de **Piso 2** no se dibujan dentro del plano de emplazamiento del primer piso. "
-                    "En la siguiente etapa crearemos una planta separada para poder ubicarlos sobre la vivienda existente."
+                    "🏘️ Aún no has agregado módulos de ampliación en Piso 2. "
+                    "Puedes igualmente visualizar la planta de referencia."
                 )
 
-            if imagen_croquis is not None:
+            mostrar_validaciones_croquis(
+                validaciones_piso2,
+                "Piso 2"
+            )
+
+            if imagen_piso2 is not None:
                 st.download_button(
-                    "📥 Descargar croquis preliminar en PNG",
-                    data=imagen_croquis,
-                    file_name="Croquis_Preliminar_Ampliacion.png",
-                    mime="image/png"
+                    "📥 Descargar croquis Piso 2",
+                    data=imagen_piso2,
+                    file_name="Croquis_Preliminar_Piso_2.png",
+                    mime="image/png",
+                    key="descargar_croquis_piso2"
                 )
 
-            plt.close(figura_croquis)
+        else:
+            st.caption(
+                "Vista comparativa: ambos croquis se muestran en tamaño reducido para revisarlos sin desplazarse tanto."
+            )
+
+            columna_croquis1, columna_croquis2 = st.columns(2)
+
+            with columna_croquis1:
+                st.markdown("#### 🏠 Piso 1")
+                st.pyplot(figura_piso1)
+
+                if imagen_piso1 is not None:
+                    st.download_button(
+                        "📥 Descargar Piso 1",
+                        data=imagen_piso1,
+                        file_name="Croquis_Preliminar_Piso_1.png",
+                        mime="image/png",
+                        key="descargar_croquis_piso1_ambos"
+                    )
+
+            with columna_croquis2:
+                st.markdown("#### 🏘️ Piso 2")
+                st.pyplot(figura_piso2)
+
+                if imagen_piso2 is not None:
+                    st.download_button(
+                        "📥 Descargar Piso 2",
+                        data=imagen_piso2,
+                        file_name="Croquis_Preliminar_Piso_2.png",
+                        mime="image/png",
+                        key="descargar_croquis_piso2_ambos"
+                    )
+
+            # Las validaciones se dejan debajo de la comparación para que
+            # los dos croquis permanezcan alineados y compactos.
+            if validaciones_piso1 or validaciones_piso2:
+                with st.expander("🔎 Ver revisión geométrica de ambos croquis"):
+                    if validaciones_piso1:
+                        st.markdown("**Piso 1**")
+                        for revision in validaciones_piso1:
+                            simbolo = "✅" if revision["cumple"] else "❌"
+                            st.write(
+                                f"{simbolo} Módulo {revision['numero']}: {revision['mensaje']}"
+                            )
+
+                    if validaciones_piso2:
+                        st.markdown("**Piso 2**")
+                        for revision in validaciones_piso2:
+                            simbolo = "✅" if revision["cumple"] else "❌"
+                            st.write(
+                                f"{simbolo} Módulo {revision['numero']}: {revision['mensaje']}"
+                            )
+
+        # Cerrar las figuras para no acumular memoria entre reruns.
+        if figura_piso1 is not None:
+            plt.close(figura_piso1)
+
+        if figura_piso2 is not None:
+            plt.close(figura_piso2)
+
+        st.markdown("---")
+
+        # ==========================================
+        # 6. EDITOR TIPO PUZLE
+        # ==========================================
+        st.markdown("### 🧩 6. Editor Tipo Puzle")
+
+        st.info(
+            "Ahora puedes **mover cada módulo de ampliación** dentro del terreno. "
+            "Selecciona una pieza y utiliza las flechas para desplazarla. "
+            "Cada movimiento se realiza en metros y queda guardado temporalmente "
+            "mientras trabajas en la propuesta."
+        )
+
+        st.caption(
+            "📐 El origen del dibujo se considera desde la esquina inferior izquierda del terreno: "
+            "X aumenta hacia la derecha e Y aumenta desde la calle hacia el deslinde posterior."
+        )
+
+        modulos_puzzle = [
+            modulo
+            for modulo in modulos_ampliacion
+            if float(modulo.get("superficie", 0) or 0) > 0
+        ]
+
+        if not modulos_puzzle:
+            st.warning(
+                "⚠️ Agrega al menos un módulo de ampliación para utilizar el editor tipo puzle."
+            )
+
+        else:
+            asegurar_posiciones_puzzle(
+                datos,
+                modulos_puzzle
+            )
+
+            piso_puzzle = st.radio(
+                "🏠 Piso que deseas editar:",
+                ["Piso 1", "Piso 2"],
+                horizontal=True,
+                key="piso_editor_puzzle"
+            )
+
+            modulos_piso_puzzle = [
+                modulo
+                for modulo in modulos_puzzle
+                if modulo.get("piso") == piso_puzzle
+            ]
+
+            if not modulos_piso_puzzle:
+                st.info(
+                    f"No hay módulos de ampliación definidos para **{piso_puzzle}**. "
+                    "Puedes volver arriba y agregar uno."
+                )
+
+            else:
+                numeros_disponibles = [
+                    modulo["numero"]
+                    for modulo in modulos_piso_puzzle
+                ]
+
+                numero_seleccionado = st.selectbox(
+                    "🧱 Pieza que deseas mover:",
+                    numeros_disponibles,
+                    format_func=lambda n: f"Módulo {n}",
+                    key=f"modulo_seleccionado_puzzle_{piso_puzzle}"
+                )
+
+                modulo_seleccionado = next(
+                    modulo
+                    for modulo in modulos_piso_puzzle
+                    if modulo["numero"] == numero_seleccionado
+                )
+
+                clave_seleccionada = clave_modulo_puzzle(
+                    modulo_seleccionado
+                )
+
+                posicion_actual = st.session_state.posiciones_puzzle[
+                    clave_seleccionada
+                ]
+
+                paso_movimiento = st.select_slider(
+                    "📏 Distancia de cada movimiento:",
+                    options=[0.25, 0.50, 1.00],
+                    value=0.50,
+                    format_func=lambda valor: f"{valor:.2f} m",
+                    key=f"paso_puzzle_{piso_puzzle}"
+                )
+
+                controles_puzzle, vista_puzzle = st.columns([1.0, 2.2])
+
+                with controles_puzzle:
+                    st.markdown(
+                        f"#### 🎮 Módulo {numero_seleccionado}"
+                    )
+
+                    rotado_actual = bool(
+                        posicion_actual.get("rotado", False)
+                    )
+
+                    ancho_visual = float(
+                        modulo_seleccionado.get("ancho", 0) or 0
+                    )
+                    largo_visual = float(
+                        modulo_seleccionado.get("largo", 0) or 0
+                    )
+
+                    if rotado_actual:
+                        ancho_visual, largo_visual = largo_visual, ancho_visual
+
+                    st.metric(
+                        "Posición X",
+                        f"{float(posicion_actual.get('x', 0)):.2f} m"
+                    )
+                    st.metric(
+                        "Posición Y desde la calle",
+                        f"{float(posicion_actual.get('y', 0)):.2f} m"
+                    )
+                    st.caption(
+                        f"Tamaño actual de la pieza: **{ancho_visual:.2f} × {largo_visual:.2f} m**"
+                    )
+
+                    flecha_arriba_1, flecha_arriba_2, flecha_arriba_3 = st.columns(3)
+
+                    with flecha_arriba_2:
+                        if st.button(
+                            "⬆️",
+                            key=f"puzzle_arriba_{piso_puzzle}_{numero_seleccionado}",
+                            help="Mover hacia el deslinde posterior"
+                        ):
+                            mover_pieza_puzzle(
+                                clave_seleccionada,
+                                dy=paso_movimiento
+                            )
+                            st.rerun()
+
+                    flecha_centro_1, flecha_centro_2, flecha_centro_3 = st.columns(3)
+
+                    with flecha_centro_1:
+                        if st.button(
+                            "⬅️",
+                            key=f"puzzle_izquierda_{piso_puzzle}_{numero_seleccionado}",
+                            help="Mover hacia el deslinde izquierdo"
+                        ):
+                            mover_pieza_puzzle(
+                                clave_seleccionada,
+                                dx=-paso_movimiento
+                            )
+                            st.rerun()
+
+                    with flecha_centro_2:
+                        st.markdown(
+                            "<div style='text-align:center; padding-top:8px;'>🧱</div>",
+                            unsafe_allow_html=True
+                        )
+
+                    with flecha_centro_3:
+                        if st.button(
+                            "➡️",
+                            key=f"puzzle_derecha_{piso_puzzle}_{numero_seleccionado}",
+                            help="Mover hacia el deslinde derecho"
+                        ):
+                            mover_pieza_puzzle(
+                                clave_seleccionada,
+                                dx=paso_movimiento
+                            )
+                            st.rerun()
+
+                    flecha_abajo_1, flecha_abajo_2, flecha_abajo_3 = st.columns(3)
+
+                    with flecha_abajo_2:
+                        if st.button(
+                            "⬇️",
+                            key=f"puzzle_abajo_{piso_puzzle}_{numero_seleccionado}",
+                            help="Mover hacia la calle"
+                        ):
+                            mover_pieza_puzzle(
+                                clave_seleccionada,
+                                dy=-paso_movimiento
+                            )
+                            st.rerun()
+
+                    st.markdown("---")
+
+                    boton_rotar, boton_reiniciar = st.columns(2)
+
+                    with boton_rotar:
+                        if st.button(
+                            "🔄 Rotar 90°",
+                            key=f"puzzle_rotar_{piso_puzzle}_{numero_seleccionado}"
+                        ):
+                            rotar_pieza_puzzle(
+                                clave_seleccionada
+                            )
+                            st.rerun()
+
+                    with boton_reiniciar:
+                        if st.button(
+                            "↩️ Reiniciar",
+                            key=f"puzzle_reiniciar_{piso_puzzle}_{numero_seleccionado}"
+                        ):
+                            reiniciar_pieza_puzzle(
+                                datos,
+                                modulo_seleccionado
+                            )
+                            st.rerun()
+
+                    st.caption(
+                        "El botón **Reiniciar** devuelve únicamente esta pieza a su ubicación automática inicial."
+                    )
+
+                with vista_puzzle:
+                    figura_puzzle, validaciones_puzzle, imagen_puzzle = crear_croquis_puzzle(
+                        datos,
+                        modulos_puzzle,
+                        piso_puzzle,
+                        st.session_state.posiciones_puzzle,
+                        modulo_seleccionado=clave_seleccionada
+                    )
+
+                    if figura_puzzle is None:
+                        st.error(
+                            "❌ No fue posible generar el editor porque faltan dimensiones del terreno."
+                        )
+                    else:
+                        st.pyplot(figura_puzzle)
+
+                        st.caption(
+                            "La pieza seleccionada se destaca con un borde más grueso. "
+                            "Las piezas en rojo requieren corregir su posición."
+                        )
+
+                        if imagen_puzzle is not None:
+                            st.download_button(
+                                f"📥 Descargar distribución editable – {piso_puzzle}",
+                                data=imagen_puzzle,
+                                file_name=f"Distribucion_Puzzle_{piso_puzzle.replace(' ', '_')}.png",
+                                mime="image/png",
+                                key=f"descargar_puzzle_{piso_puzzle}"
+                            )
+
+                        plt.close(figura_puzzle)
+
+                # Resultado geométrico compacto.
+                figura_revision, validaciones_revision, _ = crear_croquis_puzzle(
+                    datos,
+                    modulos_puzzle,
+                    piso_puzzle,
+                    st.session_state.posiciones_puzzle,
+                    modulo_seleccionado=clave_seleccionada
+                )
+
+                if figura_revision is not None:
+                    plt.close(figura_revision)
+
+                if validaciones_revision:
+                    with st.expander(
+                        f"🔎 Ver revisión de posiciones – {piso_puzzle}"
+                    ):
+                        for revision in validaciones_revision:
+                            simbolo = "✅" if revision["cumple"] else "❌"
+                            giro = "Sí" if revision["rotado"] else "No"
+                            st.write(
+                                f"{simbolo} **Módulo {revision['numero']}** — "
+                                f"X: {revision['x']:.2f} m | "
+                                f"Y: {revision['y']:.2f} m | "
+                                f"Rotado: {giro}. {revision['mensaje']}"
+                            )
+
+                if piso_puzzle == "Piso 2":
+                    st.warning(
+                        "⚠️ La ubicación gráfica de una ampliación en Piso 2 es solo una revisión geométrica. "
+                        "La factibilidad definitiva requiere comprobar la estructura existente y los apoyos de la ampliación."
+                    )
 
         st.markdown("---")
 
@@ -2061,7 +3200,11 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
                             float(margen_constructibilidad_proyectada)
                             if margen_constructibilidad_proyectada is not None
                             else None
-                        )
+                        ),
+                        "posiciones_puzzle": {
+                            clave: dict(valor)
+                            for clave, valor in st.session_state.posiciones_puzzle.items()
+                        }
                     }
 
                     st.success("✅ **Propuesta de ampliación guardada correctamente.**")
@@ -2099,6 +3242,7 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
 
         st.markdown("---")
         st.info(
-            "🧩 **Próxima etapa:** convertir este croquis automático en un editor tipo puzle, "
-            "para que puedas mover los bloques de la vivienda y de la ampliación dentro del terreno."
+            "✅ **Editor tipo puzle incorporado.** La siguiente mejora podrá utilizar esta distribución "
+            "para definir con mayor detalle la forma de la ampliación y, posteriormente, incorporar "
+            "la selección de muros y soluciones constructivas."
         )
