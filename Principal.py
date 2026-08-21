@@ -557,318 +557,6 @@ def crear_croquis_preliminar(datos, modulos):
     return fig, validaciones, buffer_png
 
 
-
-
-# ==========================================
-# CROQUIS AUTOMÁTICO PRELIMINAR - PISO 2
-# ==========================================
-def crear_croquis_piso2(datos, modulos):
-    """
-    Crea una planta esquemática del segundo piso.
-
-    La huella del Piso 1 se utiliza únicamente como referencia y la forma
-    exacta del Piso 2 sigue siendo aproximada hasta incorporar el editor
-    gráfico tipo puzle.
-    """
-
-    ancho_terreno = float(datos.get("ancho_terreno", 0) or 0)
-    largo_terreno = float(datos.get("largo_terreno", 0) or 0)
-
-    if ancho_terreno <= 0 or largo_terreno <= 0:
-        return None, [], None
-
-    izquierda = (
-        0.0
-        if datos.get("adosado_izquierdo", False)
-        else float(datos.get("distancia_izquierda", 0) or 0)
-    )
-    derecha = (
-        0.0
-        if datos.get("adosado_derecho", False)
-        else float(datos.get("distancia_derecha", 0) or 0)
-    )
-    posterior = (
-        0.0
-        if datos.get("adosado_posterior", False)
-        else float(datos.get("distancia_posterior", 0) or 0)
-    )
-    antejardin = float(datos.get("antejardin_actual", 0) or 0)
-
-    # Huella aproximada de la vivienda en Piso 1, usada como referencia.
-    casa_x = izquierda
-    casa_y = antejardin
-    casa_ancho = ancho_terreno - izquierda - derecha
-    casa_largo = largo_terreno - antejardin - posterior
-
-    if casa_ancho <= 0 or casa_largo <= 0:
-        superficie_p1 = max(float(datos.get("superficie_piso1", 0) or 0), 1.0)
-        casa_ancho = min(ancho_terreno * 0.60, max(1.0, ancho_terreno - 0.5))
-        casa_largo = min(largo_terreno * 0.55, max(1.0, superficie_p1 / casa_ancho))
-        casa_x = max((ancho_terreno - casa_ancho) / 2, 0)
-        casa_y = min(max(antejardin, 0), max(largo_terreno - casa_largo, 0))
-
-    fig, ax = plt.subplots(figsize=(8, 10))
-
-    # Terreno como marco de referencia.
-    ax.add_patch(
-        Rectangle(
-            (0, 0),
-            ancho_terreno,
-            largo_terreno,
-            fill=False,
-            linewidth=2.2,
-            edgecolor="#263238"
-        )
-    )
-
-    # Calle / frente.
-    alto_calle = max(largo_terreno * 0.08, 1.2)
-    ax.add_patch(
-        Rectangle(
-            (0, -alto_calle),
-            ancho_terreno,
-            alto_calle,
-            facecolor="#d7dbdd",
-            edgecolor="#7b7d7d",
-            linewidth=1.0
-        )
-    )
-    ax.text(
-        ancho_terreno / 2,
-        -alto_calle / 2,
-        "CALLE / FRENTE DEL PREDIO",
-        ha="center",
-        va="center",
-        fontsize=9,
-        weight="bold"
-    )
-
-    # Huella Piso 1 como referencia, sin afirmar que sea la forma real.
-    ax.add_patch(
-        Rectangle(
-            (casa_x, casa_y),
-            casa_ancho,
-            casa_largo,
-            facecolor="#ebedef",
-            edgecolor="#5d6d7e",
-            linewidth=1.5,
-            linestyle="--",
-            alpha=0.70
-        )
-    )
-    ax.text(
-        casa_x + casa_ancho / 2,
-        casa_y + casa_largo * 0.08,
-        "HUELLA PISO 1\n(referencia)",
-        ha="center",
-        va="center",
-        fontsize=8
-    )
-
-    # Representación aproximada del Piso 2 existente usando su superficie.
-    superficie_p2_actual = float(datos.get("superficie_piso2", 0) or 0)
-    area_huella = max(casa_ancho * casa_largo, 0)
-
-    if superficie_p2_actual > 0 and area_huella > 0:
-        area_objetivo = min(superficie_p2_actual, area_huella)
-        proporcion = casa_ancho / casa_largo if casa_largo > 0 else 1.0
-
-        piso2_ancho = min(casa_ancho, max(0.5, (area_objetivo * proporcion) ** 0.5))
-        piso2_largo = area_objetivo / piso2_ancho if piso2_ancho > 0 else 0
-
-        if piso2_largo > casa_largo:
-            piso2_largo = casa_largo
-            piso2_ancho = area_objetivo / piso2_largo if piso2_largo > 0 else 0
-
-        piso2_ancho = min(piso2_ancho, casa_ancho)
-        piso2_largo = min(piso2_largo, casa_largo)
-
-        piso2_x = casa_x + (casa_ancho - piso2_ancho) / 2
-        piso2_y = casa_y + (casa_largo - piso2_largo) / 2
-
-        ax.add_patch(
-            Rectangle(
-                (piso2_x, piso2_y),
-                piso2_ancho,
-                piso2_largo,
-                facecolor="#85c1e9",
-                edgecolor="#1b4f72",
-                linewidth=1.8,
-                alpha=0.80
-            )
-        )
-        ax.text(
-            piso2_x + piso2_ancho / 2,
-            piso2_y + piso2_largo / 2,
-            f"PISO 2 ACTUAL\n{superficie_p2_actual:.2f} m² aprox.",
-            ha="center",
-            va="center",
-            fontsize=8,
-            weight="bold"
-        )
-    else:
-        ax.text(
-            casa_x + casa_ancho / 2,
-            casa_y + casa_largo / 2,
-            "SIN PISO 2 EXISTENTE\nregistrado",
-            ha="center",
-            va="center",
-            fontsize=9,
-            style="italic"
-        )
-
-    # Módulos proyectados en Piso 2. Se acomodan automáticamente sobre la
-    # huella de referencia para visualizar si caben esquemáticamente.
-    modulos_piso2 = [
-        modulo
-        for modulo in modulos
-        if modulo.get("piso") == "Piso 2"
-        and float(modulo.get("superficie", 0) or 0) > 0
-    ]
-
-    validaciones = []
-    cursor_x = casa_x
-    cursor_y = casa_y
-    alto_fila = 0.0
-    separacion = max(min(ancho_terreno, largo_terreno) * 0.01, 0.10)
-
-    for modulo in modulos_piso2:
-        numero = modulo.get("numero", "")
-        modulo_ancho = float(modulo.get("ancho", 0) or 0)
-        modulo_largo = float(modulo.get("largo", 0) or 0)
-
-        # Si el módulo no cabe horizontalmente en la fila, inicia una nueva.
-        if cursor_x + modulo_ancho > casa_x + casa_ancho + 1e-9:
-            cursor_x = casa_x
-            cursor_y += alto_fila + separacion
-            alto_fila = 0.0
-
-        x = cursor_x
-        y = cursor_y
-
-        dentro_huella = (
-            x >= casa_x - 1e-9
-            and y >= casa_y - 1e-9
-            and (x + modulo_ancho) <= casa_x + casa_ancho + 1e-9
-            and (y + modulo_largo) <= casa_y + casa_largo + 1e-9
-        )
-
-        color_modulo = "#f8c471" if dentro_huella else "#f1948a"
-        borde_modulo = "#935116" if dentro_huella else "#922b21"
-
-        ax.add_patch(
-            Rectangle(
-                (x, y),
-                modulo_ancho,
-                modulo_largo,
-                facecolor=color_modulo,
-                edgecolor=borde_modulo,
-                linewidth=1.8,
-                alpha=0.86
-            )
-        )
-
-        ax.text(
-            x + modulo_ancho / 2,
-            y + modulo_largo / 2,
-            f"AMPL. {numero}\n{modulo_ancho:.2f} × {modulo_largo:.2f} m",
-            ha="center",
-            va="center",
-            fontsize=8,
-            weight="bold"
-        )
-
-        if dentro_huella:
-            mensaje = (
-                "El módulo cabe dentro de la huella aproximada utilizada como referencia. "
-                "Debe verificarse estructuralmente su ubicación real."
-            )
-        else:
-            mensaje = (
-                "El módulo no cabe completamente dentro de la huella aproximada de referencia "
-                "con esta disposición automática."
-            )
-
-        validaciones.append(
-            {
-                "numero": numero,
-                "cumple": dentro_huella,
-                "mensaje": mensaje
-            }
-        )
-
-        cursor_x += modulo_ancho + separacion
-        alto_fila = max(alto_fila, modulo_largo)
-
-    margen_cota = max(min(ancho_terreno, largo_terreno) * 0.06, 0.6)
-
-    ax.text(
-        ancho_terreno / 2,
-        largo_terreno + margen_cota * 0.25,
-        "DESLINDE POSTERIOR",
-        ha="center",
-        va="bottom",
-        fontsize=8
-    )
-    ax.text(
-        -margen_cota * 0.15,
-        largo_terreno / 2,
-        "DESLINDE IZQUIERDO",
-        ha="right",
-        va="center",
-        rotation=90,
-        fontsize=7
-    )
-    ax.text(
-        ancho_terreno + margen_cota * 0.15,
-        largo_terreno / 2,
-        "DESLINDE DERECHO",
-        ha="left",
-        va="center",
-        rotation=90,
-        fontsize=7
-    )
-
-    leyenda = [
-        Patch(facecolor="#85c1e9", edgecolor="#1b4f72", label="Piso 2 existente (aprox.)"),
-        Patch(facecolor="#ebedef", edgecolor="#5d6d7e", label="Huella Piso 1 de referencia"),
-        Patch(facecolor="#f8c471", edgecolor="#935116", label="Ampliación Piso 2 en referencia"),
-        Patch(facecolor="#f1948a", edgecolor="#922b21", label="Módulo fuera de referencia")
-    ]
-
-    ax.legend(
-        handles=leyenda,
-        loc="upper left",
-        bbox_to_anchor=(1.02, 1.0),
-        borderaxespad=0,
-        fontsize=8
-    )
-
-    ax.set_aspect("equal", adjustable="box")
-    ax.set_xlim(-margen_cota * 2.0, ancho_terreno + margen_cota * 2.0)
-    ax.set_ylim(-alto_calle - margen_cota * 0.4, largo_terreno + margen_cota * 1.7)
-    ax.axis("off")
-    ax.set_title(
-        "Croquis Preliminar de Emplazamiento – Piso 2",
-        fontsize=13,
-        weight="bold",
-        pad=18
-    )
-
-    fig.tight_layout()
-
-    buffer_png = BytesIO()
-    fig.savefig(
-        buffer_png,
-        format="png",
-        dpi=200,
-        bbox_inches="tight"
-    )
-    buffer_png.seek(0)
-
-    return fig, validaciones, buffer_png
-
-
 # ==========================================
 # BARRA LATERAL
 # ==========================================
@@ -2241,21 +1929,16 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
         st.markdown("### 🗺️ 5. Croquis Preliminar de la Propuesta")
 
         st.info(
-            "🧩 El croquis representa de forma **preliminar y esquemática** el terreno, "
-            "la vivienda existente y los módulos de ampliación. Puedes cambiar entre "
-            "la planta de **Piso 1**, **Piso 2** o visualizar **Ambos** al mismo tiempo."
+            "🧩 **Primera versión del croquis automático:** el rectángulo exterior representa el terreno. "
+            "La vivienda actual se muestra mediante una **envolvente rectangular aproximada** calculada con "
+            "el antejardín y las distancias a los deslindes que guardaste. Los módulos de ampliación del "
+            "Piso 1 se ubican automáticamente según el lado seleccionado."
         )
 
         st.warning(
-            "⚠️ Como todavía no se ha definido gráficamente la posición exacta de cada sector de la vivienda, "
-            "las plantas utilizan envolventes aproximadas. La próxima etapa será el editor tipo puzle."
-        )
-
-        # Selector solicitado para no tener que bajar entre croquis grandes.
-        vista_croquis = st.selectbox(
-            "👁️ Vista del croquis:",
-            ["Piso 1", "Piso 2", "Ambos"],
-            key="vista_croquis"
+            "⚠️ Este dibujo es **preliminar y esquemático**. Como todavía no hemos indicado la posición exacta "
+            "de cada sector de la vivienda existente, el contorno azul no corresponde necesariamente a la forma "
+            "real de la casa. En la siguiente etapa reemplazaremos esta aproximación por el editor tipo puzle."
         )
 
         distancias_sin_definir = (
@@ -2280,150 +1963,55 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
             if modulo["superficie"] > 0
         ]
 
-        figura_piso1, validaciones_piso1, imagen_piso1 = crear_croquis_preliminar(
+        figura_croquis, validaciones_croquis, imagen_croquis = crear_croquis_preliminar(
             datos,
             modulos_para_croquis
         )
 
-        figura_piso2, validaciones_piso2, imagen_piso2 = crear_croquis_piso2(
-            datos,
-            modulos_para_croquis
-        )
-
-        def mostrar_validaciones_croquis(validaciones, piso):
-            if not validaciones:
-                return
-
-            st.markdown(f"#### 🔎 Revisión geométrica automática – {piso}")
-
-            for revision in validaciones:
-                if revision["cumple"]:
-                    st.success(
-                        f"✅ **Módulo {revision['numero']}:** {revision['mensaje']}"
-                    )
-                else:
-                    st.error(
-                        f"❌ **Módulo {revision['numero']}:** {revision['mensaje']}"
-                    )
-
-        if figura_piso1 is None or figura_piso2 is None:
+        if figura_croquis is None:
             st.error(
-                "❌ No fue posible generar los croquis porque faltan las dimensiones del terreno."
+                "❌ No fue posible generar el croquis porque faltan las dimensiones del terreno."
             )
-
-        elif vista_croquis == "Piso 1":
-            st.pyplot(figura_piso1)
+        else:
+            st.pyplot(figura_croquis)
 
             st.caption(
-                "Piso 1: la calle se representa en la parte inferior y el deslinde posterior en la parte superior."
+                "Orientación del dibujo: la calle se representa en la parte inferior; "
+                "el deslinde posterior se encuentra en la parte superior."
             )
 
-            mostrar_validaciones_croquis(
-                validaciones_piso1,
-                "Piso 1"
-            )
+            if validaciones_croquis:
+                st.markdown("#### 🔎 Revisión geométrica automática del croquis")
 
-            if imagen_piso1 is not None:
-                st.download_button(
-                    "📥 Descargar croquis Piso 1",
-                    data=imagen_piso1,
-                    file_name="Croquis_Preliminar_Piso_1.png",
-                    mime="image/png",
-                    key="descargar_croquis_piso1"
-                )
+                for revision in validaciones_croquis:
+                    if revision["cumple"]:
+                        st.success(
+                            f"✅ **Módulo {revision['numero']}:** {revision['mensaje']}"
+                        )
+                    else:
+                        st.error(
+                            f"❌ **Módulo {revision['numero']}:** {revision['mensaje']}"
+                        )
 
-        elif vista_croquis == "Piso 2":
-            st.pyplot(figura_piso2)
-
-            st.caption(
-                "Piso 2: se muestra la huella del primer piso como referencia. "
-                "La ubicación de la ampliación es todavía esquemática y requiere revisión estructural."
-            )
-
-            modulos_piso2 = [
-                m for m in modulos_para_croquis
-                if m.get("piso") == "Piso 2"
+            modulos_piso2_croquis = [
+                m for m in modulos_para_croquis if m["piso"] == "Piso 2"
             ]
 
-            if not modulos_piso2:
+            if modulos_piso2_croquis:
                 st.info(
-                    "🏘️ Aún no has agregado módulos de ampliación en Piso 2. "
-                    "Puedes igualmente visualizar la planta de referencia."
+                    "🏘️ Los módulos de **Piso 2** no se dibujan dentro del plano de emplazamiento del primer piso. "
+                    "En la siguiente etapa crearemos una planta separada para poder ubicarlos sobre la vivienda existente."
                 )
 
-            mostrar_validaciones_croquis(
-                validaciones_piso2,
-                "Piso 2"
-            )
-
-            if imagen_piso2 is not None:
+            if imagen_croquis is not None:
                 st.download_button(
-                    "📥 Descargar croquis Piso 2",
-                    data=imagen_piso2,
-                    file_name="Croquis_Preliminar_Piso_2.png",
-                    mime="image/png",
-                    key="descargar_croquis_piso2"
+                    "📥 Descargar croquis preliminar en PNG",
+                    data=imagen_croquis,
+                    file_name="Croquis_Preliminar_Ampliacion.png",
+                    mime="image/png"
                 )
 
-        else:
-            st.caption(
-                "Vista comparativa: ambos croquis se muestran en tamaño reducido para revisarlos sin desplazarse tanto."
-            )
-
-            columna_croquis1, columna_croquis2 = st.columns(2)
-
-            with columna_croquis1:
-                st.markdown("#### 🏠 Piso 1")
-                st.pyplot(figura_piso1)
-
-                if imagen_piso1 is not None:
-                    st.download_button(
-                        "📥 Descargar Piso 1",
-                        data=imagen_piso1,
-                        file_name="Croquis_Preliminar_Piso_1.png",
-                        mime="image/png",
-                        key="descargar_croquis_piso1_ambos"
-                    )
-
-            with columna_croquis2:
-                st.markdown("#### 🏘️ Piso 2")
-                st.pyplot(figura_piso2)
-
-                if imagen_piso2 is not None:
-                    st.download_button(
-                        "📥 Descargar Piso 2",
-                        data=imagen_piso2,
-                        file_name="Croquis_Preliminar_Piso_2.png",
-                        mime="image/png",
-                        key="descargar_croquis_piso2_ambos"
-                    )
-
-            # Las validaciones se dejan debajo de la comparación para que
-            # los dos croquis permanezcan alineados y compactos.
-            if validaciones_piso1 or validaciones_piso2:
-                with st.expander("🔎 Ver revisión geométrica de ambos croquis"):
-                    if validaciones_piso1:
-                        st.markdown("**Piso 1**")
-                        for revision in validaciones_piso1:
-                            simbolo = "✅" if revision["cumple"] else "❌"
-                            st.write(
-                                f"{simbolo} Módulo {revision['numero']}: {revision['mensaje']}"
-                            )
-
-                    if validaciones_piso2:
-                        st.markdown("**Piso 2**")
-                        for revision in validaciones_piso2:
-                            simbolo = "✅" if revision["cumple"] else "❌"
-                            st.write(
-                                f"{simbolo} Módulo {revision['numero']}: {revision['mensaje']}"
-                            )
-
-        # Cerrar las figuras para no acumular memoria entre reruns.
-        if figura_piso1 is not None:
-            plt.close(figura_piso1)
-
-        if figura_piso2 is not None:
-            plt.close(figura_piso2)
+            plt.close(figura_croquis)
 
         st.markdown("---")
 
