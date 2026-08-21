@@ -5,7 +5,7 @@ from matplotlib.patches import Rectangle, Patch
 from pathlib import Path
 from io import BytesIO
 
-# VERSION: PUZZLE_EDITABLE_2026_08_21
+# VERSION: PUZZLE_VIVIENDA_MOVIBLE_MAGNETICO_2026_08_21
 
 # ==========================================
 # CONFIGURACIÓN DE LA PÁGINA
@@ -105,6 +105,10 @@ if "propuesta_ampliacion" not in st.session_state:
 # Posiciones editables de los módulos en el editor tipo puzle.
 if "posiciones_puzzle" not in st.session_state:
     st.session_state.posiciones_puzzle = {}
+
+# Posiciones editables de los sectores de la vivienda existente.
+if "posiciones_vivienda" not in st.session_state:
+    st.session_state.posiciones_vivienda = {}
 
 # ==========================================
 # BASE NORMATIVA PRC SAN MIGUEL
@@ -907,7 +911,6 @@ def obtener_geometria_referencia(datos):
     casa_ancho = ancho_terreno - izquierda - derecha
     casa_largo = largo_terreno - antejardin - posterior
 
-    # Respaldo esquemático si las distancias generan una geometría imposible.
     if casa_ancho <= 0 or casa_largo <= 0:
         superficie_p1 = max(float(datos.get("superficie_piso1", 0) or 0), 1.0)
         casa_ancho = min(ancho_terreno * 0.60, max(1.0, ancho_terreno - 0.5))
@@ -932,11 +935,17 @@ def obtener_geometria_referencia(datos):
 def clave_modulo_puzzle(modulo):
     piso = str(modulo.get("piso", "Piso 1")).replace(" ", "_")
     numero = modulo.get("numero", 0)
-    return f"{piso}_modulo_{numero}"
+    return f"ampliacion_{piso}_modulo_{numero}"
+
+
+def clave_sector_vivienda(piso, sector):
+    piso_clave = str(piso).replace(" ", "_")
+    numero = sector.get("numero", 0)
+    return f"vivienda_{piso_clave}_sector_{numero}"
 
 
 def calcular_posicion_inicial_puzzle(datos, modulo):
-    """Calcula una posición inicial razonable para una pieza del puzle."""
+    """Calcula una posición inicial razonable para una ampliación."""
 
     g = obtener_geometria_referencia(datos)
 
@@ -954,7 +963,6 @@ def calcular_posicion_inicial_puzzle(datos, modulo):
     desplazamiento = (numero - 1) * separacion
 
     if piso == "Piso 2":
-        # Se inicia sobre la huella aproximada del primer piso.
         x = g["casa_x"] + desplazamiento
         y = g["casa_y"] + desplazamiento
     else:
@@ -983,8 +991,58 @@ def calcular_posicion_inicial_puzzle(datos, modulo):
     }
 
 
+def calcular_posiciones_iniciales_vivienda(datos, piso):
+    """
+    Distribuye los sectores existentes inicialmente dentro de la envolvente
+    aproximada. Luego el usuario puede moverlos para reproducir la forma real.
+    """
+
+    g = obtener_geometria_referencia(datos)
+    clave_lista = "sectores_piso1" if piso == "Piso 1" else "sectores_piso2"
+    sectores = [
+        s for s in datos.get(clave_lista, [])
+        if float(s.get("superficie", 0) or 0) > 0
+    ]
+
+    posiciones = {}
+    cursor_x = g["casa_x"]
+    cursor_y = g["casa_y"]
+    alto_fila = 0.0
+    separacion = 0.0
+
+    for sector in sectores:
+        ancho = float(sector.get("ancho", 0) or 0)
+        largo = float(sector.get("largo", 0) or 0)
+
+        if ancho <= 0 or largo <= 0:
+            continue
+
+        if (
+            cursor_x > g["casa_x"]
+            and cursor_x + ancho > g["casa_x"] + g["casa_ancho"] + 1e-9
+        ):
+            cursor_x = g["casa_x"]
+            cursor_y += alto_fila + separacion
+            alto_fila = 0.0
+
+        if cursor_y + largo > g["largo_terreno"]:
+            cursor_y = max(g["casa_y"], g["largo_terreno"] - largo)
+
+        clave = clave_sector_vivienda(piso, sector)
+        posiciones[clave] = {
+            "x": float(cursor_x),
+            "y": float(cursor_y),
+            "rotado": False,
+        }
+
+        cursor_x += ancho + separacion
+        alto_fila = max(alto_fila, largo)
+
+    return posiciones
+
+
 def asegurar_posiciones_puzzle(datos, modulos):
-    """Inicializa las piezas nuevas sin borrar las posiciones ya editadas."""
+    """Inicializa ampliaciones nuevas sin borrar posiciones ya editadas."""
 
     posiciones = {
         k: dict(v)
@@ -1003,10 +1061,106 @@ def asegurar_posiciones_puzzle(datos, modulos):
     st.session_state.posiciones_puzzle = posiciones
 
 
-def mover_pieza_puzzle(clave, dx=0.0, dy=0.0):
+def asegurar_posiciones_vivienda(datos):
+    """Inicializa sectores existentes de ambos pisos sin borrar cambios."""
+
     posiciones = {
         k: dict(v)
-        for k, v in st.session_state.posiciones_puzzle.items()
+        for k, v in st.session_state.posiciones_vivienda.items()
+    }
+
+    for piso in ["Piso 1", "Piso 2"]:
+        iniciales = calcular_posiciones_iniciales_vivienda(datos, piso)
+        for clave, valor in iniciales.items():
+            if clave not in posiciones:
+                posiciones[clave] = valor
+
+    st.session_state.posiciones_vivienda = posiciones
+
+
+def dimensiones_pieza(objeto, posicion):
+    ancho = float(objeto.get("ancho", 0) or 0)
+    largo = float(objeto.get("largo", 0) or 0)
+
+    if bool(posicion.get("rotado", False)):
+        ancho, largo = largo, ancho
+
+    return ancho, largo
+
+
+def construir_lista_piezas(datos, modulos, piso):
+    """Construye una lista común de vivienda existente y ampliaciones."""
+
+    piezas = []
+    clave_lista = "sectores_piso1" if piso == "Piso 1" else "sectores_piso2"
+
+    for sector in datos.get(clave_lista, []):
+        if float(sector.get("superficie", 0) or 0) <= 0:
+            continue
+
+        clave = clave_sector_vivienda(piso, sector)
+        posicion = st.session_state.posiciones_vivienda.get(clave)
+        if posicion is None:
+            continue
+
+        ancho, largo = dimensiones_pieza(sector, posicion)
+        piezas.append({
+            "clave": clave,
+            "tipo": "vivienda",
+            "numero": sector.get("numero", ""),
+            "piso": piso,
+            "objeto": sector,
+            "x": float(posicion.get("x", 0) or 0),
+            "y": float(posicion.get("y", 0) or 0),
+            "ancho": ancho,
+            "largo": largo,
+            "rotado": bool(posicion.get("rotado", False)),
+        })
+
+    for modulo in modulos:
+        if modulo.get("piso") != piso:
+            continue
+        if float(modulo.get("superficie", 0) or 0) <= 0:
+            continue
+
+        clave = clave_modulo_puzzle(modulo)
+        posicion = st.session_state.posiciones_puzzle.get(clave)
+        if posicion is None:
+            continue
+
+        ancho, largo = dimensiones_pieza(modulo, posicion)
+        piezas.append({
+            "clave": clave,
+            "tipo": "ampliacion",
+            "numero": modulo.get("numero", ""),
+            "piso": piso,
+            "objeto": modulo,
+            "x": float(posicion.get("x", 0) or 0),
+            "y": float(posicion.get("y", 0) or 0),
+            "ancho": ancho,
+            "largo": largo,
+            "rotado": bool(posicion.get("rotado", False)),
+        })
+
+    return piezas
+
+
+def rectangulos_superpuestos(a, b, tolerancia=1e-6):
+    """True cuando dos piezas tienen un área común real; tocar bordes no cuenta."""
+
+    return not (
+        a["x"] + a["ancho"] <= b["x"] + tolerancia
+        or b["x"] + b["ancho"] <= a["x"] + tolerancia
+        or a["y"] + a["largo"] <= b["y"] + tolerancia
+        or b["y"] + b["largo"] <= a["y"] + tolerancia
+    )
+
+
+def mover_pieza_unificada(clave, tipo, dx=0.0, dy=0.0):
+    nombre_estado = "posiciones_vivienda" if tipo == "vivienda" else "posiciones_puzzle"
+    posiciones = {
+        k: dict(v)
+        for k, v in st.session_state[nombre_estado].items()
     }
 
     if clave not in posiciones:
@@ -1014,41 +1168,241 @@ def mover_pieza_puzzle(clave, dx=0.0, dy=0.0):
 
     posiciones[clave]["x"] = float(posiciones[clave].get("x", 0)) + float(dx)
     posiciones[clave]["y"] = float(posiciones[clave].get("y", 0)) + float(dy)
+    st.session_state[nombre_estado] = posiciones
 
-    st.session_state.posiciones_puzzle = posiciones
 
-
-def rotar_pieza_puzzle(clave):
+def rotar_pieza_unificada(clave, tipo):
+    nombre_estado = "posiciones_vivienda" if tipo == "vivienda" else "posiciones_puzzle"
     posiciones = {
         k: dict(v)
-        for k, v in st.session_state.posiciones_puzzle.items()
+        for k, v in st.session_state[nombre_estado].items()
     }
 
     if clave not in posiciones:
         return
 
     posiciones[clave]["rotado"] = not bool(posiciones[clave].get("rotado", False))
-    st.session_state.posiciones_puzzle = posiciones
+    st.session_state[nombre_estado] = posiciones
 
 
-def reiniciar_pieza_puzzle(datos, modulo):
+def reiniciar_pieza_unificada(datos, objeto, piso, tipo):
+    if tipo == "ampliacion":
+        clave = clave_modulo_puzzle(objeto)
+        posiciones = {
+            k: dict(v)
+            for k, v in st.session_state.posiciones_puzzle.items()
+        }
+        posiciones[clave] = calcular_posicion_inicial_puzzle(datos, objeto)
+        st.session_state.posiciones_puzzle = posiciones
+    else:
+        clave = clave_sector_vivienda(piso, objeto)
+        iniciales = calcular_posiciones_iniciales_vivienda(datos, piso)
+        if clave in iniciales:
+            posiciones = {
+                k: dict(v)
+                for k, v in st.session_state.posiciones_vivienda.items()
+            }
+            posiciones[clave] = iniciales[clave]
+            st.session_state.posiciones_vivienda = posiciones
+
+
+def reiniciar_piso_vivienda(datos, piso):
+    iniciales = calcular_posiciones_iniciales_vivienda(datos, piso)
     posiciones = {
         k: dict(v)
-        for k, v in st.session_state.posiciones_puzzle.items()
+        for k, v in st.session_state.posiciones_vivienda.items()
     }
 
-    clave = clave_modulo_puzzle(modulo)
-    posiciones[clave] = calcular_posicion_inicial_puzzle(datos, modulo)
-    st.session_state.posiciones_puzzle = posiciones
+    prefijo = f"vivienda_{piso.replace(' ', '_')}_sector_"
+    posiciones = {
+        k: v for k, v in posiciones.items()
+        if not k.startswith(prefijo)
+    }
+    posiciones.update(iniciales)
+    st.session_state.posiciones_vivienda = posiciones
 
 
-def crear_croquis_puzzle(datos, modulos, piso, posiciones, modulo_seleccionado=None):
+def pieza_dentro_terreno(pieza, g):
+    return (
+        pieza["x"] >= -1e-9
+        and pieza["y"] >= -1e-9
+        and pieza["x"] + pieza["ancho"] <= g["ancho_terreno"] + 1e-9
+        and pieza["y"] + pieza["largo"] <= g["largo_terreno"] + 1e-9
+    )
+
+
+def aplicar_encaje_magnetico(datos, modulos, piso, clave, tipo, umbral=0.35):
     """
-    Dibuja el editor tipo puzle utilizando las posiciones almacenadas.
+    Encaja una pieza con bordes del terreno, antejardín o piezas cercanas.
+    El objetivo es que dos rectángulos puedan quedar exactamente lado a lado.
+    """
 
-    En Piso 1 se valida que cada pieza permanezca dentro del terreno y no
-    invada el antejardín medido. En Piso 2 se revisa que permanezca dentro
-    de la huella aproximada del Piso 1. Son validaciones preliminares.
+    g = obtener_geometria_referencia(datos)
+    piezas = construir_lista_piezas(datos, modulos, piso)
+    seleccionada = next((p for p in piezas if p["clave"] == clave), None)
+
+    if seleccionada is None:
+        return False
+
+    actual_x = seleccionada["x"]
+    actual_y = seleccionada["y"]
+    w = seleccionada["ancho"]
+    h = seleccionada["largo"]
+
+    candidatos = []
+
+    # Bordes útiles del terreno y línea de antejardín.
+    for cx in [0.0, g["ancho_terreno"] - w]:
+        candidatos.append((cx, actual_y, "borde del terreno"))
+
+    limites_y = [0.0, g["largo_terreno"] - h]
+    if piso == "Piso 1":
+        limites_y.append(g["antejardin"])
+
+    for cy in limites_y:
+        candidatos.append((actual_x, cy, "línea de referencia"))
+
+    # Encaje lado a lado y alineación de bordes con todas las otras piezas.
+    for otra in piezas:
+        if otra["clave"] == clave:
+            continue
+
+        ox, oy = otra["x"], otra["y"]
+        ow, oh = otra["ancho"], otra["largo"]
+
+        alineaciones_y = [actual_y, oy, oy + oh - h]
+        alineaciones_x = [actual_x, ox, ox + ow - w]
+
+        for cy in alineaciones_y:
+            candidatos.append((ox - w, cy, f"lado izquierdo de otra pieza"))
+            candidatos.append((ox + ow, cy, f"lado derecho de otra pieza"))
+
+        for cx in alineaciones_x:
+            candidatos.append((cx, oy - h, f"debajo de otra pieza"))
+            candidatos.append((cx, oy + oh, f"sobre otra pieza"))
+
+    mejor = None
+    mejor_distancia = None
+
+    for cx, cy, motivo in candidatos:
+        dx = cx - actual_x
+        dy = cy - actual_y
+
+        if max(abs(dx), abs(dy)) > umbral + 1e-9:
+            continue
+
+        candidata = dict(seleccionada)
+        candidata["x"] = cx
+        candidata["y"] = cy
+
+        if not pieza_dentro_terreno(candidata, g):
+            continue
+
+        if tipo == "ampliacion" and piso == "Piso 1" and cy < g["antejardin"] - 1e-9:
+            continue
+
+        # No encajar en una posición que se monte sobre otra pieza.
+        colision = False
+        for otra in piezas:
+            if otra["clave"] == clave:
+                continue
+            if rectangulos_superpuestos(candidata, otra):
+                colision = True
+                break
+
+        if colision:
+            continue
+
+        distancia = (dx ** 2 + dy ** 2) ** 0.5
+        if mejor_distancia is None or distancia < mejor_distancia:
+            mejor = (cx, cy, motivo)
+            mejor_distancia = distancia
+
+    if mejor is None:
+        return False
+
+    nombre_estado = "posiciones_vivienda" if tipo == "vivienda" else "posiciones_puzzle"
+    posiciones = {
+        k: dict(v)
+        for k, v in st.session_state[nombre_estado].items()
+    }
+    posiciones[clave]["x"] = float(mejor[0])
+    posiciones[clave]["y"] = float(mejor[1])
+    st.session_state[nombre_estado] = posiciones
+    return True
+
+
+def validar_piezas_puzzle(datos, modulos, piso):
+    g = obtener_geometria_referencia(datos)
+    piezas = construir_lista_piezas(datos, modulos, piso)
+    resultados = []
+
+    for pieza in piezas:
+        errores = []
+        avisos = []
+
+        if not pieza_dentro_terreno(pieza, g):
+            errores.append("sale fuera del terreno")
+
+        if pieza["tipo"] == "ampliacion" and piso == "Piso 1":
+            if pieza["y"] < g["antejardin"] - 1e-9:
+                errores.append("invade el antejardín medido")
+
+        if pieza["tipo"] == "ampliacion" and piso == "Piso 2":
+            dentro_huella_referencia = (
+                pieza["x"] >= g["casa_x"] - 1e-9
+                and pieza["y"] >= g["casa_y"] - 1e-9
+                and pieza["x"] + pieza["ancho"] <= g["casa_x"] + g["casa_ancho"] + 1e-9
+                and pieza["y"] + pieza["largo"] <= g["casa_y"] + g["casa_largo"] + 1e-9
+            )
+            if not dentro_huella_referencia:
+                avisos.append(
+                    "se proyecta fuera de la huella aproximada del Piso 1; requiere revisión estructural"
+                )
+
+        superposiciones = []
+        for otra in piezas:
+            if otra["clave"] == pieza["clave"]:
+                continue
+            if rectangulos_superpuestos(pieza, otra):
+                etiqueta = (
+                    f"sector existente {otra['numero']}"
+                    if otra["tipo"] == "vivienda"
+                    else f"módulo de ampliación {otra['numero']}"
+                )
+                superposiciones.append(etiqueta)
+
+        if superposiciones:
+            errores.append("se superpone con " + ", ".join(sorted(set(superposiciones))))
+
+        if errores:
+            nivel = "error"
+            mensaje = "La pieza " + "; ".join(errores) + "."
+        elif avisos:
+            nivel = "warning"
+            mensaje = "La pieza está dentro del terreno, pero " + "; ".join(avisos) + "."
+        else:
+            nivel = "ok"
+            if pieza["tipo"] == "vivienda":
+                mensaje = "Sector de vivienda existente ubicado dentro del terreno sin superposición."
+            else:
+                mensaje = "Módulo de ampliación ubicado sin superposición y dentro de los límites preliminares."
+
+        resultados.append({
+            **pieza,
+            "nivel": nivel,
+            "cumple": nivel != "error",
+            "mensaje": mensaje,
+        })
+
+    return resultados
+
+
+def crear_croquis_puzzle(datos, modulos, piso, modulo_seleccionado=None):
+    """
+    Dibuja vivienda existente y futura ampliación usando posiciones editables.
+    En Piso 2 muestra el Piso 1 como huella de referencia, pero permite ubicar
+    libremente los sectores ya construidos del segundo piso.
     """
 
     g = obtener_geometria_referencia(datos)
@@ -1058,31 +1412,18 @@ def crear_croquis_puzzle(datos, modulos, piso, posiciones, modulo_seleccionado=N
 
     fig, ax = plt.subplots(figsize=(7.2, 8.5))
 
-    # Cuadrícula métrica de referencia.
+    # Cuadrícula métrica.
     paso_grilla = 1.0
     x = 0.0
     while x <= g["ancho_terreno"] + 1e-9:
-        ax.plot(
-            [x, x],
-            [0, g["largo_terreno"]],
-            linewidth=0.35,
-            alpha=0.18,
-            zorder=0
-        )
+        ax.plot([x, x], [0, g["largo_terreno"]], linewidth=0.35, alpha=0.18, zorder=0)
         x += paso_grilla
 
     y = 0.0
     while y <= g["largo_terreno"] + 1e-9:
-        ax.plot(
-            [0, g["ancho_terreno"]],
-            [y, y],
-            linewidth=0.35,
-            alpha=0.18,
-            zorder=0
-        )
+        ax.plot([0, g["ancho_terreno"]], [y, y], linewidth=0.35, alpha=0.18, zorder=0)
         y += paso_grilla
 
-    # Terreno.
     ax.add_patch(
         Rectangle(
             (0, 0),
@@ -1090,7 +1431,7 @@ def crear_croquis_puzzle(datos, modulos, piso, posiciones, modulo_seleccionado=N
             g["largo_terreno"],
             fill=False,
             linewidth=2.2,
-            zorder=4
+            zorder=6
         )
     )
 
@@ -1114,174 +1455,123 @@ def crear_croquis_puzzle(datos, modulos, piso, posiciones, modulo_seleccionado=N
         weight="bold"
     )
 
-    if piso == "Piso 1":
-        if 0 < g["antejardin"] < g["largo_terreno"]:
-            ax.add_patch(
-                Rectangle(
-                    (0, 0),
-                    g["ancho_terreno"],
-                    g["antejardin"],
-                    alpha=0.12,
-                    zorder=0
-                )
-            )
-            ax.text(
-                g["ancho_terreno"] / 2,
-                g["antejardin"] / 2,
-                f"ANTEJARDÍN {g['antejardin']:.2f} m",
-                ha="center",
-                va="center",
-                fontsize=7
-            )
-
+    if piso == "Piso 1" and 0 < g["antejardin"] < g["largo_terreno"]:
         ax.add_patch(
             Rectangle(
-                (g["casa_x"], g["casa_y"]),
-                g["casa_ancho"],
-                g["casa_largo"],
-                facecolor="#85c1e9",
-                edgecolor="#1b4f72",
-                linewidth=1.8,
-                alpha=0.70,
-                zorder=1
+                (0, 0),
+                g["ancho_terreno"],
+                g["antejardin"],
+                facecolor="#d5f5e3",
+                alpha=0.30,
+                zorder=0
             )
         )
         ax.text(
-            g["casa_x"] + g["casa_ancho"] / 2,
-            g["casa_y"] + g["casa_largo"] / 2,
-            "VIVIENDA ACTUAL\n(referencia)",
-            ha="center",
-            va="center",
-            fontsize=8,
-            weight="bold"
-        )
-
-    else:
-        # Huella de Piso 1 como límite de referencia del Piso 2.
-        ax.add_patch(
-            Rectangle(
-                (g["casa_x"], g["casa_y"]),
-                g["casa_ancho"],
-                g["casa_largo"],
-                facecolor="#ebedef",
-                edgecolor="#5d6d7e",
-                linewidth=1.5,
-                linestyle="--",
-                alpha=0.65,
-                zorder=1
-            )
-        )
-        ax.text(
-            g["casa_x"] + g["casa_ancho"] / 2,
-            g["casa_y"] + g["casa_largo"] * 0.08,
-            "HUELLA PISO 1 (referencia)",
+            g["ancho_terreno"] / 2,
+            g["antejardin"] / 2,
+            f"ANTEJARDÍN {g['antejardin']:.2f} m",
             ha="center",
             va="center",
             fontsize=7
         )
 
-    validaciones = []
+    # Piso 2: mostrar como sombra las piezas reales configuradas del Piso 1.
+    if piso == "Piso 2":
+        piezas_piso1 = construir_lista_piezas(datos, modulos, "Piso 1")
+        sectores_p1 = [p for p in piezas_piso1 if p["tipo"] == "vivienda"]
 
-    for modulo in modulos:
-        if modulo.get("piso") != piso:
-            continue
-
-        if float(modulo.get("superficie", 0) or 0) <= 0:
-            continue
-
-        clave = clave_modulo_puzzle(modulo)
-        posicion = posiciones.get(clave)
-
-        if posicion is None:
-            continue
-
-        rotado = bool(posicion.get("rotado", False))
-        ancho_modulo = float(modulo.get("ancho", 0) or 0)
-        largo_modulo = float(modulo.get("largo", 0) or 0)
-
-        if rotado:
-            ancho_modulo, largo_modulo = largo_modulo, ancho_modulo
-
-        px = float(posicion.get("x", 0) or 0)
-        py = float(posicion.get("y", 0) or 0)
-
-        dentro_terreno = (
-            px >= -1e-9
-            and py >= -1e-9
-            and px + ancho_modulo <= g["ancho_terreno"] + 1e-9
-            and py + largo_modulo <= g["largo_terreno"] + 1e-9
-        )
-
-        if piso == "Piso 1":
-            respeta_antejardin = py >= g["antejardin"] - 1e-9
-            cumple = dentro_terreno and respeta_antejardin
-
-            if not dentro_terreno:
-                mensaje = "La pieza sale fuera del terreno."
-            elif not respeta_antejardin:
-                mensaje = "La pieza invade el antejardín medido."
-            else:
-                mensaje = "La pieza está dentro del terreno y fuera del antejardín medido."
-
+        if sectores_p1:
+            for pieza in sectores_p1:
+                ax.add_patch(
+                    Rectangle(
+                        (pieza["x"], pieza["y"]),
+                        pieza["ancho"],
+                        pieza["largo"],
+                        facecolor="#ebedef",
+                        edgecolor="#7f8c8d",
+                        linewidth=1.1,
+                        linestyle="--",
+                        alpha=0.45,
+                        zorder=1
+                    )
+                )
         else:
-            dentro_huella = (
-                px >= g["casa_x"] - 1e-9
-                and py >= g["casa_y"] - 1e-9
-                and px + ancho_modulo <= g["casa_x"] + g["casa_ancho"] + 1e-9
-                and py + largo_modulo <= g["casa_y"] + g["casa_largo"] + 1e-9
+            ax.add_patch(
+                Rectangle(
+                    (g["casa_x"], g["casa_y"]),
+                    g["casa_ancho"],
+                    g["casa_largo"],
+                    fill=False,
+                    edgecolor="#7f8c8d",
+                    linewidth=1.2,
+                    linestyle="--",
+                    alpha=0.55,
+                    zorder=1
+                )
             )
-            cumple = dentro_terreno and dentro_huella
-
-            if not dentro_terreno:
-                mensaje = "La pieza sale fuera del terreno."
-            elif not dentro_huella:
-                mensaje = "La pieza sale de la huella aproximada utilizada como referencia."
-            else:
-                mensaje = "La pieza está dentro de la huella aproximada de referencia."
-
-        seleccionado = clave == modulo_seleccionado
-
-        facecolor = "#f8c471" if cumple else "#f1948a"
-        edgecolor = "#6c3483" if seleccionado else ("#935116" if cumple else "#922b21")
-        linewidth = 3.0 if seleccionado else 1.8
-
-        ax.add_patch(
-            Rectangle(
-                (px, py),
-                ancho_modulo,
-                largo_modulo,
-                facecolor=facecolor,
-                edgecolor=edgecolor,
-                linewidth=linewidth,
-                alpha=0.88,
-                zorder=3
-            )
-        )
 
         ax.text(
-            px + ancho_modulo / 2,
-            py + largo_modulo / 2,
-            f"MÓD. {modulo.get('numero', '')}\n{ancho_modulo:.2f} × {largo_modulo:.2f} m",
-            ha="center",
-            va="center",
+            g["casa_x"],
+            max(g["casa_y"] - 0.25, 0),
+            "Huella Piso 1 (referencia)",
+            ha="left",
+            va="top",
             fontsize=7,
-            weight="bold",
-            zorder=5
+            style="italic"
         )
 
-        validaciones.append(
-            {
-                "numero": modulo.get("numero", ""),
-                "clave": clave,
-                "cumple": cumple,
-                "mensaje": mensaje,
-                "x": px,
-                "y": py,
-                "ancho": ancho_modulo,
-                "largo": largo_modulo,
-                "rotado": rotado,
-            }
-        )
+    validaciones = validar_piezas_puzzle(datos, modulos, piso)
+
+    # Primero vivienda existente, luego ampliaciones.
+    for tipo in ["vivienda", "ampliacion"]:
+        for revision in validaciones:
+            if revision["tipo"] != tipo:
+                continue
+
+            seleccionado = revision["clave"] == modulo_seleccionado
+            nivel = revision["nivel"]
+
+            if tipo == "vivienda":
+                facecolor = "#85c1e9" if piso == "Piso 1" else "#a9cce3"
+                edgecolor_base = "#1b4f72"
+            else:
+                if nivel == "error":
+                    facecolor = "#f1948a"
+                    edgecolor_base = "#922b21"
+                elif nivel == "warning":
+                    facecolor = "#f9e79f"
+                    edgecolor_base = "#9a7d0a"
+                else:
+                    facecolor = "#f8c471"
+                    edgecolor_base = "#935116"
+
+            edgecolor = "#6c3483" if seleccionado else edgecolor_base
+            linewidth = 3.2 if seleccionado else 1.8
+
+            ax.add_patch(
+                Rectangle(
+                    (revision["x"], revision["y"]),
+                    revision["ancho"],
+                    revision["largo"],
+                    facecolor=facecolor,
+                    edgecolor=edgecolor,
+                    linewidth=linewidth,
+                    alpha=0.88,
+                    zorder=3 if tipo == "vivienda" else 4
+                )
+            )
+
+            prefijo = "CASA" if tipo == "vivienda" else "AMPL."
+            ax.text(
+                revision["x"] + revision["ancho"] / 2,
+                revision["y"] + revision["largo"] / 2,
+                f"{prefijo} {revision['numero']}\n{revision['ancho']:.2f} × {revision['largo']:.2f} m",
+                ha="center",
+                va="center",
+                fontsize=7,
+                weight="bold",
+                zorder=5
+            )
 
     margen = max(min(g["ancho_terreno"], g["largo_terreno"]) * 0.05, 0.5)
 
@@ -1291,6 +1581,21 @@ def crear_croquis_puzzle(datos, modulos, piso, posiciones, modulo_seleccionado=N
         "DESLINDE POSTERIOR",
         ha="center",
         va="bottom",
+        fontsize=7
+    )
+
+    leyenda = [
+        Patch(facecolor="#85c1e9", edgecolor="#1b4f72", label="Vivienda existente"),
+        Patch(facecolor="#f8c471", edgecolor="#935116", label="Futura ampliación"),
+        Patch(facecolor="#f9e79f", edgecolor="#9a7d0a", label="Requiere revisión"),
+        Patch(facecolor="#f1948a", edgecolor="#922b21", label="Posición con conflicto"),
+    ]
+
+    ax.legend(
+        handles=leyenda,
+        loc="upper left",
+        bbox_to_anchor=(1.01, 1.0),
+        borderaxespad=0,
         fontsize=7
     )
 
@@ -2311,6 +2616,7 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
             # Si cambian los datos base, la propuesta anterior se invalida.
             st.session_state.propuesta_ampliacion = None
             st.session_state.posiciones_puzzle = {}
+            st.session_state.posiciones_vivienda = {}
 
             st.success(
                 "✅ **Datos guardados correctamente.** La información de la propiedad ya está disponible "
@@ -2879,15 +3185,14 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
         st.markdown("---")
 
         # ==========================================
-        # 6. EDITOR TIPO PUZLE
+        # 6. EDITOR TIPO PUZLE MEJORADO
         # ==========================================
-        st.markdown("### 🧩 6. Editor Tipo Puzle")
+        st.markdown("### 🧩 6. Editor Tipo Puzle Mejorado")
 
         st.info(
-            "Ahora puedes **mover cada módulo de ampliación** dentro del terreno. "
-            "Selecciona una pieza y utiliza las flechas para desplazarla. "
-            "Cada movimiento se realiza en metros y queda guardado temporalmente "
-            "mientras trabajas en la propuesta."
+            "Ahora puedes editar tanto la **vivienda existente** como la **futura ampliación**. "
+            "Esto permite representar mejor una casa en L, un segundo piso ubicado al fondo o a un costado, "
+            "y luego hacer que las ampliaciones encajen con las piezas reales de la vivienda."
         )
 
         st.caption(
@@ -2901,256 +3206,387 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
             if float(modulo.get("superficie", 0) or 0) > 0
         ]
 
-        if not modulos_puzzle:
+        asegurar_posiciones_puzzle(datos, modulos_puzzle)
+        asegurar_posiciones_vivienda(datos)
+
+        piso_puzzle = st.radio(
+            "🏠 Piso que deseas editar:",
+            ["Piso 1", "Piso 2"],
+            horizontal=True,
+            key="piso_editor_puzzle"
+        )
+
+        sectores_clave = "sectores_piso1" if piso_puzzle == "Piso 1" else "sectores_piso2"
+        sectores_existentes_piso = [
+            sector
+            for sector in datos.get(sectores_clave, [])
+            if float(sector.get("superficie", 0) or 0) > 0
+        ]
+
+        modulos_piso_puzzle = [
+            modulo
+            for modulo in modulos_puzzle
+            if modulo.get("piso") == piso_puzzle
+        ]
+
+        tipos_disponibles = []
+        if sectores_existentes_piso:
+            tipos_disponibles.append("Vivienda existente")
+        if modulos_piso_puzzle:
+            tipos_disponibles.append("Futura ampliación")
+
+        if not tipos_disponibles:
             st.warning(
-                "⚠️ Agrega al menos un módulo de ampliación para utilizar el editor tipo puzle."
+                f"⚠️ No existen piezas registradas para **{piso_puzzle}**. "
+                "Si corresponde, vuelve a Datos del Terreno para registrar ese piso o agrega un módulo de ampliación."
             )
 
         else:
-            asegurar_posiciones_puzzle(
-                datos,
-                modulos_puzzle
-            )
+            st.markdown("#### ✏️ Configuración de la planta")
 
-            piso_puzzle = st.radio(
-                "🏠 Piso que deseas editar:",
-                ["Piso 1", "Piso 2"],
-                horizontal=True,
-                key="piso_editor_puzzle"
-            )
+            config_col1, config_col2, config_col3 = st.columns([1.1, 1.1, 1.3])
 
-            modulos_piso_puzzle = [
-                modulo
-                for modulo in modulos_puzzle
-                if modulo.get("piso") == piso_puzzle
-            ]
-
-            if not modulos_piso_puzzle:
-                st.info(
-                    f"No hay módulos de ampliación definidos para **{piso_puzzle}**. "
-                    "Puedes volver arriba y agregar uno."
+            with config_col1:
+                tipo_visible = st.radio(
+                    "Tipo de pieza:",
+                    tipos_disponibles,
+                    horizontal=False,
+                    key=f"tipo_pieza_puzzle_{piso_puzzle}"
                 )
 
-            else:
-                numeros_disponibles = [
-                    modulo["numero"]
-                    for modulo in modulos_piso_puzzle
-                ]
-
-                numero_seleccionado = st.selectbox(
-                    "🧱 Pieza que deseas mover:",
-                    numeros_disponibles,
-                    format_func=lambda n: f"Módulo {n}",
-                    key=f"modulo_seleccionado_puzzle_{piso_puzzle}"
+            with config_col2:
+                encaje_magnetico = st.toggle(
+                    "🧲 Encaje magnético",
+                    value=True,
+                    key=f"encaje_magnetico_{piso_puzzle}",
+                    help=(
+                        "Cuando una pieza queda cerca del borde de otra, del terreno o de la línea de antejardín, "
+                        "se ajusta automáticamente para que los bordes coincidan."
+                    )
                 )
 
-                modulo_seleccionado = next(
-                    modulo
-                    for modulo in modulos_piso_puzzle
-                    if modulo["numero"] == numero_seleccionado
-                )
-
-                clave_seleccionada = clave_modulo_puzzle(
-                    modulo_seleccionado
-                )
-
-                posicion_actual = st.session_state.posiciones_puzzle[
-                    clave_seleccionada
-                ]
-
-                paso_movimiento = st.select_slider(
-                    "📏 Distancia de cada movimiento:",
-                    options=[0.25, 0.50, 1.00],
-                    value=0.50,
+            with config_col3:
+                paso_movimiento = st.selectbox(
+                    "Precisión del movimiento:",
+                    [0.10, 0.25, 0.50, 1.00],
+                    index=1,
                     format_func=lambda valor: f"{valor:.2f} m",
-                    key=f"paso_puzzle_{piso_puzzle}"
+                    key=f"paso_movimiento_puzzle_{piso_puzzle}"
                 )
 
-                controles_puzzle, vista_puzzle = st.columns([1.0, 2.2])
+            st.caption(
+                "🧲 Con el encaje magnético activado, si una pieza queda a unos centímetros de otra, "
+                "el programa intenta dejarla exactamente al lado, sin montarla encima."
+            )
 
-                with controles_puzzle:
-                    st.markdown(
-                        f"#### 🎮 Módulo {numero_seleccionado}"
-                    )
+            if tipo_visible == "Vivienda existente":
+                opciones = {
+                    f"Sector existente {sector['numero']}": sector
+                    for sector in sectores_existentes_piso
+                }
+                etiqueta_seleccion = "Sector de la vivienda que deseas mover:"
+            else:
+                opciones = {
+                    f"Módulo de ampliación {modulo['numero']}": modulo
+                    for modulo in modulos_piso_puzzle
+                }
+                etiqueta_seleccion = "Módulo de ampliación que deseas mover:"
 
-                    rotado_actual = bool(
-                        posicion_actual.get("rotado", False)
-                    )
+            nombre_pieza = st.selectbox(
+                etiqueta_seleccion,
+                list(opciones.keys()),
+                key=f"pieza_seleccionada_puzzle_{piso_puzzle}_{tipo_visible}"
+            )
 
-                    ancho_visual = float(
-                        modulo_seleccionado.get("ancho", 0) or 0
-                    )
-                    largo_visual = float(
-                        modulo_seleccionado.get("largo", 0) or 0
-                    )
+            objeto_seleccionado = opciones[nombre_pieza]
+            tipo_interno = "vivienda" if tipo_visible == "Vivienda existente" else "ampliacion"
 
-                    if rotado_actual:
-                        ancho_visual, largo_visual = largo_visual, ancho_visual
+            if tipo_interno == "vivienda":
+                clave_seleccionada = clave_sector_vivienda(
+                    piso_puzzle,
+                    objeto_seleccionado
+                )
+                posicion_actual = st.session_state.posiciones_vivienda.get(
+                    clave_seleccionada,
+                    {"x": 0.0, "y": 0.0, "rotado": False}
+                )
+            else:
+                clave_seleccionada = clave_modulo_puzzle(
+                    objeto_seleccionado
+                )
+                posicion_actual = st.session_state.posiciones_puzzle.get(
+                    clave_seleccionada,
+                    {"x": 0.0, "y": 0.0, "rotado": False}
+                )
 
-                    st.metric(
-                        "Posición X",
-                        f"{float(posicion_actual.get('x', 0)):.2f} m"
-                    )
-                    st.metric(
-                        "Posición Y desde la calle",
-                        f"{float(posicion_actual.get('y', 0)):.2f} m"
-                    )
-                    st.caption(
-                        f"Tamaño actual de la pieza: **{ancho_visual:.2f} × {largo_visual:.2f} m**"
-                    )
+            ancho_actual, largo_actual = dimensiones_pieza(
+                objeto_seleccionado,
+                posicion_actual
+            )
 
-                    flecha_arriba_1, flecha_arriba_2, flecha_arriba_3 = st.columns(3)
+            st.markdown("---")
 
-                    with flecha_arriba_2:
-                        if st.button(
-                            "⬆️",
-                            key=f"puzzle_arriba_{piso_puzzle}_{numero_seleccionado}",
-                            help="Mover hacia el deslinde posterior"
-                        ):
-                            mover_pieza_puzzle(
-                                clave_seleccionada,
-                                dy=paso_movimiento
-                            )
-                            st.rerun()
+            controles_puzzle, vista_puzzle = st.columns([1.0, 2.3])
 
-                    flecha_centro_1, flecha_centro_2, flecha_centro_3 = st.columns(3)
+            with controles_puzzle:
+                st.markdown("#### 🎮 Mover pieza")
 
-                    with flecha_centro_1:
-                        if st.button(
-                            "⬅️",
-                            key=f"puzzle_izquierda_{piso_puzzle}_{numero_seleccionado}",
-                            help="Mover hacia el deslinde izquierdo"
-                        ):
-                            mover_pieza_puzzle(
-                                clave_seleccionada,
-                                dx=-paso_movimiento
-                            )
-                            st.rerun()
+                st.metric(
+                    "Coordenada X",
+                    f"{float(posicion_actual.get('x', 0)):.2f} m"
+                )
+                st.metric(
+                    "Coordenada Y",
+                    f"{float(posicion_actual.get('y', 0)):.2f} m"
+                )
+                st.caption(
+                    f"Tamaño actual: **{ancho_actual:.2f} × {largo_actual:.2f} m**"
+                )
 
-                    with flecha_centro_2:
-                        st.markdown(
-                            "<div style='text-align:center; padding-top:8px;'>🧱</div>",
-                            unsafe_allow_html=True
+                flecha_arriba_1, flecha_arriba_2, flecha_arriba_3 = st.columns(3)
+
+                with flecha_arriba_2:
+                    if st.button(
+                        "⬆️",
+                        key=f"puzzle_arriba_{piso_puzzle}_{tipo_interno}_{clave_seleccionada}",
+                        help="Mover hacia el deslinde posterior"
+                    ):
+                        mover_pieza_unificada(
+                            clave_seleccionada,
+                            tipo_interno,
+                            dy=paso_movimiento
                         )
-
-                    with flecha_centro_3:
-                        if st.button(
-                            "➡️",
-                            key=f"puzzle_derecha_{piso_puzzle}_{numero_seleccionado}",
-                            help="Mover hacia el deslinde derecho"
-                        ):
-                            mover_pieza_puzzle(
-                                clave_seleccionada,
-                                dx=paso_movimiento
-                            )
-                            st.rerun()
-
-                    flecha_abajo_1, flecha_abajo_2, flecha_abajo_3 = st.columns(3)
-
-                    with flecha_abajo_2:
-                        if st.button(
-                            "⬇️",
-                            key=f"puzzle_abajo_{piso_puzzle}_{numero_seleccionado}",
-                            help="Mover hacia la calle"
-                        ):
-                            mover_pieza_puzzle(
-                                clave_seleccionada,
-                                dy=-paso_movimiento
-                            )
-                            st.rerun()
-
-                    st.markdown("---")
-
-                    boton_rotar, boton_reiniciar = st.columns(2)
-
-                    with boton_rotar:
-                        if st.button(
-                            "🔄 Rotar 90°",
-                            key=f"puzzle_rotar_{piso_puzzle}_{numero_seleccionado}"
-                        ):
-                            rotar_pieza_puzzle(
-                                clave_seleccionada
-                            )
-                            st.rerun()
-
-                    with boton_reiniciar:
-                        if st.button(
-                            "↩️ Reiniciar",
-                            key=f"puzzle_reiniciar_{piso_puzzle}_{numero_seleccionado}"
-                        ):
-                            reiniciar_pieza_puzzle(
+                        if encaje_magnetico:
+                            aplicar_encaje_magnetico(
                                 datos,
-                                modulo_seleccionado
+                                modulos_puzzle,
+                                piso_puzzle,
+                                clave_seleccionada,
+                                tipo_interno
+                            )
+                        st.rerun()
+
+                flecha_centro_1, flecha_centro_2, flecha_centro_3 = st.columns(3)
+
+                with flecha_centro_1:
+                    if st.button(
+                        "⬅️",
+                        key=f"puzzle_izquierda_{piso_puzzle}_{tipo_interno}_{clave_seleccionada}",
+                        help="Mover hacia el deslinde izquierdo"
+                    ):
+                        mover_pieza_unificada(
+                            clave_seleccionada,
+                            tipo_interno,
+                            dx=-paso_movimiento
+                        )
+                        if encaje_magnetico:
+                            aplicar_encaje_magnetico(
+                                datos,
+                                modulos_puzzle,
+                                piso_puzzle,
+                                clave_seleccionada,
+                                tipo_interno
+                            )
+                        st.rerun()
+
+                with flecha_centro_2:
+                    st.markdown(
+                        "<div style='text-align:center; padding-top:8px;'>🧱</div>",
+                        unsafe_allow_html=True
+                    )
+
+                with flecha_centro_3:
+                    if st.button(
+                        "➡️",
+                        key=f"puzzle_derecha_{piso_puzzle}_{tipo_interno}_{clave_seleccionada}",
+                        help="Mover hacia el deslinde derecho"
+                    ):
+                        mover_pieza_unificada(
+                            clave_seleccionada,
+                            tipo_interno,
+                            dx=paso_movimiento
+                        )
+                        if encaje_magnetico:
+                            aplicar_encaje_magnetico(
+                                datos,
+                                modulos_puzzle,
+                                piso_puzzle,
+                                clave_seleccionada,
+                                tipo_interno
+                            )
+                        st.rerun()
+
+                flecha_abajo_1, flecha_abajo_2, flecha_abajo_3 = st.columns(3)
+
+                with flecha_abajo_2:
+                    if st.button(
+                        "⬇️",
+                        key=f"puzzle_abajo_{piso_puzzle}_{tipo_interno}_{clave_seleccionada}",
+                        help="Mover hacia la calle"
+                    ):
+                        mover_pieza_unificada(
+                            clave_seleccionada,
+                            tipo_interno,
+                            dy=-paso_movimiento
+                        )
+                        if encaje_magnetico:
+                            aplicar_encaje_magnetico(
+                                datos,
+                                modulos_puzzle,
+                                piso_puzzle,
+                                clave_seleccionada,
+                                tipo_interno
+                            )
+                        st.rerun()
+
+                st.markdown("---")
+
+                boton_rotar, boton_encajar = st.columns(2)
+
+                with boton_rotar:
+                    if st.button(
+                        "🔄 Rotar 90°",
+                        key=f"puzzle_rotar_{piso_puzzle}_{tipo_interno}_{clave_seleccionada}"
+                    ):
+                        rotar_pieza_unificada(
+                            clave_seleccionada,
+                            tipo_interno
+                        )
+                        if encaje_magnetico:
+                            aplicar_encaje_magnetico(
+                                datos,
+                                modulos_puzzle,
+                                piso_puzzle,
+                                clave_seleccionada,
+                                tipo_interno
+                            )
+                        st.rerun()
+
+                with boton_encajar:
+                    if st.button(
+                        "🧲 Encajar ahora",
+                        key=f"puzzle_encajar_{piso_puzzle}_{tipo_interno}_{clave_seleccionada}",
+                        help="Busca un borde cercano y ajusta la pieza exactamente"
+                    ):
+                        encontro = aplicar_encaje_magnetico(
+                            datos,
+                            modulos_puzzle,
+                            piso_puzzle,
+                            clave_seleccionada,
+                            tipo_interno,
+                            umbral=0.60
+                        )
+                        if not encontro:
+                            st.toast("No se encontró un borde cercano para encajar.")
+                        st.rerun()
+
+                boton_reiniciar, boton_reiniciar_piso = st.columns(2)
+
+                with boton_reiniciar:
+                    if st.button(
+                        "↩️ Reiniciar pieza",
+                        key=f"puzzle_reiniciar_{piso_puzzle}_{tipo_interno}_{clave_seleccionada}"
+                    ):
+                        reiniciar_pieza_unificada(
+                            datos,
+                            objeto_seleccionado,
+                            piso_puzzle,
+                            tipo_interno
+                        )
+                        st.rerun()
+
+                with boton_reiniciar_piso:
+                    if tipo_interno == "vivienda":
+                        if st.button(
+                            "🏠 Reiniciar vivienda",
+                            key=f"puzzle_reiniciar_vivienda_{piso_puzzle}"
+                        ):
+                            reiniciar_piso_vivienda(
+                                datos,
+                                piso_puzzle
                             )
                             st.rerun()
 
-                    st.caption(
-                        "El botón **Reiniciar** devuelve únicamente esta pieza a su ubicación automática inicial."
+                if tipo_interno == "vivienda":
+                    st.info(
+                        "✏️ Estás moviendo una pieza de la **vivienda ya construida**. "
+                        "Úsala para reproducir la ubicación real de la casa; no significa que la vivienda se vaya a mover físicamente."
+                    )
+                else:
+                    st.info(
+                        "🧱 Estás moviendo una pieza de la **futura ampliación**. "
+                        "Las piezas se pueden dejar pegadas a la vivienda existente sin superponerlas."
                     )
 
-                with vista_puzzle:
-                    figura_puzzle, validaciones_puzzle, imagen_puzzle = crear_croquis_puzzle(
-                        datos,
-                        modulos_puzzle,
-                        piso_puzzle,
-                        st.session_state.posiciones_puzzle,
-                        modulo_seleccionado=clave_seleccionada
-                    )
-
-                    if figura_puzzle is None:
-                        st.error(
-                            "❌ No fue posible generar el editor porque faltan dimensiones del terreno."
-                        )
-                    else:
-                        st.pyplot(figura_puzzle)
-
-                        st.caption(
-                            "La pieza seleccionada se destaca con un borde más grueso. "
-                            "Las piezas en rojo requieren corregir su posición."
-                        )
-
-                        if imagen_puzzle is not None:
-                            st.download_button(
-                                f"📥 Descargar distribución editable – {piso_puzzle}",
-                                data=imagen_puzzle,
-                                file_name=f"Distribucion_Puzzle_{piso_puzzle.replace(' ', '_')}.png",
-                                mime="image/png",
-                                key=f"descargar_puzzle_{piso_puzzle}"
-                            )
-
-                        plt.close(figura_puzzle)
-
-                # Resultado geométrico compacto.
-                figura_revision, validaciones_revision, _ = crear_croquis_puzzle(
+            with vista_puzzle:
+                figura_puzzle, validaciones_puzzle, imagen_puzzle = crear_croquis_puzzle(
                     datos,
                     modulos_puzzle,
                     piso_puzzle,
-                    st.session_state.posiciones_puzzle,
                     modulo_seleccionado=clave_seleccionada
                 )
 
-                if figura_revision is not None:
-                    plt.close(figura_revision)
-
-                if validaciones_revision:
-                    with st.expander(
-                        f"🔎 Ver revisión de posiciones – {piso_puzzle}"
-                    ):
-                        for revision in validaciones_revision:
-                            simbolo = "✅" if revision["cumple"] else "❌"
-                            giro = "Sí" if revision["rotado"] else "No"
-                            st.write(
-                                f"{simbolo} **Módulo {revision['numero']}** — "
-                                f"X: {revision['x']:.2f} m | "
-                                f"Y: {revision['y']:.2f} m | "
-                                f"Rotado: {giro}. {revision['mensaje']}"
-                            )
-
-                if piso_puzzle == "Piso 2":
-                    st.warning(
-                        "⚠️ La ubicación gráfica de una ampliación en Piso 2 es solo una revisión geométrica. "
-                        "La factibilidad definitiva requiere comprobar la estructura existente y los apoyos de la ampliación."
+                if figura_puzzle is None:
+                    st.error(
+                        "❌ No fue posible generar el editor porque faltan dimensiones del terreno."
                     )
+                else:
+                    st.pyplot(figura_puzzle)
+
+                    st.caption(
+                        "La pieza seleccionada se destaca con borde morado. "
+                        "Azul = vivienda existente; naranjo = futura ampliación; "
+                        "amarillo = requiere revisión; rojo = posición con conflicto."
+                    )
+
+                    if imagen_puzzle is not None:
+                        st.download_button(
+                            f"📥 Descargar distribución editable – {piso_puzzle}",
+                            data=imagen_puzzle,
+                            file_name=f"Distribucion_Puzzle_{piso_puzzle.replace(' ', '_')}.png",
+                            mime="image/png",
+                            key=f"descargar_puzzle_{piso_puzzle}"
+                        )
+
+                    plt.close(figura_puzzle)
+
+            if validaciones_puzzle:
+                with st.expander(
+                    f"🔎 Ver revisión de posiciones – {piso_puzzle}"
+                ):
+                    for revision in validaciones_puzzle:
+                        if revision["nivel"] == "ok":
+                            simbolo = "✅"
+                        elif revision["nivel"] == "warning":
+                            simbolo = "⚠️"
+                        else:
+                            simbolo = "❌"
+
+                        tipo_texto = (
+                            "Sector existente"
+                            if revision["tipo"] == "vivienda"
+                            else "Módulo de ampliación"
+                        )
+                        giro = "Sí" if revision["rotado"] else "No"
+
+                        st.write(
+                            f"{simbolo} **{tipo_texto} {revision['numero']}** — "
+                            f"X: {revision['x']:.2f} m | "
+                            f"Y: {revision['y']:.2f} m | "
+                            f"Rotado: {giro}. {revision['mensaje']}"
+                        )
+
+            if piso_puzzle == "Piso 2":
+                st.warning(
+                    "⚠️ En el segundo piso puedes mover libremente los sectores existentes para representar dónde están realmente. "
+                    "Si una futura ampliación queda fuera de la huella del primer piso, el programa la marca para **revisión estructural**, "
+                    "pero no la considera automáticamente imposible."
+                )
+
+            st.success(
+                "🧲 **Consejo:** para unir dos piezas, muévelas hasta quedar cerca. "
+                "Con el encaje magnético activado, el sistema intentará dejar sus bordes exactamente coincidentes."
+            )
 
         st.markdown("---")
 
@@ -3204,6 +3640,10 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
                         "posiciones_puzzle": {
                             clave: dict(valor)
                             for clave, valor in st.session_state.posiciones_puzzle.items()
+                        },
+                        "posiciones_vivienda": {
+                            clave: dict(valor)
+                            for clave, valor in st.session_state.posiciones_vivienda.items()
                         }
                     }
 
