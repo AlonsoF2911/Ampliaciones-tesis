@@ -5,7 +5,7 @@ from matplotlib.patches import Rectangle, Patch
 from pathlib import Path
 from io import BytesIO
 
-# VERSION: PUZZLE_VIVIENDA_MOVIBLE_MAGNETICO_2026_08_21
+# VERSION: PUZZLE_VIVIENDA_MOVIBLE_MAGNETICO_ZONA_D_2026_10_19
 
 # ==========================================
 # CONFIGURACIÓN DE LA PÁGINA
@@ -1754,7 +1754,7 @@ if menu_seleccionado == "🏠 Inicio":
             "Clasificación geográfica que determina las exigencias mínimas "
             "de acondicionamiento térmico (aislación en techumbres, muros y "
             "pisos ventilados). La comuna de San Miguel se encuentra en la "
-            "**Zona Térmica 3**, lo que exige materiales con una "
+            "**Zona Térmica D**, lo que exige materiales con una "
             "Transmitancia Térmica (U) específica según la OGUC."
         )
 
