@@ -1,3 +1,4 @@
+# VERSION: PASO7_SOLUCIONES_FUTURA_AMPLIACION_2026_10_19
 # VERSION: PASO6_RESULTADO_FINAL_REGULARIZACION_2026_10_19
 import streamlit as st
 import pandas as pd
@@ -3774,6 +3775,432 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
         st.markdown("---")
 
         # ==========================================
+        # 7. SOLUCIONES CONSTRUCTIVAS DE LA FUTURA AMPLIACIÓN
+        # ==========================================
+        st.markdown("### 🧰 7. Soluciones Constructivas de la Futura Ampliación")
+        st.info(
+            "Seleccione soluciones de referencia para **muros, pisos y techumbre** de la ampliación. "
+            "Las alternativas provienen de la base técnica incorporada al prototipo y se muestran con "
+            "carácter orientativo. Su selección no reemplaza el proyecto, cálculo, especificación ni "
+            "acreditación que pueda exigir un profesional competente o la Dirección de Obras Municipales."
+        )
+
+        solucion_muro_futura = None
+        solucion_piso1_futura = None
+        solucion_piso2_futura = None
+        solucion_techumbre_futura = None
+
+        def _texto_valor_futuro(valor, decimales=2, sufijo=""):
+            if valor is None or pd.isna(valor):
+                return "No informado"
+            try:
+                return f"{float(valor):.{decimales}f}{sufijo}"
+            except (TypeError, ValueError):
+                return str(valor)
+
+        def _fila_a_dict_seguro(fila):
+            resultado = {}
+            for clave, valor in fila.to_dict().items():
+                if pd.isna(valor):
+                    resultado[clave] = None
+                elif hasattr(valor, "item"):
+                    try:
+                        resultado[clave] = valor.item()
+                    except Exception:
+                        resultado[clave] = valor
+                else:
+                    resultado[clave] = valor
+            return resultado
+
+        # ------------------------------------------
+        # 7.1 MURO
+        # ------------------------------------------
+        st.markdown("#### 🧱 7.1 Solución de Muro")
+
+        try:
+            base_muros_futura = cargar_soluciones_muros()
+        except Exception:
+            base_muros_futura = None
+
+        if base_muros_futura is None or base_muros_futura.empty:
+            st.warning(
+                "⚠️ No fue posible cargar **Soluciones_Muros** desde la base normativa. "
+                "La propuesta puede continuar, pero la solución de muro quedará pendiente."
+            )
+        else:
+            opciones_muros_futura = ["Seleccione una solución..."]
+            mapa_muros_futura = {}
+
+            for _, fila_muro in base_muros_futura.iterrows():
+                etiqueta = f"{fila_muro['Codigo_Solucion']} — {fila_muro['Sistema']}"
+                opciones_muros_futura.append(etiqueta)
+                mapa_muros_futura[etiqueta] = fila_muro
+
+            muro_elegido_futura = st.selectbox(
+                "Solución propuesta para los muros perimetrales de la ampliación:",
+                opciones_muros_futura,
+                key="futura_solucion_muro"
+            )
+
+            if muro_elegido_futura != "Seleccione una solución...":
+                fila_muro = mapa_muros_futura[muro_elegido_futura]
+                solucion_muro_futura = _fila_a_dict_seguro(fila_muro)
+
+                col_muro_a, col_muro_b, col_muro_c = st.columns(3)
+                with col_muro_a:
+                    st.metric("Transmitancia U", _texto_valor_futuro(fila_muro.get("U_W_m2K"), 2, " W/m²K"))
+                with col_muro_b:
+                    st.metric("Resistencia Rt", _texto_valor_futuro(fila_muro.get("Rt_m2K_W"), 2, " m²K/W"))
+                with col_muro_c:
+                    st.metric("Referencia térmica", str(fila_muro.get("Compatibilidad_Zona_D", "Pendiente")))
+
+                u_muro = fila_muro.get("U_W_m2K")
+                u_max_muro = fila_muro.get("U_Max_Zona_D")
+                rt_muro = fila_muro.get("Rt_m2K_W")
+                rt_min_muro = fila_muro.get("Rt_Min_Zona_D")
+
+                if (
+                    pd.notna(u_muro) and pd.notna(u_max_muro)
+                    and pd.notna(rt_muro) and pd.notna(rt_min_muro)
+                    and float(u_muro) <= float(u_max_muro)
+                    and float(rt_muro) >= float(rt_min_muro)
+                ):
+                    st.success(
+                        f"✅ La solución de referencia presenta valores compatibles con Zona Térmica D: "
+                        f"**U = {float(u_muro):.2f} W/m²K ≤ {float(u_max_muro):.2f}** y "
+                        f"**Rt = {float(rt_muro):.2f} m²K/W ≥ {float(rt_min_muro):.2f}**."
+                    )
+
+                with st.expander("🔎 Ver composición del muro seleccionado"):
+                    st.write(f"**Código:** {fila_muro.get('Codigo_Solucion', '')}")
+                    st.write(f"**Sistema:** {fila_muro.get('Sistema', '')}")
+                    st.write(f"**Estructura principal:** {fila_muro.get('Estructura_Principal', '')}")
+
+                    if pd.notna(fila_muro.get("Revestimiento_Interior")) and str(fila_muro.get("Revestimiento_Interior", "")).strip():
+                        st.write(
+                            f"**Revestimiento interior:** {fila_muro.get('Revestimiento_Interior')} "
+                            f"({_texto_valor_futuro(fila_muro.get('Espesor_Rev_Int_mm'), 1, ' mm')})"
+                        )
+                    if pd.notna(fila_muro.get("Aislante_Entre_Estructura")) and str(fila_muro.get("Aislante_Entre_Estructura", "")).strip():
+                        st.write(
+                            f"**Aislación entre estructura:** {fila_muro.get('Aislante_Entre_Estructura')} "
+                            f"({_texto_valor_futuro(fila_muro.get('Espesor_Aislante_mm'), 1, ' mm')})"
+                        )
+                    if pd.notna(fila_muro.get("Placa_Estructural")) and str(fila_muro.get("Placa_Estructural", "")).strip():
+                        st.write(
+                            f"**Placa estructural:** {fila_muro.get('Placa_Estructural')} "
+                            f"({_texto_valor_futuro(fila_muro.get('Espesor_Placa_mm'), 1, ' mm')})"
+                        )
+                    if pd.notna(fila_muro.get("Aislacion_Exterior")) and str(fila_muro.get("Aislacion_Exterior", "")).strip():
+                        st.write(
+                            f"**Aislación exterior:** {fila_muro.get('Aislacion_Exterior')} "
+                            f"({_texto_valor_futuro(fila_muro.get('Espesor_Aislacion_Ext_mm'), 1, ' mm')})"
+                        )
+                    if pd.notna(fila_muro.get("Barrera_Humedad")) and str(fila_muro.get("Barrera_Humedad", "")).strip():
+                        st.write(f"**Barrera de humedad:** {fila_muro.get('Barrera_Humedad')}")
+                    if pd.notna(fila_muro.get("Revestimiento_Exterior")) and str(fila_muro.get("Revestimiento_Exterior", "")).strip():
+                        esp_ext = fila_muro.get("Espesor_Rev_Ext_mm")
+                        texto_esp_ext = "" if pd.isna(esp_ext) else f" ({float(esp_ext):.1f} mm)"
+                        st.write(f"**Revestimiento exterior:** {fila_muro.get('Revestimiento_Exterior')}{texto_esp_ext}")
+                    if pd.notna(fila_muro.get("Barrera_Vapor")) and str(fila_muro.get("Barrera_Vapor", "")).strip():
+                        st.write(f"**Barrera de vapor:** {fila_muro.get('Barrera_Vapor')}")
+                    st.caption(f"Fuente: {fila_muro.get('Fuente', '')}")
+
+                st.warning(
+                    "🔥 La compatibilidad térmica de esta solución **no acredita por sí sola resistencia al fuego, "
+                    "estabilidad estructural ni condiciones de encuentro**. Esas materias deben revisarse por separado."
+                )
+
+        st.markdown("---")
+
+        # ------------------------------------------
+        # 7.2 PISO
+        # ------------------------------------------
+        st.markdown("#### ⬛ 7.2 Solución de Piso")
+        st.caption(
+            "La condición del piso se revisa de manera distinta según se trate de una ampliación apoyada sobre terreno, "
+            "un piso expuesto/ventilado o un entrepiso interior."
+        )
+
+        try:
+            base_pisos_futura = cargar_soluciones_pisos()
+        except Exception:
+            base_pisos_futura = None
+
+        if base_pisos_futura is None or base_pisos_futura.empty:
+            st.warning(
+                "⚠️ No fue posible cargar **Soluciones_Pisos** desde la base normativa. "
+                "Las soluciones de piso quedarán pendientes."
+            )
+        else:
+            # Piso 1: normalmente apoyado sobre terreno, aunque se permite indicar una solución elevada/ventilada.
+            if superficie_ampliacion_piso1 > 0:
+                st.markdown("**Ampliación ubicada en Piso 1**")
+                condicion_piso1_futura = st.radio(
+                    "Condición constructiva predominante del piso de la ampliación en primer nivel:",
+                    ["Apoyado sobre terreno", "Ventilado/elevado"],
+                    horizontal=True,
+                    key="futura_condicion_piso1"
+                )
+
+                condicion_busqueda_p1 = (
+                    "Apoyado sobre terreno"
+                    if condicion_piso1_futura == "Apoyado sobre terreno"
+                    else "Ventilado"
+                )
+                coincidencias_p1 = base_pisos_futura[
+                    base_pisos_futura["Condicion_Piso"].str.lower() == condicion_busqueda_p1.lower()
+                ]
+
+                if not coincidencias_p1.empty:
+                    fila_piso1 = coincidencias_p1.iloc[0]
+                    solucion_piso1_futura = _fila_a_dict_seguro(fila_piso1)
+
+                    st.write(
+                        f"**Referencia seleccionada:** {fila_piso1.get('Codigo_Solucion', '')} — "
+                        f"{fila_piso1.get('Sistema', '')}"
+                    )
+
+                    if condicion_busqueda_p1 == "Apoyado sobre terreno":
+                        c1, c2, c3 = st.columns(3)
+                        with c1:
+                            st.metric("Ripio de referencia", _texto_valor_futuro(fila_piso1.get("Cama_Ripio_mm"), 0, " mm"))
+                        with c2:
+                            st.metric("Radier de referencia", _texto_valor_futuro(fila_piso1.get("Radier_Hormigon_mm"), 0, " mm"))
+                        with c3:
+                            st.metric("R100 sobrecimiento", f"≥ {_texto_valor_futuro(fila_piso1.get('R100_Min_Sobrecimiento'), 0)}")
+
+                        st.success(
+                            "✅ Para esta alternativa, la revisión térmica considerada en el prototipo se concentra en la "
+                            "**aislación exterior del sobrecimiento con R100 ≥ 45**. Los espesores de ripio y radier "
+                            "corresponden a referencias constructivas adoptadas en la tesis y no a una exigencia general de la OGUC."
+                        )
+                    else:
+                        c1, c2, c3 = st.columns(3)
+                        with c1:
+                            st.metric("U referencia", _texto_valor_futuro(fila_piso1.get("U_W_m2K"), 2, " W/m²K"))
+                        with c2:
+                            st.metric("Rt referencia", _texto_valor_futuro(fila_piso1.get("Rt_m2K_W"), 2, " m²K/W"))
+                        with c3:
+                            st.metric("Zona D", str(fila_piso1.get("Compatibilidad_Zona_D", "Pendiente")))
+
+                        st.success(
+                            f"✅ Referencia para piso ventilado: **U ≤ {float(fila_piso1.get('U_Max_Zona_D')):.2f} W/m²K** "
+                            f"o **Rt ≥ {float(fila_piso1.get('Rt_Min_Zona_D')):.2f} m²K/W**."
+                        )
+
+                    with st.expander("🔎 Ver composición/referencia del piso de Piso 1"):
+                        st.write(f"**Sistema:** {fila_piso1.get('Sistema', '')}")
+                        if condicion_busqueda_p1 == "Ventilado":
+                            st.write(f"**Placa estructural:** {fila_piso1.get('Placa_Estructural', '')} aprox. {_texto_valor_futuro(fila_piso1.get('Espesor_Placa_Min_mm'), 1)}–{_texto_valor_futuro(fila_piso1.get('Espesor_Placa_Max_mm'), 1)} mm")
+                            st.write(f"**Estructura:** {fila_piso1.get('Estructura_Principal', '')}")
+                            st.write(f"**Aislante:** {fila_piso1.get('Aislante', '')}, {_texto_valor_futuro(fila_piso1.get('Espesor_Aislante_mm'), 0, ' mm')}")
+                            st.write(f"**Barrera:** {fila_piso1.get('Barrera_Humedad_Viento', '')}")
+                            st.write(f"**Revestimiento inferior:** {fila_piso1.get('Revestimiento_Inferior', '')}, {_texto_valor_futuro(fila_piso1.get('Espesor_Rev_Inferior_mm'), 0, ' mm')}")
+                        else:
+                            st.write(f"**Base:** ripio compactado de referencia {_texto_valor_futuro(fila_piso1.get('Cama_Ripio_mm'), 0, ' mm')}")
+                            st.write(f"**Radier:** hormigón de referencia {_texto_valor_futuro(fila_piso1.get('Radier_Hormigon_mm'), 0, ' mm')}")
+                            st.write(f"**Aislación térmica:** {fila_piso1.get('Aislacion_Sobrecimiento', '')}")
+                        st.caption(f"Fuente: {fila_piso1.get('Fuente', '')}")
+
+            # Piso 2: se distingue un entrepiso interior de un piso que forma parte de la envolvente por estar expuesto abajo.
+            if superficie_ampliacion_piso2 > 0:
+                st.markdown("**Ampliación ubicada en Piso 2**")
+                condicion_piso2_futura = st.radio(
+                    "Condición del piso del segundo nivel:",
+                    [
+                        "Entrepiso sobre recinto cerrado",
+                        "Piso expuesto/ventilado hacia el exterior"
+                    ],
+                    key="futura_condicion_piso2"
+                )
+
+                if condicion_piso2_futura == "Entrepiso sobre recinto cerrado":
+                    solucion_piso2_futura = {
+                        "Condicion_Piso": condicion_piso2_futura,
+                        "Codigo_Solucion": None,
+                        "Sistema": "Definición estructural de entrepiso",
+                        "Compatibilidad_Zona_D": "No evaluado como piso ventilado",
+                        "Observacion": (
+                            "Cuando el piso separa recintos interiores acondicionados, el prototipo no le asigna "
+                            "automáticamente la exigencia U/Rt correspondiente a un piso ventilado. La solución estructural "
+                            "del entrepiso debe definirse según el proyecto."
+                        )
+                    }
+                    st.info(
+                        "ℹ️ Este caso **no se compara automáticamente con la exigencia térmica de piso ventilado**, "
+                        "porque el elemento puede no formar parte de la envolvente térmica exterior. La estructura del "
+                        "entrepiso debe ser definida y revisada según las condiciones reales del proyecto."
+                    )
+                else:
+                    coincidencias_p2 = base_pisos_futura[
+                        base_pisos_futura["Condicion_Piso"].str.lower() == "ventilado"
+                    ]
+                    if not coincidencias_p2.empty:
+                        fila_piso2 = coincidencias_p2.iloc[0]
+                        solucion_piso2_futura = _fila_a_dict_seguro(fila_piso2)
+
+                        c1, c2, c3 = st.columns(3)
+                        with c1:
+                            st.metric("U referencia", _texto_valor_futuro(fila_piso2.get("U_W_m2K"), 2, " W/m²K"))
+                        with c2:
+                            st.metric("Rt referencia", _texto_valor_futuro(fila_piso2.get("Rt_m2K_W"), 2, " m²K/W"))
+                        with c3:
+                            st.metric("Zona D", str(fila_piso2.get("Compatibilidad_Zona_D", "Pendiente")))
+
+                        st.success(
+                            f"✅ Se propone como referencia **{fila_piso2.get('Codigo_Solucion', '')} — {fila_piso2.get('Sistema', '')}**."
+                        )
+                        st.warning(
+                            "🏗️ En una ampliación de segundo piso, esta selección térmica no sustituye la revisión de la "
+                            "capacidad resistente de la vivienda existente ni el diseño estructural del nuevo entrepiso."
+                        )
+
+            if superficie_ampliacion_piso1 <= 0 and superficie_ampliacion_piso2 <= 0:
+                st.caption("Ingrese superficie de ampliación para habilitar la selección de piso correspondiente.")
+
+        st.markdown("---")
+
+        # ------------------------------------------
+        # 7.3 TECHUMBRE
+        # ------------------------------------------
+        st.markdown("#### 🏠 7.3 Solución de Techumbre")
+
+        try:
+            base_techumbres_futura = cargar_soluciones_techumbres()
+        except Exception:
+            base_techumbres_futura = None
+
+        if base_techumbres_futura is None or base_techumbres_futura.empty:
+            st.warning(
+                "⚠️ No fue posible cargar **Soluciones_Techumbres** desde la base normativa. "
+                "La solución de techumbre quedará pendiente."
+            )
+        else:
+            opciones_tech_futura = ["Seleccione una solución...", "Definir otra solución con profesional"]
+            mapa_tech_futura = {}
+
+            for _, fila_tech in base_techumbres_futura.iterrows():
+                etiqueta = f"{fila_tech['Codigo_Solucion']} — {fila_tech['Sistema']}"
+                opciones_tech_futura.insert(-1, etiqueta)
+                mapa_tech_futura[etiqueta] = fila_tech
+
+            tech_elegida_futura = st.selectbox(
+                "Solución propuesta para la techumbre de la ampliación:",
+                opciones_tech_futura,
+                key="futura_solucion_techumbre"
+            )
+
+            if tech_elegida_futura in mapa_tech_futura:
+                fila_tech = mapa_tech_futura[tech_elegida_futura]
+                solucion_techumbre_futura = _fila_a_dict_seguro(fila_tech)
+
+                col_t1, col_t2, col_t3 = st.columns(3)
+                with col_t1:
+                    st.metric("U referencia", _texto_valor_futuro(fila_tech.get("U_W_m2K"), 2, " W/m²K"))
+                with col_t2:
+                    st.metric("Rt referencia", _texto_valor_futuro(fila_tech.get("Rt_m2K_W"), 2, " m²K/W"))
+                with col_t3:
+                    st.metric("Zona D", str(fila_tech.get("Compatibilidad_Zona_D", "Pendiente")))
+
+                st.success(
+                    f"✅ La solución de referencia presenta **U = {float(fila_tech.get('U_W_m2K')):.2f} W/m²K** y "
+                    f"**Rt = {float(fila_tech.get('Rt_m2K_W')):.2f} m²K/W**, frente a una referencia Zona D de "
+                    f"**U ≤ {float(fila_tech.get('U_Max_Zona_D')):.2f}** o **Rt ≥ {float(fila_tech.get('Rt_Min_Zona_D')):.2f}**."
+                )
+
+                with st.expander("🔎 Ver composición de la techumbre seleccionada"):
+                    st.write(f"**Código:** {fila_tech.get('Codigo_Solucion', '')}")
+                    st.write(f"**Geometría:** {fila_tech.get('Geometria', '')}")
+                    st.write(f"**Cielo interior:** {fila_tech.get('Cielo_Interior', '')}, {_texto_valor_futuro(fila_tech.get('Espesor_Cielo_mm'), 0, ' mm')}")
+                    st.write(f"**Listoneado:** {fila_tech.get('Listoneado_Cielo', '')}")
+                    st.write(f"**Aislación:** {fila_tech.get('Aislante', '')}, {_texto_valor_futuro(fila_tech.get('Espesor_Aislante_mm'), 0, ' mm')}")
+                    st.write(f"**Estructura:** {fila_tech.get('Estructura_Principal', '')}")
+                    st.write(f"**Separación referencial de cerchas:** {_texto_valor_futuro(fila_tech.get('Separacion_Cerchas_cm'), 0, ' cm')}")
+                    st.write(f"**Entretecho:** {fila_tech.get('Espacio_Entretecho', '')} — {fila_tech.get('Ventilacion_Entretecho', '')}")
+                    st.write(f"**Cubierta exterior:** {fila_tech.get('Cubierta_Exterior', '')}")
+                    st.write(f"**Barrera de vapor:** {fila_tech.get('Barrera_Vapor', '')}")
+                    st.caption(f"Fuente: {fila_tech.get('Fuente', '')}")
+
+            elif tech_elegida_futura == "Definir otra solución con profesional":
+                solucion_techumbre_futura = {
+                    "Codigo_Solucion": None,
+                    "Sistema": "Otra solución por definir",
+                    "Compatibilidad_Zona_D": "Pendiente de acreditación",
+                    "Observacion": (
+                        "La solución deberá demostrar el desempeño térmico correspondiente mediante un antecedente técnico "
+                        "válido, como solución acreditada, ensayo o memoria de cálculo, según corresponda."
+                    )
+                }
+                st.warning(
+                    "⚠️ La solución queda **pendiente de acreditación técnica**. No se asignan automáticamente valores U o Rt."
+                )
+
+        # ------------------------------------------
+        # 7.4 RESUMEN TÉCNICO
+        # ------------------------------------------
+        st.markdown("#### 📋 7.4 Especificación Técnica Preliminar")
+
+        nombre_muro_futura = (
+            f"{solucion_muro_futura.get('Codigo_Solucion')} — {solucion_muro_futura.get('Sistema')}"
+            if solucion_muro_futura
+            else "Pendiente de selección"
+        )
+        nombre_piso1_futura = (
+            f"{solucion_piso1_futura.get('Codigo_Solucion') or 'Sin código'} — {solucion_piso1_futura.get('Sistema', '')}"
+            if solucion_piso1_futura
+            else ("No aplica" if superficie_ampliacion_piso1 <= 0 else "Pendiente")
+        )
+        nombre_piso2_futura = (
+            f"{solucion_piso2_futura.get('Codigo_Solucion') or 'Sin código'} — {solucion_piso2_futura.get('Sistema', '')}"
+            if solucion_piso2_futura
+            else ("No aplica" if superficie_ampliacion_piso2 <= 0 else "Pendiente")
+        )
+        nombre_tech_futura = (
+            f"{solucion_techumbre_futura.get('Codigo_Solucion') or 'Sin código'} — {solucion_techumbre_futura.get('Sistema', '')}"
+            if solucion_techumbre_futura
+            else "Pendiente de selección"
+        )
+
+        resumen_soluciones_futura = pd.DataFrame(
+            [
+                {"Elemento": "Muro perimetral", "Solución propuesta": nombre_muro_futura},
+                {"Elemento": "Piso ampliación Piso 1", "Solución propuesta": nombre_piso1_futura},
+                {"Elemento": "Piso ampliación Piso 2", "Solución propuesta": nombre_piso2_futura},
+                {"Elemento": "Techumbre", "Solución propuesta": nombre_tech_futura},
+            ]
+        )
+        st.dataframe(resumen_soluciones_futura, use_container_width=True, hide_index=True)
+
+        pendientes_tecnicos_futura = []
+        if solucion_muro_futura is None:
+            pendientes_tecnicos_futura.append("muro")
+        if superficie_ampliacion_piso1 > 0 and solucion_piso1_futura is None:
+            pendientes_tecnicos_futura.append("piso de la ampliación en Piso 1")
+        if superficie_ampliacion_piso2 > 0 and solucion_piso2_futura is None:
+            pendientes_tecnicos_futura.append("piso de la ampliación en Piso 2")
+        if solucion_techumbre_futura is None:
+            pendientes_tecnicos_futura.append("techumbre")
+
+        if pendientes_tecnicos_futura:
+            st.warning(
+                "⚠️ La propuesta todavía tiene definiciones técnicas pendientes: "
+                + ", ".join(pendientes_tecnicos_futura)
+                + ". Puedes guardar el diseño igualmente y completarlas después."
+            )
+        else:
+            st.success(
+                "✅ La propuesta cuenta con una definición preliminar de muro, piso y techumbre para los elementos que corresponden."
+            )
+
+        st.caption(
+            "Estas alternativas son referencias técnicas del prototipo. La ejecución debe considerar encuentros, fijaciones, "
+            "continuidad de aislación, humedad, condensación, resistencia al fuego, estructura e instalaciones según corresponda."
+        )
+
+        st.markdown("---")
+
+        # ==========================================
         # GUARDAR PROPUESTA
         # ==========================================
         if st.button("💾 Guardar Propuesta de Ampliación", type="primary"):
@@ -3827,13 +4254,18 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
                         "posiciones_vivienda": {
                             clave: dict(valor)
                             for clave, valor in st.session_state.posiciones_vivienda.items()
-                        }
+                        },
+                        "solucion_muro": solucion_muro_futura,
+                        "solucion_piso1": solucion_piso1_futura,
+                        "solucion_piso2": solucion_piso2_futura,
+                        "solucion_techumbre": solucion_techumbre_futura,
+                        "pendientes_tecnicos": list(pendientes_tecnicos_futura),
                     }
 
                     st.success("✅ **Propuesta de ampliación guardada correctamente.**")
                     st.info(
-                        "🗺️ Los módulos, sus dimensiones, orientación y ubicación referencial ya quedaron "
-                        "guardados para la siguiente etapa del editor gráfico."
+                        "🗺️ Se guardaron los módulos, su distribución y las soluciones constructivas seleccionadas. "
+                        "Si algún elemento quedó pendiente, podrás completarlo posteriormente."
                     )
 
         if st.session_state.propuesta_ampliacion is not None:
@@ -3863,11 +4295,55 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
                         f"{modulo['superficie']:.2f} m² — {modulo['ubicacion']}{rotacion}"
                     )
 
+                st.markdown("**Soluciones constructivas guardadas:**")
+
+                sol_muro_guardada = propuesta.get("solucion_muro")
+                if sol_muro_guardada:
+                    st.write(
+                        f"• **Muro:** {sol_muro_guardada.get('Codigo_Solucion') or 'Sin código'} — "
+                        f"{sol_muro_guardada.get('Sistema', '')}"
+                    )
+                else:
+                    st.write("• **Muro:** Pendiente")
+
+                sol_p1_guardada = propuesta.get("solucion_piso1")
+                if sol_p1_guardada:
+                    st.write(
+                        f"• **Piso ampliación Piso 1:** {sol_p1_guardada.get('Codigo_Solucion') or 'Sin código'} — "
+                        f"{sol_p1_guardada.get('Sistema', '')}"
+                    )
+                elif propuesta.get("superficie_ampliacion_piso1", 0) > 0:
+                    st.write("• **Piso ampliación Piso 1:** Pendiente")
+
+                sol_p2_guardada = propuesta.get("solucion_piso2")
+                if sol_p2_guardada:
+                    st.write(
+                        f"• **Piso ampliación Piso 2:** {sol_p2_guardada.get('Codigo_Solucion') or 'Sin código'} — "
+                        f"{sol_p2_guardada.get('Sistema', '')}"
+                    )
+                elif propuesta.get("superficie_ampliacion_piso2", 0) > 0:
+                    st.write("• **Piso ampliación Piso 2:** Pendiente")
+
+                sol_tech_guardada = propuesta.get("solucion_techumbre")
+                if sol_tech_guardada:
+                    st.write(
+                        f"• **Techumbre:** {sol_tech_guardada.get('Codigo_Solucion') or 'Sin código'} — "
+                        f"{sol_tech_guardada.get('Sistema', '')}"
+                    )
+                else:
+                    st.write("• **Techumbre:** Pendiente")
+
+                if propuesta.get("pendientes_tecnicos"):
+                    st.warning(
+                        "⚠️ Pendientes técnicos guardados: "
+                        + ", ".join(propuesta.get("pendientes_tecnicos", []))
+                    )
+
         st.markdown("---")
         st.info(
-            "✅ **Editor tipo puzle incorporado.** La siguiente mejora podrá utilizar esta distribución "
-            "para definir con mayor detalle la forma de la ampliación y, posteriormente, incorporar "
-            "la selección de muros y soluciones constructivas."
+            "✅ **Soluciones constructivas incorporadas.** La propuesta ahora puede guardar muro, piso y techumbre "
+            "junto con la geometría del editor. La siguiente etapa puede profundizar la revisión de altura, vanos, "
+            "distanciamientos y rasantes de la futura ampliación."
         )
 
 # ==========================================
