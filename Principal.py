@@ -1,3 +1,4 @@
+# VERSION: PASO6_RESULTADO_FINAL_REGULARIZACION_2026_10_19
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -3934,6 +3935,33 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
         "diferencias": [],
     }
 
+    # Estados consolidados que alimentan el resultado final de regularización.
+    evaluacion_habitabilidad_reg = {
+        "estado": "No evaluado",
+        "observaciones": [],
+    }
+    evaluacion_seguridad_reg = {
+        "estado": "No evaluado",
+        "observaciones": [],
+    }
+    evaluacion_estabilidad_reg = {
+        "estado": "No evaluado",
+        "observaciones": [],
+    }
+
+    # Valores por defecto de la revisión técnica. Se inicializan aquí para que
+    # el resumen final funcione tanto para Art. 1° como para Art. 3°.
+    altura_cielo = None
+    locales_habitables_ventilan = "No aplica"
+    zonas_humedas_sin_ventana = "No aplica"
+    ducto_016 = "No aplica"
+    resistencia_f15 = "No aplica"
+    vivienda_adosada = "No aplica"
+    resistencia_f60 = "No aplica"
+    materialidad_estructura = "No evaluado"
+    luz_maxima = 0.0
+    orientacion_calculo = "No evaluada"
+
     # ==========================================
     # 1. DATOS DEL INMUEBLE A REGULARIZAR
     # ==========================================
@@ -4553,6 +4581,143 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
                 key="reg_luz_apoyos"
             )
 
+        # Consolidación de habitabilidad para el resultado final.
+        observaciones_hab = []
+        hab_incumplimiento = False
+        hab_pendiente = False
+
+        if altura_cielo < 2.00:
+            hab_incumplimiento = True
+            observaciones_hab.append(
+                f"Altura piso-cielo informada ({altura_cielo:.2f} m) inferior a la referencia de 2,00 m."
+            )
+
+        if locales_habitables_ventilan == "No":
+            hab_incumplimiento = True
+            observaciones_hab.append("Se informó falta de ventilación/iluminación exterior en locales habitables.")
+        elif locales_habitables_ventilan not in ["Sí", "No"]:
+            hab_pendiente = True
+            observaciones_hab.append("Ventilación/iluminación de locales habitables pendiente de verificar.")
+
+        if zonas_humedas_sin_ventana == "Sí":
+            if ducto_016 == "No":
+                hab_incumplimiento = True
+                observaciones_hab.append("Recintos húmedos sin ventana informados sin solución de ventilación verificada.")
+            elif ducto_016 != "Sí":
+                hab_pendiente = True
+                observaciones_hab.append("Solución de ventilación de recintos húmedos pendiente de verificar.")
+        elif zonas_humedas_sin_ventana not in ["No", "Sí"]:
+            hab_pendiente = True
+            observaciones_hab.append("Existencia de recintos húmedos sin ventana pendiente de verificar.")
+
+        if hab_incumplimiento:
+            evaluacion_habitabilidad_reg = {
+                "estado": "Presenta observaciones",
+                "observaciones": observaciones_hab,
+            }
+        elif hab_pendiente:
+            evaluacion_habitabilidad_reg = {
+                "estado": "Requiere antecedentes",
+                "observaciones": observaciones_hab,
+            }
+        else:
+            evaluacion_habitabilidad_reg = {
+                "estado": "Compatible preliminarmente",
+                "observaciones": ["Las condiciones consultadas de habitabilidad no presentan observaciones con los datos ingresados."],
+            }
+
+        # Consolidación de seguridad contra incendios para el resultado final.
+        observaciones_seg = []
+        seg_incumplimiento = False
+        seg_pendiente = False
+
+        if resistencia_f15 == "No":
+            seg_incumplimiento = True
+            observaciones_seg.append("No se informó antecedente F-15 para los elementos/componentes soportantes cuando corresponde.")
+        elif resistencia_f15 != "Sí":
+            seg_pendiente = True
+            observaciones_seg.append("Antecedente F-15 pendiente de verificar.")
+
+        if vivienda_adosada == "Sí":
+            if resistencia_f60 == "No":
+                seg_incumplimiento = True
+                observaciones_seg.append("Muro de adosamiento sin antecedente F-60/configuración acreditada según lo informado.")
+            elif resistencia_f60 != "Sí":
+                seg_pendiente = True
+                observaciones_seg.append("Condición F-60 del muro de adosamiento pendiente de verificar.")
+        elif vivienda_adosada not in ["No", "Sí"]:
+            seg_pendiente = True
+            observaciones_seg.append("Condición de adosamiento pendiente de verificar.")
+
+        if seg_incumplimiento:
+            evaluacion_seguridad_reg = {
+                "estado": "Presenta observaciones",
+                "observaciones": observaciones_seg,
+            }
+        elif seg_pendiente:
+            evaluacion_seguridad_reg = {
+                "estado": "Requiere antecedentes",
+                "observaciones": observaciones_seg,
+            }
+        else:
+            evaluacion_seguridad_reg = {
+                "estado": "Compatible preliminarmente",
+                "observaciones": ["Las condiciones de resistencia al fuego consultadas no presentan observaciones con los datos ingresados."],
+            }
+
+        # Consolidación de estabilidad. La salida nunca certifica estabilidad:
+        # sólo informa si la configuración coincide preliminarmente con un caso especial.
+        observaciones_est = []
+        estabilidad_compatible = False
+        estabilidad_pendiente = False
+
+        if materialidad_estructura == "Estructura de madera":
+            if luz_maxima <= 0:
+                estabilidad_pendiente = True
+                observaciones_est.append("Falta informar la mayor distancia libre entre apoyos.")
+            elif numero_pisos_reg in [1, 2] and luz_maxima <= 3.0:
+                estabilidad_compatible = True
+                observaciones_est.append("Configuración compatible preliminarmente con el caso especial de estructura de madera; requiere declaración profesional.")
+            else:
+                observaciones_est.append("No puede asumirse el caso especial de estructura de madera con los datos ingresados.")
+        elif materialidad_estructura == "Albañilería armada/reforzada u hormigón armado":
+            if luz_maxima <= 0:
+                estabilidad_pendiente = True
+                observaciones_est.append("Falta informar la mayor distancia libre entre apoyos.")
+            elif numero_pisos_reg == 1 and luz_maxima <= 3.0:
+                estabilidad_compatible = True
+                observaciones_est.append("Configuración compatible preliminarmente con el caso especial de un piso; requiere declaración profesional.")
+            else:
+                observaciones_est.append("No puede asumirse el caso especial de albañilería/hormigón con los datos ingresados.")
+        elif materialidad_estructura == "Sistema mixto de 2 pisos":
+            if luz_maxima <= 0:
+                estabilidad_pendiente = True
+                observaciones_est.append("Falta informar la mayor distancia libre entre apoyos.")
+            elif numero_pisos_reg == 2 and luz_maxima <= 3.0:
+                estabilidad_compatible = True
+                observaciones_est.append("Configuración potencialmente compatible con el caso especial mixto; deben verificarse materialidad por nivel, entramado de piso y segundo piso liviano.")
+            else:
+                observaciones_est.append("No puede asumirse el caso especial del sistema mixto con los datos ingresados.")
+        else:
+            estabilidad_pendiente = True
+            observaciones_est.append("Sistema estructural no identificado suficientemente para orientar la posible excepción de cálculo.")
+
+        if estabilidad_compatible:
+            evaluacion_estabilidad_reg = {
+                "estado": "Compatible preliminarmente con caso especial",
+                "observaciones": observaciones_est,
+            }
+        elif estabilidad_pendiente:
+            evaluacion_estabilidad_reg = {
+                "estado": "Requiere antecedentes",
+                "observaciones": observaciones_est,
+            }
+        else:
+            evaluacion_estabilidad_reg = {
+                "estado": "Requiere revisión estructural",
+                "observaciones": observaciones_est,
+            }
+
         st.markdown("#### 🔎 Resultado técnico preliminar")
 
         if altura_cielo >= 2.00:
@@ -4633,6 +4798,18 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
         st.info(f"🏗️ {orientacion_calculo}")
 
     elif procedimiento_orientativo == "Artículo 3°":
+        evaluacion_habitabilidad_reg = {
+            "estado": "Revisión OGUC requerida",
+            "observaciones": ["El artículo 3° no utiliza las flexibilidades técnicas del artículo 1°; la habitabilidad debe revisarse según OGUC."],
+        }
+        evaluacion_seguridad_reg = {
+            "estado": "Revisión OGUC requerida",
+            "observaciones": ["La seguridad debe revisarse según OGUC y antecedentes específicos de la vivienda."],
+        }
+        evaluacion_estabilidad_reg = {
+            "estado": "Revisión OGUC requerida",
+            "observaciones": ["La estabilidad y la exigencia de proyecto de cálculo estructural deben determinarse según OGUC."],
+        }
         st.info(
             "ℹ️ Para el artículo 3° deben cumplirse las normas de habitabilidad, estabilidad y seguridad de la OGUC. "
             "La revisión técnica específica se integrará con los módulos generales del prototipo, sin aplicar automáticamente "
@@ -5808,44 +5985,273 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
         st.success("✅ Todos los antecedentes del checklist orientativo fueron marcados.")
 
     # ==========================================
-    # 10. RESUMEN Y GUARDADO
+    # 10. RESULTADO FINAL Y GUARDADO
     # ==========================================
     st.markdown("---")
-    st.markdown("### 💾 10. Resumen de la Orientación")
+    st.markdown("### 📋 10. Resultado Final de la Revisión Preliminar")
+    st.caption(
+        "La síntesis reúne los antecedentes ingresados durante toda la evaluación. "
+        "Los estados indican compatibilidad preliminar, observaciones o información pendiente; "
+        "no equivalen a una aprobación municipal ni a una certificación profesional."
+    )
 
-    resumen_reg1, resumen_reg2, resumen_reg3, resumen_reg4 = st.columns(4)
-    with resumen_reg1:
-        st.metric("Superficie edificada", f"{superficie_regularizar:.2f} m²")
-    with resumen_reg2:
-        st.metric("Avalúo informado", f"{avaluo_fiscal_uf:.2f} UF")
-    with resumen_reg3:
-        if coef_ocupacion_suelo_real is not None:
-            st.metric("Ocupación Piso 1", f"{coef_ocupacion_suelo_real:.2f}")
+    # ---------- Utilidades del resumen ----------
+    def _estado_envolvente(resultado):
+        estado = str(resultado.get("estado", "No evaluado"))
+        estado_lower = estado.lower()
+        if "coincidencia con solución" in estado_lower or "referencia térmica compatible" in estado_lower:
+            return "ok", estado
+        if "no evaluado" in estado_lower:
+            return "pendiente", estado
+        if "parcial" in estado_lower or "no verificable" in estado_lower or "requiere" in estado_lower:
+            return "pendiente", estado
+        return "pendiente", estado
+
+    def _mostrar_estado(etiqueta, tipo, texto):
+        if tipo == "ok":
+            st.success(f"✅ **{etiqueta}:** {texto}")
+        elif tipo == "error":
+            st.error(f"❌ **{etiqueta}:** {texto}")
+        elif tipo == "info":
+            st.info(f"ℹ️ **{etiqueta}:** {texto}")
         else:
-            st.metric("Ocupación Piso 1", "Pendiente")
-    with resumen_reg4:
-        st.metric("Ruta preliminar", procedimiento_orientativo)
+            st.warning(f"⚠️ **{etiqueta}:** {texto}")
 
+    observaciones_finales = []
+    pendientes_finales = []
+
+    # ---------- A. Ruta y datos generales ----------
+    st.markdown("#### 🧭 A. Vía preliminar identificada")
+    if procedimiento_orientativo in ["Artículo 1°", "Artículo 3°"]:
+        _mostrar_estado("Procedimiento", "ok", procedimiento_orientativo)
+    elif procedimiento_orientativo in ["No se identifica acceso preliminar", "Fuera de los umbrales analizados"]:
+        _mostrar_estado("Procedimiento", "error", procedimiento_orientativo)
+        observaciones_finales.append(f"Ruta de regularización: {procedimiento_orientativo}.")
+    else:
+        _mostrar_estado("Procedimiento", "pendiente", procedimiento_orientativo)
+        pendientes_finales.append("Faltan antecedentes para identificar de manera preliminar el procedimiento aplicable.")
+
+    limite_sup = 90.0 if procedimiento_orientativo == "Artículo 1°" else 140.0 if procedimiento_orientativo == "Artículo 3°" else None
+    limite_av = 1000.0 if procedimiento_orientativo == "Artículo 1°" else 2000.0 if procedimiento_orientativo == "Artículo 3°" else None
+
+    datos_col1, datos_col2, datos_col3, datos_col4 = st.columns(4)
+    with datos_col1:
+        st.metric("Superficie edificada", f"{superficie_regularizar:.2f} m²")
+    with datos_col2:
+        st.metric("Avalúo informado", f"{avaluo_fiscal_uf:.2f} UF")
+    with datos_col3:
+        st.metric("Número de pisos", str(numero_pisos_reg))
+    with datos_col4:
+        st.metric("Zona PRC", zona_codigo_reg if zona_codigo_reg else "Pendiente")
+
+    if limite_sup is not None:
+        _mostrar_estado(
+            "Superficie",
+            "ok" if superficie_regularizar <= limite_sup else "error",
+            f"{superficie_regularizar:.2f} m² / referencia de la vía: hasta {limite_sup:.0f} m²"
+        )
+    if limite_av is not None:
+        _mostrar_estado(
+            "Avalúo fiscal",
+            "ok" if avaluo_fiscal_uf <= limite_av else "error",
+            f"{avaluo_fiscal_uf:.2f} UF / referencia de la vía: hasta {limite_av:.0f} UF"
+        )
+
+    condiciones_generales = [
+        ("Recepción definitiva", sin_recepcion == "Sí", sin_recepcion, "Se informó que la vivienda no cuenta con recepción definitiva total o parcial."),
+        ("Antigüedad", construida_antes_ley == "Sí", construida_antes_ley, "Se informó que la edificación existía antes de la publicación de la Ley N.º 20.898."),
+        ("Uso residencial", uso_residencial == "Sí", uso_residencial, "El uso residencial aparece compatible según los antecedentes ingresados."),
+        ("Área restringida", area_restringida == "No", area_restringida, "No se informó emplazamiento en área de riesgo/protección, utilidad pública o bien nacional de uso público."),
+        ("Reclamaciones", reclamaciones == "No", reclamaciones, "No se informaron reclamaciones escritas pendientes por incumplimiento urbanístico."),
+    ]
+
+    with st.expander("🏠 Ver condiciones generales de acceso"):
+        for nombre, cumple, respuesta, texto_ok in condiciones_generales:
+            if cumple:
+                st.write(f"✅ **{nombre}:** {texto_ok}")
+            elif respuesta in ["Seleccione una opción...", "No estoy seguro/a"]:
+                st.write(f"⚠️ **{nombre}:** pendiente de verificar.")
+                pendientes_finales.append(f"{nombre}: antecedente pendiente de verificar.")
+            else:
+                st.write(f"❌ **{nombre}:** la respuesta ingresada requiere revisión para esta vía.")
+                observaciones_finales.append(f"{nombre}: la respuesta ingresada requiere revisión.")
+
+    # ---------- B. Revisión urbanística ----------
+    st.markdown("#### 📐 B. Revisión urbanística")
     if procedimiento_orientativo == "Artículo 3°":
-        st.markdown("#### 📌 Síntesis urbanística del artículo 3°")
-        sint_col1, sint_col2 = st.columns(2)
-        with sint_col1:
-            st.write(f"**Ocupación:** {evaluacion_ocupacion_art3}")
-        with sint_col2:
-            st.write(f"**Constructibilidad:** {evaluacion_constructibilidad_art3}")
+        if evaluacion_ocupacion_art3 == "Dentro del límite especial de 0,80":
+            _mostrar_estado("Ocupación de suelo/pisos", "ok", evaluacion_ocupacion_art3)
+        elif "Supera" in evaluacion_ocupacion_art3:
+            _mostrar_estado("Ocupación de suelo/pisos", "error", evaluacion_ocupacion_art3)
+            observaciones_finales.append("El coeficiente de ocupación calculado supera 0,80; no puede asumirse esa excepción del artículo 3°.")
+        else:
+            _mostrar_estado("Ocupación de suelo/pisos", "pendiente", evaluacion_ocupacion_art3)
+            pendientes_finales.append("Revisión del coeficiente de ocupación pendiente.")
 
-    st.markdown("#### 🌡️ Síntesis de envolvente existente")
-    env_col1, env_col2, env_col3 = st.columns(3)
-    with env_col1:
-        st.write(f"**Muro:** {resultado_muro_regularizacion.get('estado', 'No evaluado')}")
-    with env_col2:
-        st.write(f"**Piso:** {resultado_piso_regularizacion.get('estado', 'No evaluado')}")
-    with env_col3:
-        st.write(f"**Techumbre:** {resultado_techumbre_regularizacion.get('estado', 'No evaluado')}")
+        if "Excepción aplicable preliminarmente" in evaluacion_constructibilidad_art3:
+            _mostrar_estado("Constructibilidad", "ok", evaluacion_constructibilidad_art3)
+        else:
+            _mostrar_estado("Constructibilidad", "pendiente", evaluacion_constructibilidad_art3)
+            pendientes_finales.append("La excepción de constructibilidad no puede asumirse automáticamente; revisar norma aplicable.")
 
-    if st.button("💾 Guardar Orientación de Regularización", type="primary"):
+        if coef_ocupacion_suelo_real is not None:
+            st.caption(
+                f"Ocupación Piso 1: {coef_ocupacion_suelo_real:.2f} · "
+                + (f"Piso 2: {coef_ocupacion_piso2_real:.2f} · " if superficie_piso2_reg > 0 else "")
+                + f"Constructibilidad real: {coef_constructibilidad_real:.2f}"
+            )
+    elif procedimiento_orientativo == "Artículo 1°":
+        _mostrar_estado(
+            "Coeficientes PRC",
+            "info",
+            "Se conservan como antecedentes geométricos; no se aplican en este prototipo como el mismo filtro de una futura ampliación."
+        )
+    else:
+        _mostrar_estado("Revisión urbanística", "pendiente", "Se habilita una vez identificada una vía preliminar.")
+
+    # ---------- C. Habitabilidad, seguridad y estabilidad ----------
+    st.markdown("#### 🧱 C. Habitabilidad, seguridad y estabilidad")
+
+    def _tipo_estado_tecnico(estado):
+        est = str(estado).lower()
+        if "compatible preliminarmente" in est:
+            return "ok"
+        if "presenta observaciones" in est:
+            return "error"
+        if "requiere" in est or "no evaluado" in est:
+            return "pendiente"
+        return "pendiente"
+
+    for etiqueta, evaluacion in [
+        ("Habitabilidad", evaluacion_habitabilidad_reg),
+        ("Seguridad contra incendios", evaluacion_seguridad_reg),
+        ("Estabilidad estructural", evaluacion_estabilidad_reg),
+    ]:
+        tipo_eval = _tipo_estado_tecnico(evaluacion.get("estado", "No evaluado"))
+        _mostrar_estado(etiqueta, tipo_eval, evaluacion.get("estado", "No evaluado"))
+        if tipo_eval == "error":
+            observaciones_finales.extend(evaluacion.get("observaciones", []))
+        elif tipo_eval == "pendiente":
+            pendientes_finales.extend(evaluacion.get("observaciones", []))
+
+        if evaluacion.get("observaciones"):
+            with st.expander(f"Ver detalle: {etiqueta}"):
+                for obs in evaluacion.get("observaciones", []):
+                    st.write(f"• {obs}")
+
+    # ---------- D. Envolvente existente ----------
+    st.markdown("#### 🌡️ D. Envolvente constructiva existente")
+    envolventes = [
+        ("Muro", resultado_muro_regularizacion),
+        ("Piso", resultado_piso_regularizacion),
+        ("Techumbre", resultado_techumbre_regularizacion),
+    ]
+
+    for etiqueta, resultado_env in envolventes:
+        tipo_env, texto_env = _estado_envolvente(resultado_env)
+        _mostrar_estado(etiqueta, tipo_env, texto_env)
+
+        if tipo_env != "ok":
+            pendientes_finales.append(f"{etiqueta}: {texto_env}.")
+
+        codigo_env = resultado_env.get("codigo_referencia")
+        u_env = resultado_env.get("u_referencia")
+        rt_env = resultado_env.get("rt_referencia")
+        detalles = []
+        if codigo_env:
+            detalles.append(f"referencia {codigo_env}")
+        if u_env is not None:
+            detalles.append(f"U = {u_env:.2f} W/m²K")
+        if rt_env is not None:
+            detalles.append(f"Rt = {rt_env:.2f} m²K/W")
+        if detalles:
+            st.caption(f"{etiqueta}: " + " · ".join(detalles))
+
+    st.caption(
+        "Una coincidencia con una solución de referencia permite comparar la composición y su desempeño térmico registrado; "
+        "no constituye por sí sola certificación del elemento existente ni acredita resistencia al fuego o estabilidad."
+    )
+
+    # ---------- E. Documentación ----------
+    st.markdown("#### 📑 E. Antecedentes documentales")
+    docs_col_a, docs_col_b = st.columns(2)
+    with docs_col_a:
+        st.metric("Antecedentes identificados", f"{cantidad_docs} de {total_docs}")
+    with docs_col_b:
+        st.metric("Pendientes", len(faltantes_docs))
+
+    if faltantes_docs:
+        _mostrar_estado(
+            "Documentación",
+            "pendiente",
+            f"Faltan {len(faltantes_docs)} antecedente(s) del checklist orientativo."
+        )
+        pendientes_finales.append(f"Faltan {len(faltantes_docs)} antecedentes del checklist documental.")
+        with st.expander("📌 Ver documentos pendientes en el resultado final"):
+            for doc in faltantes_docs:
+                st.write(f"• {doc}")
+    else:
+        _mostrar_estado("Documentación", "ok", "Todos los antecedentes del checklist fueron marcados.")
+
+    # Eliminar duplicados conservando el orden para una salida limpia.
+    observaciones_finales = list(dict.fromkeys([x for x in observaciones_finales if x]))
+    pendientes_finales = list(dict.fromkeys([x for x in pendientes_finales if x]))
+
+    # ---------- F. Conclusión global ----------
+    st.markdown("#### 🧾 F. Conclusión preliminar")
+
+    if procedimiento_orientativo not in ["Artículo 1°", "Artículo 3°"]:
+        if procedimiento_orientativo in ["No se identifica acceso preliminar", "Fuera de los umbrales analizados"]:
+            resultado_global_reg = "No se identifica una vía preliminar compatible con los antecedentes ingresados"
+            st.error(
+                "❌ **No se identifica una vía preliminar compatible con los antecedentes ingresados.** "
+                "Esto no equivale a una resolución definitiva; corresponde revisar el caso y sus antecedentes con un profesional competente y la DOM."
+            )
+        else:
+            resultado_global_reg = "No es posible concluir por falta de antecedentes"
+            st.warning(
+                "⚠️ **No es posible concluir todavía.** Faltan antecedentes para identificar y revisar de manera preliminar la vía de regularización."
+            )
+    elif observaciones_finales:
+        resultado_global_reg = "Condiciones preliminares de acceso con observaciones que deben resolverse o acreditarse"
+        st.warning(
+            f"⚠️ **La vivienda presenta condiciones preliminares asociadas al {procedimiento_orientativo}, "
+            "pero existen observaciones técnicas o normativas que deben resolverse, corregirse o acreditarse antes de una tramitación formal.**"
+        )
+    elif pendientes_finales:
+        resultado_global_reg = "Condiciones preliminares compatibles con antecedentes pendientes de verificación"
+        st.warning(
+            f"⚠️ **La vivienda presenta condiciones preliminares compatibles con el {procedimiento_orientativo}, "
+            "pero todavía existen antecedentes o verificaciones pendientes.**"
+        )
+    else:
+        resultado_global_reg = "Condiciones preliminares compatibles, sujetas a revisión profesional y DOM"
+        st.success(
+            f"✅ **Con los antecedentes ingresados, la vivienda presenta condiciones preliminares compatibles con el {procedimiento_orientativo}.** "
+            "La tramitación continúa requiriendo los antecedentes, intervención profesional y revisión de la Dirección de Obras Municipales que correspondan."
+        )
+
+    if observaciones_finales:
+        with st.expander(f"❌ Observaciones detectadas ({len(observaciones_finales)})"):
+            for obs in observaciones_finales:
+                st.write(f"• {obs}")
+
+    if pendientes_finales:
+        with st.expander(f"⚠️ Antecedentes o verificaciones pendientes ({len(pendientes_finales)})"):
+            for pendiente in pendientes_finales:
+                st.write(f"• {pendiente}")
+
+    st.info(
+        "📌 **Alcance del resultado:** esta síntesis es una herramienta de apoyo preliminar. "
+        "No reemplaza el informe del profesional competente, los antecedentes técnicos que deban acreditarse, "
+        "ni la revisión y resolución de la Dirección de Obras Municipales."
+    )
+
+    # ---------- Guardado ----------
+    if st.button("💾 Guardar Resultado de Regularización", type="primary"):
         st.session_state.resultado_regularizacion = {
             "procedimiento_orientativo": procedimiento_orientativo,
+            "resultado_global": resultado_global_reg,
             "fuente_datos": fuente_datos_regularizacion,
             "superficie_terreno_m2": float(superficie_terreno_reg),
             "superficie_piso1_m2": float(superficie_piso1_reg),
@@ -5874,6 +6280,9 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
             "coef_constructibilidad_prc_referencia": coef_constructibilidad_prc_reg,
             "evaluacion_ocupacion_art3": evaluacion_ocupacion_art3,
             "evaluacion_constructibilidad_art3": evaluacion_constructibilidad_art3,
+            "evaluacion_habitabilidad": evaluacion_habitabilidad_reg,
+            "evaluacion_seguridad": evaluacion_seguridad_reg,
+            "evaluacion_estabilidad": evaluacion_estabilidad_reg,
             "revision_muro": resultado_muro_regularizacion,
             "revision_piso": resultado_piso_regularizacion,
             "revision_techumbre": resultado_techumbre_regularizacion,
@@ -5884,28 +6293,27 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
             "reclamaciones": reclamaciones,
             "documentos_marcados": [nombre for nombre, marcado in docs_marcados if marcado],
             "documentos_pendientes": faltantes_docs,
+            "observaciones_finales": observaciones_finales,
+            "pendientes_finales": pendientes_finales,
         }
-        st.success("✅ Orientación preliminar de regularización guardada correctamente.")
+        st.success("✅ Resultado preliminar de regularización guardado correctamente.")
 
     if st.session_state.resultado_regularizacion is not None:
-        with st.expander("✅ Ver última orientación guardada"):
+        with st.expander("✅ Ver último resultado guardado"):
             reg_guardada = st.session_state.resultado_regularizacion
-            st.write(f"**Ruta preliminar:** {reg_guardada['procedimiento_orientativo']}")
+            st.write(f"**Ruta preliminar:** {reg_guardada.get('procedimiento_orientativo', 'Pendiente')}")
+            st.write(f"**Resultado global:** {reg_guardada.get('resultado_global', 'Sin síntesis guardada')}")
             st.write(f"**Superficie del terreno:** {reg_guardada.get('superficie_terreno_m2', 0.0):.2f} m²")
-            st.write(f"**Superficie edificada:** {reg_guardada['superficie_m2']:.2f} m²")
-            st.write(f"**Avalúo:** {reg_guardada['avaluo_uf']:.2f} UF")
+            st.write(f"**Superficie edificada:** {reg_guardada.get('superficie_m2', 0.0):.2f} m²")
+            st.write(f"**Avalúo:** {reg_guardada.get('avaluo_uf', 0.0):.2f} UF")
             if reg_guardada.get("coef_ocupacion_suelo_real") is not None:
                 st.write(f"**Coeficiente real de ocupación Piso 1:** {reg_guardada['coef_ocupacion_suelo_real']:.2f}")
             if reg_guardada.get("coef_constructibilidad_real") is not None:
                 st.write(f"**Coeficiente real de constructibilidad:** {reg_guardada['coef_constructibilidad_real']:.2f}")
-            st.write(f"**Antecedentes pendientes del checklist:** {len(reg_guardada['documentos_pendientes'])}")
-            if reg_guardada.get("revision_muro"):
-                st.write(f"**Revisión del muro:** {reg_guardada['revision_muro'].get('estado', 'No evaluado')}")
-            if reg_guardada.get("revision_piso"):
-                st.write(f"**Revisión del piso:** {reg_guardada['revision_piso'].get('estado', 'No evaluado')}")
-            if reg_guardada.get("revision_techumbre"):
-                st.write(f"**Revisión de la techumbre:** {reg_guardada['revision_techumbre'].get('estado', 'No evaluado')}")
-
+            st.write(f"**Documentos pendientes:** {len(reg_guardada.get('documentos_pendientes', []))}")
+            st.write(f"**Muro:** {reg_guardada.get('revision_muro', {}).get('estado', 'No evaluado')}")
+            st.write(f"**Piso:** {reg_guardada.get('revision_piso', {}).get('estado', 'No evaluado')}")
+            st.write(f"**Techumbre:** {reg_guardada.get('revision_techumbre', {}).get('estado', 'No evaluado')}")
     st.markdown("---")
     st.info(
         "📌 **Ruta diferenciada:** este módulo se mantiene separado de la evaluación de una futura ampliación. "
