@@ -5,7 +5,7 @@ from matplotlib.patches import Rectangle, Patch
 from pathlib import Path
 from io import BytesIO
 
-# VERSION: PASO4_MUROS_EXISTENTES_LOSCAT_2026_10_19
+# VERSION: PASO5_ENVOLVENTE_EXISTENTE_PISOS_TECHUMBRES_2026_10_19
 
 # ==========================================
 # CONFIGURACIÓN DE LA PÁGINA
@@ -208,6 +208,122 @@ def cargar_soluciones_muros():
         "Aislacion_Exterior",
         "Barrera_Humedad",
         "Revestimiento_Exterior",
+        "Compatibilidad_Zona_D",
+        "Fuente",
+        "Observacion",
+    ]
+
+    for columna in columnas_texto:
+        if columna in soluciones.columns:
+            soluciones[columna] = soluciones[columna].fillna("").astype(str).str.strip()
+
+    return soluciones
+
+
+@st.cache_data
+def cargar_soluciones_pisos():
+    """Carga las soluciones/criterios de piso seleccionados para el prototipo."""
+    carpeta_proyecto = Path(__file__).resolve().parent
+    ruta_excel = carpeta_proyecto / "Base_Normativa_PRC_San_Miguel.xlsx"
+
+    if not ruta_excel.exists():
+        return None
+
+    try:
+        soluciones = pd.read_excel(ruta_excel, sheet_name="Soluciones_Pisos")
+    except Exception:
+        return None
+
+    soluciones.columns = soluciones.columns.str.strip()
+
+    columnas_numericas = [
+        "Espesor_Placa_Min_mm",
+        "Espesor_Placa_Max_mm",
+        "Espesor_Aislante_mm",
+        "Densidad_Aislante_kg_m3",
+        "Espesor_Rev_Inferior_mm",
+        "Cama_Ripio_mm",
+        "Radier_Hormigon_mm",
+        "R100_Min_Sobrecimiento",
+        "U_W_m2K",
+        "Rt_m2K_W",
+        "U_Max_Zona_D",
+        "Rt_Min_Zona_D",
+    ]
+
+    for columna in columnas_numericas:
+        if columna in soluciones.columns:
+            soluciones[columna] = pd.to_numeric(soluciones[columna], errors="coerce")
+
+    columnas_texto = [
+        "Codigo_Solucion",
+        "Elemento",
+        "Condicion_Piso",
+        "Sistema",
+        "Tipo_Referencia",
+        "Pavimento_Terminacion",
+        "Placa_Estructural",
+        "Estructura_Principal",
+        "Aislante",
+        "Barrera_Humedad_Viento",
+        "Revestimiento_Inferior",
+        "Aislacion_Sobrecimiento",
+        "Compatibilidad_Zona_D",
+        "Fuente",
+        "Observacion",
+    ]
+
+    for columna in columnas_texto:
+        if columna in soluciones.columns:
+            soluciones[columna] = soluciones[columna].fillna("").astype(str).str.strip()
+
+    return soluciones
+
+
+@st.cache_data
+def cargar_soluciones_techumbres():
+    """Carga las soluciones de techumbre seleccionadas para el prototipo."""
+    carpeta_proyecto = Path(__file__).resolve().parent
+    ruta_excel = carpeta_proyecto / "Base_Normativa_PRC_San_Miguel.xlsx"
+
+    if not ruta_excel.exists():
+        return None
+
+    try:
+        soluciones = pd.read_excel(ruta_excel, sheet_name="Soluciones_Techumbres")
+    except Exception:
+        return None
+
+    soluciones.columns = soluciones.columns.str.strip()
+
+    columnas_numericas = [
+        "Espesor_Cielo_mm",
+        "Espesor_Aislante_mm",
+        "Densidad_Aislante_Min_kg_m3",
+        "Separacion_Cerchas_cm",
+        "U_W_m2K",
+        "Rt_m2K_W",
+        "U_Max_Zona_D",
+        "Rt_Min_Zona_D",
+    ]
+
+    for columna in columnas_numericas:
+        if columna in soluciones.columns:
+            soluciones[columna] = pd.to_numeric(soluciones[columna], errors="coerce")
+
+    columnas_texto = [
+        "Codigo_Solucion",
+        "Elemento",
+        "Sistema",
+        "Geometria",
+        "Cielo_Interior",
+        "Barrera_Vapor",
+        "Listoneado_Cielo",
+        "Aislante",
+        "Estructura_Principal",
+        "Espacio_Entretecho",
+        "Ventilacion_Entretecho",
+        "Cubierta_Exterior",
         "Compatibilidad_Zona_D",
         "Fuente",
         "Observacion",
@@ -3801,6 +3917,22 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
         "rt_referencia": None,
         "diferencias": [],
     }
+    resultado_piso_regularizacion = {
+        "estado": "No evaluado",
+        "sistema_ingresado": None,
+        "codigo_referencia": None,
+        "u_referencia": None,
+        "rt_referencia": None,
+        "diferencias": [],
+    }
+    resultado_techumbre_regularizacion = {
+        "estado": "No evaluado",
+        "sistema_ingresado": None,
+        "codigo_referencia": None,
+        "u_referencia": None,
+        "rt_referencia": None,
+        "diferencias": [],
+    }
 
     # ==========================================
     # 1. DATOS DEL INMUEBLE A REGULARIZAR
@@ -4997,10 +5129,643 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
         )
 
     # ==========================================
-    # 7. CHECKLIST DOCUMENTAL
+    # 7. REVISIÓN CONSTRUCTIVA Y TÉRMICA DEL PISO
     # ==========================================
     st.markdown("---")
-    st.markdown("### 📑 7. Checklist Orientativo de Antecedentes")
+    st.markdown("### ⬛ 7. Revisión Constructiva y Térmica del Piso Existente")
+    st.caption(
+        "Selecciona la condición predominante del piso. Para un piso apoyado sobre terreno, el prototipo revisa "
+        "el criterio constructivo de referencia y la aislación exterior del sobrecimiento. Para un piso ventilado, "
+        "compara la composición ingresada con la solución MINVU seleccionada en la tesis. Esta revisión es orientativa."
+    )
+
+    try:
+        base_pisos = cargar_soluciones_pisos()
+    except Exception:
+        base_pisos = None
+
+    if base_pisos is None or base_pisos.empty:
+        st.warning(
+            "⚠️ No fue posible cargar la hoja **Soluciones_Pisos** desde `Base_Normativa_PRC_San_Miguel.xlsx`. "
+            "Para utilizar esta revisión debes subir también la versión actualizada de la base normativa."
+        )
+    else:
+        tipo_piso_reg = st.selectbox(
+            "Condición predominante del piso existente:",
+            [
+                "Seleccione una opción...",
+                "Piso apoyado sobre terreno (radier)",
+                "Piso ventilado de madera",
+                "Otro sistema",
+                "No sé cómo está construido",
+            ],
+            key="reg_piso_tipo"
+        )
+
+        if tipo_piso_reg == "Piso apoyado sobre terreno (radier)":
+            referencia_piso = base_pisos[
+                base_pisos["Condicion_Piso"].str.lower() == "apoyado sobre terreno"
+            ]
+            fila_ref_piso = referencia_piso.iloc[0] if not referencia_piso.empty else None
+
+            st.markdown("#### 🧱 Piso apoyado directamente sobre terreno")
+            st.info(
+                "ℹ️ En esta alternativa, los espesores de ripio y radier se muestran como **criterios constructivos de referencia**. "
+                "La revisión térmica se concentra en la aislación exterior del sobrecimiento para Zona Térmica D."
+            )
+
+            piso_col1, piso_col2 = st.columns(2)
+            with piso_col1:
+                espesor_ripio_piso = st.number_input(
+                    "Espesor aproximado de la cama de ripio (mm; 0 = no sé):",
+                    min_value=0.0, value=0.0, step=10.0, format="%.0f",
+                    key="reg_piso_radier_ripio"
+                )
+                espesor_radier_piso = st.number_input(
+                    "Espesor aproximado del radier de hormigón (mm; 0 = no sé):",
+                    min_value=0.0, value=0.0, step=10.0, format="%.0f",
+                    key="reg_piso_radier_espesor"
+                )
+
+            with piso_col2:
+                aislacion_sobrecimiento = st.selectbox(
+                    "¿Existe aislación térmica exterior en el sobrecimiento?",
+                    opciones_si_no,
+                    key="reg_piso_sobrecimiento_aislacion"
+                )
+                r100_sobrecimiento = 0.0
+                if aislacion_sobrecimiento == "Sí":
+                    r100_sobrecimiento = st.number_input(
+                        "R100 informado de la aislación del sobrecimiento (0 = no sé):",
+                        min_value=0.0, value=0.0, step=5.0, format="%.0f",
+                        key="reg_piso_sobrecimiento_r100"
+                    )
+
+            diferencias_piso = []
+            if fila_ref_piso is not None:
+                ripio_ref = fila_ref_piso.get("Cama_Ripio_mm", None)
+                radier_ref = fila_ref_piso.get("Radier_Hormigon_mm", None)
+                r100_min_ref = fila_ref_piso.get("R100_Min_Sobrecimiento", None)
+                codigo_ref_piso = str(fila_ref_piso.get("Codigo_Solucion", "PST-REF-ZD"))
+
+                if espesor_ripio_piso > 0 and pd.notna(ripio_ref) and abs(float(espesor_ripio_piso) - float(ripio_ref)) > 1.0:
+                    diferencias_piso.append(
+                        f"Cama de ripio: ingresada {espesor_ripio_piso:.0f} mm · referencia constructiva {float(ripio_ref):.0f} mm."
+                    )
+                if espesor_radier_piso > 0 and pd.notna(radier_ref) and abs(float(espesor_radier_piso) - float(radier_ref)) > 1.0:
+                    diferencias_piso.append(
+                        f"Radier: ingresado {espesor_radier_piso:.0f} mm · referencia constructiva {float(radier_ref):.0f} mm."
+                    )
+
+                if aislacion_sobrecimiento == "Sí" and r100_sobrecimiento > 0 and pd.notna(r100_min_ref):
+                    if float(r100_sobrecimiento) >= float(r100_min_ref):
+                        estado_piso = "Referencia térmica compatible para piso sobre terreno"
+                        st.success(
+                            f"✅ El R100 informado (**{r100_sobrecimiento:.0f}**) alcanza el valor de referencia "
+                            f"considerado para Zona Térmica D (**R100 ≥ {float(r100_min_ref):.0f}**)."
+                        )
+                    else:
+                        estado_piso = "Requiere revisión térmica del sobrecimiento"
+                        diferencias_piso.append(
+                            f"R100 del sobrecimiento: informado {r100_sobrecimiento:.0f} · referencia mínima {float(r100_min_ref):.0f}."
+                        )
+                        st.error(
+                            f"❌ El R100 informado (**{r100_sobrecimiento:.0f}**) es inferior al valor de referencia "
+                            f"(**{float(r100_min_ref):.0f}**)."
+                        )
+                elif aislacion_sobrecimiento == "No":
+                    estado_piso = "Requiere revisión térmica del sobrecimiento"
+                    diferencias_piso.append("Se informó que el sobrecimiento no cuenta con aislación térmica exterior.")
+                    st.warning(
+                        "⚠️ Se informó ausencia de aislación exterior en el sobrecimiento. Debe revisarse la condición térmica aplicable."
+                    )
+                else:
+                    estado_piso = "No verificable por falta de antecedentes térmicos"
+                    diferencias_piso.append("No se dispone de un R100 verificable para la aislación exterior del sobrecimiento.")
+                    st.info(
+                        "ℹ️ No es posible verificar térmicamente el piso sobre terreno sin antecedentes de la aislación del sobrecimiento."
+                    )
+
+                resultado_piso_regularizacion = {
+                    "estado": estado_piso,
+                    "sistema_ingresado": tipo_piso_reg,
+                    "codigo_referencia": codigo_ref_piso,
+                    "u_referencia": None,
+                    "rt_referencia": None,
+                    "r100_sobrecimiento": float(r100_sobrecimiento) if r100_sobrecimiento > 0 else None,
+                    "diferencias": diferencias_piso,
+                }
+
+                with st.expander("📚 Ver criterio de referencia para piso sobre terreno"):
+                    st.write(f"**Código interno de referencia:** {codigo_ref_piso}")
+                    st.write(f"**Cama de ripio de referencia:** {float(ripio_ref):.0f} mm" if pd.notna(ripio_ref) else "**Cama de ripio:** sin dato")
+                    st.write(f"**Radier de referencia:** {float(radier_ref):.0f} mm" if pd.notna(radier_ref) else "**Radier:** sin dato")
+                    st.write(f"**Aislación de sobrecimiento:** {fila_ref_piso.get('Aislacion_Sobrecimiento', '')}")
+                    st.write(f"**R100 mínimo de referencia:** {float(r100_min_ref):.0f}" if pd.notna(r100_min_ref) else "**R100:** sin dato")
+                    st.write(f"**Fuente:** {fila_ref_piso.get('Fuente', '')}")
+                    st.write(f"**Observación:** {fila_ref_piso.get('Observacion', '')}")
+
+                if diferencias_piso:
+                    with st.expander("🔎 Ver diferencias respecto del criterio de referencia"):
+                        for diferencia in diferencias_piso:
+                            st.write(f"• {diferencia}")
+
+        elif tipo_piso_reg == "Piso ventilado de madera":
+            referencia_piso = base_pisos[
+                base_pisos["Condicion_Piso"].str.lower() == "ventilado"
+            ]
+            fila_ref_piso = referencia_piso.iloc[0] if not referencia_piso.empty else None
+
+            st.markdown("#### 🪵 Piso ventilado – entramado de madera")
+            piso_col1, piso_col2 = st.columns(2)
+
+            with piso_col1:
+                placa_piso = st.selectbox(
+                    "Placa estructural superior:",
+                    ["No sé", "OSB", "Terciado estructural", "Otra"],
+                    key="reg_piso_vent_placa"
+                )
+                espesor_placa_piso = st.number_input(
+                    "Espesor de la placa estructural (mm; 0 = no sé):",
+                    min_value=0.0, value=0.0, step=0.5, format="%.1f",
+                    key="reg_piso_vent_esp_placa"
+                )
+                estructura_piso = st.selectbox(
+                    "Envigado estructural:",
+                    ["No sé", 'Pino 2"x8"', 'Pino 2"x6"', "Otra"],
+                    key="reg_piso_vent_estructura"
+                )
+                aislante_piso = st.selectbox(
+                    "Aislante entre vigas:",
+                    ["No sé", "Lana de fibra de vidrio", "Lana mineral", "EPS", "Sin aislación", "Otro"],
+                    key="reg_piso_vent_aislante"
+                )
+
+            with piso_col2:
+                espesor_aislante_piso = st.number_input(
+                    "Espesor del aislante (mm; 0 = no sé):",
+                    min_value=0.0, value=0.0, step=10.0, format="%.0f",
+                    key="reg_piso_vent_esp_aislante"
+                )
+                densidad_aislante_piso = st.number_input(
+                    "Densidad aproximada del aislante (kg/m³; 0 = no sé):",
+                    min_value=0.0, value=0.0, step=1.0, format="%.1f",
+                    key="reg_piso_vent_densidad"
+                )
+                barrera_piso = st.selectbox(
+                    "¿Cuenta con barrera de humedad y viento bajo el complejo?",
+                    opciones_si_no,
+                    key="reg_piso_vent_barrera"
+                )
+                revestimiento_inf_piso = st.selectbox(
+                    "Revestimiento inferior:",
+                    ["No sé", "Fibrocemento", "Yeso-cartón", "Madera", "Sin revestimiento", "Otro"],
+                    key="reg_piso_vent_rev_inf"
+                )
+                espesor_rev_inf_piso = st.number_input(
+                    "Espesor del revestimiento inferior (mm; 0 = no sé):",
+                    min_value=0.0, value=0.0, step=1.0, format="%.0f",
+                    key="reg_piso_vent_esp_rev_inf"
+                )
+
+            if fila_ref_piso is not None:
+                diferencias_piso = []
+                conocidos_piso = 0
+                totales_piso = 8
+                cumple_piso = True
+
+                esperado_placa = str(fila_ref_piso.get("Placa_Estructural", ""))
+                if placa_piso != "No sé":
+                    conocidos_piso += 1
+                    if placa_piso.lower() != esperado_placa.lower():
+                        cumple_piso = False
+                        diferencias_piso.append(f"Placa estructural: ingresada {placa_piso} · referencia {esperado_placa}.")
+
+                min_placa = fila_ref_piso.get("Espesor_Placa_Min_mm", None)
+                max_placa = fila_ref_piso.get("Espesor_Placa_Max_mm", None)
+                if espesor_placa_piso > 0:
+                    conocidos_piso += 1
+                    if pd.notna(min_placa) and pd.notna(max_placa):
+                        if not (float(min_placa) - 0.05 <= float(espesor_placa_piso) <= float(max_placa) + 0.05):
+                            cumple_piso = False
+                            diferencias_piso.append(
+                                f"Espesor OSB: ingresado {espesor_placa_piso:.1f} mm · referencia aprox. {float(min_placa):.1f}–{float(max_placa):.1f} mm."
+                            )
+
+                esperado_estructura = str(fila_ref_piso.get("Estructura_Principal", ""))
+                if estructura_piso != "No sé":
+                    conocidos_piso += 1
+                    if estructura_piso.lower() != esperado_estructura.lower():
+                        cumple_piso = False
+                        diferencias_piso.append(f"Envigado: ingresado {estructura_piso} · referencia {esperado_estructura}.")
+
+                esperado_aislante = str(fila_ref_piso.get("Aislante", ""))
+                if aislante_piso != "No sé":
+                    conocidos_piso += 1
+                    if aislante_piso.lower() != esperado_aislante.lower():
+                        cumple_piso = False
+                        diferencias_piso.append(f"Aislante: ingresado {aislante_piso} · referencia {esperado_aislante}.")
+
+                esperado_esp_aislante = fila_ref_piso.get("Espesor_Aislante_mm", None)
+                if espesor_aislante_piso > 0:
+                    conocidos_piso += 1
+                    if pd.notna(esperado_esp_aislante) and abs(float(espesor_aislante_piso) - float(esperado_esp_aislante)) > 0.5:
+                        cumple_piso = False
+                        diferencias_piso.append(
+                            f"Espesor aislante: ingresado {espesor_aislante_piso:.0f} mm · referencia {float(esperado_esp_aislante):.0f} mm."
+                        )
+
+                esperado_densidad = fila_ref_piso.get("Densidad_Aislante_kg_m3", None)
+                if densidad_aislante_piso > 0:
+                    conocidos_piso += 1
+                    if pd.notna(esperado_densidad) and float(densidad_aislante_piso) + 1e-9 < float(esperado_densidad):
+                        cumple_piso = False
+                        diferencias_piso.append(
+                            f"Densidad aislante: ingresada {densidad_aislante_piso:.1f} kg/m³ · referencia aprox. {float(esperado_densidad):.1f} kg/m³."
+                        )
+
+                if barrera_piso != "Seleccione una opción..." and barrera_piso != "No estoy seguro/a":
+                    conocidos_piso += 1
+                    if barrera_piso != "Sí":
+                        cumple_piso = False
+                        diferencias_piso.append("No se informó barrera de humedad y viento incorporada bajo el complejo.")
+
+                esperado_rev_inf = str(fila_ref_piso.get("Revestimiento_Inferior", ""))
+                if revestimiento_inf_piso != "No sé":
+                    conocidos_piso += 1
+                    if revestimiento_inf_piso.lower() != esperado_rev_inf.lower():
+                        cumple_piso = False
+                        diferencias_piso.append(
+                            f"Revestimiento inferior: ingresado {revestimiento_inf_piso} · referencia {esperado_rev_inf}."
+                        )
+
+                # El espesor del revestimiento inferior se considera dato adicional; si se conoce y difiere, se informa.
+                esperado_esp_rev_inf = fila_ref_piso.get("Espesor_Rev_Inferior_mm", None)
+                if espesor_rev_inf_piso > 0 and pd.notna(esperado_esp_rev_inf):
+                    if abs(float(espesor_rev_inf_piso) - float(esperado_esp_rev_inf)) > 0.5:
+                        cumple_piso = False
+                        diferencias_piso.append(
+                            f"Espesor revestimiento inferior: ingresado {espesor_rev_inf_piso:.0f} mm · referencia {float(esperado_esp_rev_inf):.0f} mm."
+                        )
+
+                codigo_ref_piso = str(fila_ref_piso.get("Codigo_Solucion", ""))
+                u_ref_piso = fila_ref_piso.get("U_W_m2K", None)
+                rt_ref_piso = fila_ref_piso.get("Rt_m2K_W", None)
+                u_max_piso = fila_ref_piso.get("U_Max_Zona_D", None)
+                rt_min_piso = fila_ref_piso.get("Rt_Min_Zona_D", None)
+
+                if cumple_piso and conocidos_piso == totales_piso:
+                    resultado_piso_regularizacion = {
+                        "estado": "Coincidencia con solución de referencia",
+                        "sistema_ingresado": tipo_piso_reg,
+                        "codigo_referencia": codigo_ref_piso,
+                        "u_referencia": float(u_ref_piso) if pd.notna(u_ref_piso) else None,
+                        "rt_referencia": float(rt_ref_piso) if pd.notna(rt_ref_piso) else None,
+                        "diferencias": [],
+                    }
+                    st.success(
+                        f"✅ La composición ingresada coincide con los parámetros críticos registrados para la solución **{codigo_ref_piso}**."
+                    )
+                    piso_m1, piso_m2, piso_m3, piso_m4 = st.columns(4)
+                    with piso_m1:
+                        st.metric("U referencia", f"{float(u_ref_piso):.2f} W/m²K")
+                    with piso_m2:
+                        st.metric("Rt referencia", f"{float(rt_ref_piso):.2f} m²K/W")
+                    with piso_m3:
+                        st.metric("U máx. Zona D", f"{float(u_max_piso):.2f} W/m²K")
+                    with piso_m4:
+                        st.metric("Rt mín. Zona D", f"{float(rt_min_piso):.2f} m²K/W")
+                    st.success("🌡️ La solución de referencia presenta un desempeño térmico compatible con Zona Térmica D.")
+                else:
+                    estado_piso = "No verificable" if conocidos_piso == 0 else "Coincidencia parcial / requiere verificación"
+                    resultado_piso_regularizacion = {
+                        "estado": estado_piso,
+                        "sistema_ingresado": tipo_piso_reg,
+                        "codigo_referencia": codigo_ref_piso,
+                        "u_referencia": None,
+                        "rt_referencia": None,
+                        "diferencias": diferencias_piso,
+                    }
+                    st.warning(
+                        f"⚠️ **{estado_piso}.** No se asignan automáticamente U ni Rt porque faltan antecedentes "
+                        "o la composición no coincide completamente con la solución de referencia."
+                    )
+                    if diferencias_piso:
+                        with st.expander("🔎 Ver diferencias o antecedentes pendientes"):
+                            for diferencia in diferencias_piso:
+                                st.write(f"• {diferencia}")
+
+                with st.expander("📚 Ver solución MINVU utilizada como referencia"):
+                    st.write(f"**Código:** {codigo_ref_piso}")
+                    st.write(f"**Sistema:** {fila_ref_piso.get('Sistema', '')}")
+                    st.write(
+                        f"**Placa estructural:** {fila_ref_piso.get('Placa_Estructural', '')} "
+                        f"aprox. {fila_ref_piso.get('Espesor_Placa_Min_mm', '')}–{fila_ref_piso.get('Espesor_Placa_Max_mm', '')} mm"
+                    )
+                    st.write(f"**Estructura:** {fila_ref_piso.get('Estructura_Principal', '')}")
+                    st.write(
+                        f"**Aislación:** {fila_ref_piso.get('Aislante', '')} "
+                        f"{fila_ref_piso.get('Espesor_Aislante_mm', '')} mm"
+                    )
+                    st.write(f"**Revestimiento inferior:** {fila_ref_piso.get('Revestimiento_Inferior', '')} {fila_ref_piso.get('Espesor_Rev_Inferior_mm', '')} mm")
+                    st.write(f"**Fuente:** {fila_ref_piso.get('Fuente', '')}")
+                    st.write(f"**Observación:** {fila_ref_piso.get('Observacion', '')}")
+
+        elif tipo_piso_reg == "Otro sistema":
+            descripcion_otro_piso = st.text_area(
+                "Describe los materiales y espesores del piso que conozcas:",
+                placeholder="Ej.: envigado de madera, tablero, aislante, revestimiento inferior...",
+                key="reg_piso_otro_descripcion"
+            )
+            resultado_piso_regularizacion = {
+                "estado": "No verificable con las soluciones registradas",
+                "sistema_ingresado": "Otro sistema",
+                "codigo_referencia": None,
+                "u_referencia": None,
+                "rt_referencia": None,
+                "diferencias": [descripcion_otro_piso] if descripcion_otro_piso else [],
+            }
+            st.info(
+                "ℹ️ La base del prototipo contiene un conjunto acotado de referencias. La solución descrita requiere "
+                "antecedentes técnicos, ensayo, memoria de cálculo o una solución acreditada cuando corresponda."
+            )
+
+        elif tipo_piso_reg == "No sé cómo está construido":
+            resultado_piso_regularizacion = {
+                "estado": "No verificable por falta de antecedentes",
+                "sistema_ingresado": "No identificado",
+                "codigo_referencia": None,
+                "u_referencia": None,
+                "rt_referencia": None,
+                "diferencias": ["El usuario no conoce la composición del piso existente."],
+            }
+            st.info("ℹ️ Para verificar el piso se requiere identificar su condición y composición constructiva.")
+
+        elif tipo_piso_reg == "Seleccione una opción...":
+            st.info("Selecciona la condición del piso para iniciar la revisión.")
+
+    # ==========================================
+    # 8. REVISIÓN CONSTRUCTIVA Y TÉRMICA DE TECHUMBRE
+    # ==========================================
+    st.markdown("---")
+    st.markdown("### 🏠 8. Revisión Constructiva y Térmica de la Techumbre Existente")
+    st.caption(
+        "Describe la techumbre predominante. El prototipo compara los parámetros térmicos críticos ingresados "
+        "con la solución LOSCAT de referencia seleccionada en la tesis para Zona Térmica D."
+    )
+
+    try:
+        base_techumbres = cargar_soluciones_techumbres()
+    except Exception:
+        base_techumbres = None
+
+    if base_techumbres is None or base_techumbres.empty:
+        st.warning(
+            "⚠️ No fue posible cargar la hoja **Soluciones_Techumbres** desde `Base_Normativa_PRC_San_Miguel.xlsx`. "
+            "Para utilizar esta revisión debes subir también la versión actualizada de la base normativa."
+        )
+    else:
+        tipo_techumbre_reg = st.selectbox(
+            "Sistema predominante de techumbre existente:",
+            [
+                "Seleccione una opción...",
+                "Cerchas de madera con lana de fibra de vidrio sobre cielo horizontal",
+                "Otro sistema",
+                "No sé cómo está construida",
+            ],
+            key="reg_tech_tipo"
+        )
+
+        if tipo_techumbre_reg == "Cerchas de madera con lana de fibra de vidrio sobre cielo horizontal":
+            fila_ref_tech = base_techumbres.iloc[0]
+            st.markdown("#### 🏠 Composición informada – techumbre liviana")
+            tech_col1, tech_col2 = st.columns(2)
+
+            with tech_col1:
+                cielo_tech = st.selectbox(
+                    "Cielo interior:",
+                    ["No sé", "Yeso-cartón", "Madera", "Otro", "Sin cielo"],
+                    key="reg_tech_cielo"
+                )
+                espesor_cielo_tech = st.number_input(
+                    "Espesor del cielo interior (mm; 0 = no sé):",
+                    min_value=0.0, value=0.0, step=1.0, format="%.0f",
+                    key="reg_tech_esp_cielo"
+                )
+                estructura_tech = st.selectbox(
+                    "Estructura principal:",
+                    ["No sé", "Cerchas de madera", "Cerchas metálicas", "Vigas de madera", "Otra"],
+                    key="reg_tech_estructura"
+                )
+                separacion_tech = st.number_input(
+                    "Separación aproximada entre cerchas (cm; 0 = no sé):",
+                    min_value=0.0, value=0.0, step=5.0, format="%.0f",
+                    key="reg_tech_separacion"
+                )
+
+            with tech_col2:
+                aislante_tech = st.selectbox(
+                    "Aislación térmica:",
+                    ["No sé", "Lana de fibra de vidrio", "Lana mineral", "EPS", "Sin aislación", "Otro"],
+                    key="reg_tech_aislante"
+                )
+                espesor_aislante_tech = st.number_input(
+                    "Espesor de aislación (mm; 0 = no sé):",
+                    min_value=0.0, value=0.0, step=10.0, format="%.0f",
+                    key="reg_tech_esp_aislante"
+                )
+                densidad_aislante_tech = st.number_input(
+                    "Densidad del aislante (kg/m³; 0 = no sé):",
+                    min_value=0.0, value=0.0, step=1.0, format="%.1f",
+                    key="reg_tech_densidad"
+                )
+                entretecho_tech = st.selectbox(
+                    "¿Existe espacio de entretecho?",
+                    opciones_si_no,
+                    key="reg_tech_entretecho"
+                )
+                ventilacion_tech = "No aplica"
+                if entretecho_tech == "Sí":
+                    ventilacion_tech = st.selectbox(
+                        "¿El entretecho cuenta con ventilación cruzada?",
+                        opciones_si_no,
+                        key="reg_tech_ventilacion"
+                    )
+
+            diferencias_tech = []
+            conocidos_tech = 0
+            totales_tech = 6
+            cumple_tech = True
+
+            esperado_cielo = str(fila_ref_tech.get("Cielo_Interior", ""))
+            if cielo_tech != "No sé":
+                conocidos_tech += 1
+                if cielo_tech.lower() != esperado_cielo.lower():
+                    cumple_tech = False
+                    diferencias_tech.append(f"Cielo interior: ingresado {cielo_tech} · referencia {esperado_cielo}.")
+
+            esperado_esp_cielo = fila_ref_tech.get("Espesor_Cielo_mm", None)
+            if espesor_cielo_tech > 0:
+                conocidos_tech += 1
+                if pd.notna(esperado_esp_cielo) and abs(float(espesor_cielo_tech) - float(esperado_esp_cielo)) > 0.5:
+                    cumple_tech = False
+                    diferencias_tech.append(
+                        f"Espesor cielo: ingresado {espesor_cielo_tech:.0f} mm · referencia {float(esperado_esp_cielo):.0f} mm."
+                    )
+
+            esperado_estructura_tech = str(fila_ref_tech.get("Estructura_Principal", ""))
+            if estructura_tech != "No sé":
+                conocidos_tech += 1
+                if estructura_tech.lower() != esperado_estructura_tech.lower():
+                    cumple_tech = False
+                    diferencias_tech.append(
+                        f"Estructura principal: ingresada {estructura_tech} · referencia {esperado_estructura_tech}."
+                    )
+
+            esperado_aislante_tech = str(fila_ref_tech.get("Aislante", ""))
+            if aislante_tech != "No sé":
+                conocidos_tech += 1
+                if aislante_tech.lower() != esperado_aislante_tech.lower():
+                    cumple_tech = False
+                    diferencias_tech.append(
+                        f"Aislante: ingresado {aislante_tech} · referencia {esperado_aislante_tech}."
+                    )
+
+            esperado_esp_aislante_tech = fila_ref_tech.get("Espesor_Aislante_mm", None)
+            if espesor_aislante_tech > 0:
+                conocidos_tech += 1
+                if pd.notna(esperado_esp_aislante_tech) and abs(float(espesor_aislante_tech) - float(esperado_esp_aislante_tech)) > 0.5:
+                    cumple_tech = False
+                    diferencias_tech.append(
+                        f"Espesor aislante: ingresado {espesor_aislante_tech:.0f} mm · referencia {float(esperado_esp_aislante_tech):.0f} mm."
+                    )
+
+            esperado_densidad_tech = fila_ref_tech.get("Densidad_Aislante_Min_kg_m3", None)
+            if densidad_aislante_tech > 0:
+                conocidos_tech += 1
+                if pd.notna(esperado_densidad_tech) and float(densidad_aislante_tech) + 1e-9 < float(esperado_densidad_tech):
+                    cumple_tech = False
+                    diferencias_tech.append(
+                        f"Densidad aislante: ingresada {densidad_aislante_tech:.1f} kg/m³ · referencia mínima {float(esperado_densidad_tech):.1f} kg/m³."
+                    )
+
+            # La separación y ventilación se informan como antecedentes complementarios, porque la solución
+            # de referencia los contempla aproximadamente/según corresponda.
+            separacion_ref_tech = fila_ref_tech.get("Separacion_Cerchas_cm", None)
+            if separacion_tech > 0 and pd.notna(separacion_ref_tech) and abs(float(separacion_tech) - float(separacion_ref_tech)) > 5.0:
+                diferencias_tech.append(
+                    f"Separación entre cerchas: ingresada {separacion_tech:.0f} cm · referencia aproximada {float(separacion_ref_tech):.0f} cm."
+                )
+            if entretecho_tech == "Sí" and ventilacion_tech == "No":
+                diferencias_tech.append("Se informó entretecho sin ventilación cruzada; la solución de referencia la contempla cuando corresponde.")
+
+            codigo_ref_tech = str(fila_ref_tech.get("Codigo_Solucion", ""))
+            u_ref_tech = fila_ref_tech.get("U_W_m2K", None)
+            rt_ref_tech = fila_ref_tech.get("Rt_m2K_W", None)
+            u_max_tech = fila_ref_tech.get("U_Max_Zona_D", None)
+            rt_min_tech = fila_ref_tech.get("Rt_Min_Zona_D", None)
+
+            if cumple_tech and conocidos_tech == totales_tech:
+                resultado_techumbre_regularizacion = {
+                    "estado": "Coincidencia con solución de referencia",
+                    "sistema_ingresado": tipo_techumbre_reg,
+                    "codigo_referencia": codigo_ref_tech,
+                    "u_referencia": float(u_ref_tech) if pd.notna(u_ref_tech) else None,
+                    "rt_referencia": float(rt_ref_tech) if pd.notna(rt_ref_tech) else None,
+                    "diferencias": diferencias_tech,
+                }
+                st.success(
+                    f"✅ Los parámetros térmicos críticos ingresados coinciden con la solución de referencia **{codigo_ref_tech}**."
+                )
+                tech_m1, tech_m2, tech_m3, tech_m4 = st.columns(4)
+                with tech_m1:
+                    st.metric("U referencia", f"{float(u_ref_tech):.2f} W/m²K")
+                with tech_m2:
+                    st.metric("Rt referencia", f"{float(rt_ref_tech):.2f} m²K/W")
+                with tech_m3:
+                    st.metric("U máx. Zona D", f"{float(u_max_tech):.2f} W/m²K")
+                with tech_m4:
+                    st.metric("Rt mín. Zona D", f"{float(rt_min_tech):.2f} m²K/W")
+                st.success("🌡️ La solución de referencia presenta un desempeño térmico compatible con Zona Térmica D.")
+                if diferencias_tech:
+                    st.info(
+                        "ℹ️ Existen antecedentes complementarios que difieren o requieren revisión, pero no se utilizaron "
+                        "para atribuir automáticamente el valor térmico de referencia."
+                    )
+            else:
+                estado_tech = "No verificable" if conocidos_tech == 0 else "Coincidencia parcial / requiere verificación"
+                resultado_techumbre_regularizacion = {
+                    "estado": estado_tech,
+                    "sistema_ingresado": tipo_techumbre_reg,
+                    "codigo_referencia": codigo_ref_tech,
+                    "u_referencia": None,
+                    "rt_referencia": None,
+                    "diferencias": diferencias_tech,
+                }
+                st.warning(
+                    f"⚠️ **{estado_tech}.** No se asignan automáticamente U ni Rt porque faltan antecedentes "
+                    "o los parámetros térmicos críticos no coinciden completamente con la solución LOSCAT."
+                )
+
+            if diferencias_tech:
+                with st.expander("🔎 Ver diferencias o antecedentes complementarios"):
+                    for diferencia in diferencias_tech:
+                        st.write(f"• {diferencia}")
+
+            with st.expander("📚 Ver solución LOSCAT utilizada como referencia"):
+                st.write(f"**Código:** {codigo_ref_tech}")
+                st.write(f"**Sistema:** {fila_ref_tech.get('Sistema', '')}")
+                st.write(f"**Cielo interior:** {fila_ref_tech.get('Cielo_Interior', '')} {fila_ref_tech.get('Espesor_Cielo_mm', '')} mm")
+                st.write(f"**Estructura:** {fila_ref_tech.get('Estructura_Principal', '')}")
+                st.write(f"**Aislación:** {fila_ref_tech.get('Aislante', '')} {fila_ref_tech.get('Espesor_Aislante_mm', '')} mm")
+                st.write(f"**Densidad mínima de referencia:** {fila_ref_tech.get('Densidad_Aislante_Min_kg_m3', '')} kg/m³")
+                st.write(f"**Ventilación:** {fila_ref_tech.get('Ventilacion_Entretecho', '')}")
+                st.write(f"**Fuente:** {fila_ref_tech.get('Fuente', '')}")
+                st.write(f"**Observación:** {fila_ref_tech.get('Observacion', '')}")
+
+        elif tipo_techumbre_reg == "Otro sistema":
+            descripcion_otra_tech = st.text_area(
+                "Describe la estructura, cielo, aislación y cubierta que conozcas:",
+                placeholder="Ej.: vigas de madera, cielo de yeso-cartón, lana mineral 100 mm, cubierta metálica...",
+                key="reg_tech_otro_descripcion"
+            )
+            resultado_techumbre_regularizacion = {
+                "estado": "No verificable con las soluciones registradas",
+                "sistema_ingresado": "Otro sistema",
+                "codigo_referencia": None,
+                "u_referencia": None,
+                "rt_referencia": None,
+                "diferencias": [descripcion_otra_tech] if descripcion_otra_tech else [],
+            }
+            st.info(
+                "ℹ️ La solución ingresada no coincide con el conjunto acotado de referencias del prototipo. "
+                "Su desempeño deberá respaldarse mediante antecedente técnico adecuado."
+            )
+
+        elif tipo_techumbre_reg == "No sé cómo está construida":
+            resultado_techumbre_regularizacion = {
+                "estado": "No verificable por falta de antecedentes",
+                "sistema_ingresado": "No identificado",
+                "codigo_referencia": None,
+                "u_referencia": None,
+                "rt_referencia": None,
+                "diferencias": ["El usuario no conoce la composición de la techumbre existente."],
+            }
+            st.info("ℹ️ Para verificar la techumbre se requiere identificar su estructura, cielo y aislación térmica.")
+
+        elif tipo_techumbre_reg == "Seleccione una opción...":
+            st.info("Selecciona el sistema de techumbre para iniciar la comparación.")
+
+    st.caption(
+        "🌡️ Los valores U y Rt se muestran únicamente cuando la configuración ingresada coincide con los parámetros "
+        "críticos de una referencia registrada. Esta revisión no reemplaza memoria de cálculo, ensayo, certificación ni revisión profesional."
+    )
+
+    # ==========================================
+    # 9. CHECKLIST DOCUMENTAL
+    # ==========================================
+    st.markdown("---")
+    st.markdown("### 📑 9. Checklist Orientativo de Antecedentes")
     st.caption(
         "Este listado sirve únicamente para organizar antecedentes. No valida documentos ni reemplaza "
         "la elaboración, firma o revisión profesional correspondiente."
@@ -5043,10 +5808,10 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
         st.success("✅ Todos los antecedentes del checklist orientativo fueron marcados.")
 
     # ==========================================
-    # 8. RESUMEN Y GUARDADO
+    # 10. RESUMEN Y GUARDADO
     # ==========================================
     st.markdown("---")
-    st.markdown("### 💾 8. Resumen de la Orientación")
+    st.markdown("### 💾 10. Resumen de la Orientación")
 
     resumen_reg1, resumen_reg2, resumen_reg3, resumen_reg4 = st.columns(4)
     with resumen_reg1:
@@ -5068,6 +5833,15 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
             st.write(f"**Ocupación:** {evaluacion_ocupacion_art3}")
         with sint_col2:
             st.write(f"**Constructibilidad:** {evaluacion_constructibilidad_art3}")
+
+    st.markdown("#### 🌡️ Síntesis de envolvente existente")
+    env_col1, env_col2, env_col3 = st.columns(3)
+    with env_col1:
+        st.write(f"**Muro:** {resultado_muro_regularizacion.get('estado', 'No evaluado')}")
+    with env_col2:
+        st.write(f"**Piso:** {resultado_piso_regularizacion.get('estado', 'No evaluado')}")
+    with env_col3:
+        st.write(f"**Techumbre:** {resultado_techumbre_regularizacion.get('estado', 'No evaluado')}")
 
     if st.button("💾 Guardar Orientación de Regularización", type="primary"):
         st.session_state.resultado_regularizacion = {
@@ -5101,6 +5875,8 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
             "evaluacion_ocupacion_art3": evaluacion_ocupacion_art3,
             "evaluacion_constructibilidad_art3": evaluacion_constructibilidad_art3,
             "revision_muro": resultado_muro_regularizacion,
+            "revision_piso": resultado_piso_regularizacion,
+            "revision_techumbre": resultado_techumbre_regularizacion,
             "sin_recepcion": sin_recepcion,
             "construida_antes_ley": construida_antes_ley,
             "uso_residencial": uso_residencial,
@@ -5125,6 +5901,10 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
             st.write(f"**Antecedentes pendientes del checklist:** {len(reg_guardada['documentos_pendientes'])}")
             if reg_guardada.get("revision_muro"):
                 st.write(f"**Revisión del muro:** {reg_guardada['revision_muro'].get('estado', 'No evaluado')}")
+            if reg_guardada.get("revision_piso"):
+                st.write(f"**Revisión del piso:** {reg_guardada['revision_piso'].get('estado', 'No evaluado')}")
+            if reg_guardada.get("revision_techumbre"):
+                st.write(f"**Revisión de la techumbre:** {reg_guardada['revision_techumbre'].get('estado', 'No evaluado')}")
 
     st.markdown("---")
     st.info(
