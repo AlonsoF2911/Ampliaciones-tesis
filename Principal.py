@@ -5,7 +5,7 @@ from matplotlib.patches import Rectangle, Patch
 from pathlib import Path
 from io import BytesIO
 
-# VERSION: PUZZLE_VIVIENDA_MOVIBLE_MAGNETICO_ZONA_D_2026_10_19
+# VERSION: PASO2_RUTAS_SEPARADAS_REGULARIZACION_LEY20898_2026_10_19
 
 # ==========================================
 # CONFIGURACIÓN DE LA PÁGINA
@@ -109,6 +109,10 @@ if "posiciones_puzzle" not in st.session_state:
 # Posiciones editables de los sectores de la vivienda existente.
 if "posiciones_vivienda" not in st.session_state:
     st.session_state.posiciones_vivienda = {}
+
+# Resultado guardado del módulo orientativo de regularización Ley N.º 20.898.
+if "resultado_regularizacion" not in st.session_state:
+    st.session_state.resultado_regularizacion = None
 
 # ==========================================
 # BASE NORMATIVA PRC SAN MIGUEL
@@ -1635,7 +1639,8 @@ with st.sidebar:
         (
             "🏠 Inicio",
             "🏡 Datos del Terreno",
-            "🧱 Futura Ampliación"
+            "🧱 Futura Ampliación",
+            "📋 Regularización Ley 20.898"
         )
     )
 
@@ -1651,6 +1656,9 @@ with st.sidebar:
 
     if st.session_state.propuesta_ampliacion is not None:
         st.success("✅ Propuesta de ampliación guardada")
+
+    if st.session_state.resultado_regularizacion is not None:
+        st.success("✅ Orientación de regularización guardada")
 
 
 # ==========================================
@@ -3686,3 +3694,464 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
             "para definir con mayor detalle la forma de la ampliación y, posteriormente, incorporar "
             "la selección de muros y soluciones constructivas."
         )
+
+# ==========================================
+# PANTALLA 4: REGULARIZACIÓN LEY N.º 20.898
+# ==========================================
+elif menu_seleccionado == "📋 Regularización Ley 20.898":
+
+    st.markdown("## 📋 Orientación para Edificación Existente – Ley N.º 20.898")
+    st.write(
+        "Este módulo está destinado a **edificaciones existentes sin regularizar**. "
+        "Su función es orientar preliminarmente respecto de los procedimientos especiales "
+        "considerados en la Ley N.º 20.898 y sus modificaciones."
+    )
+
+    st.warning(
+        "⚠️ **Importante:** este resultado es únicamente orientativo. No constituye una aprobación, "
+        "permiso, recepción definitiva ni certificación de cumplimiento. La procedencia definitiva "
+        "debe ser revisada por el profesional competente y por la Dirección de Obras Municipales."
+    )
+
+    st.markdown("---")
+
+    # ==========================================
+    # 1. CONDICIONES GENERALES
+    # ==========================================
+    st.markdown("### 🧭 1. Condiciones Generales de la Edificación Existente")
+    st.caption(
+        "Responde según los antecedentes disponibles. Cuando no tengas certeza, selecciona "
+        "'No estoy seguro/a' para que el sistema mantenga la condición como pendiente de revisión."
+    )
+
+    opciones_si_no = ["Seleccione una opción...", "Sí", "No", "No estoy seguro/a"]
+
+    reg_col1, reg_col2 = st.columns(2)
+
+    with reg_col1:
+        sin_recepcion = st.selectbox(
+            "¿La vivienda no cuenta con recepción definitiva total o parcial?",
+            opciones_si_no,
+            key="reg_sin_recepcion"
+        )
+        construida_antes_ley = st.selectbox(
+            "¿La edificación existía antes de la publicación de la Ley N.º 20.898?",
+            opciones_si_no,
+            key="reg_antiguedad"
+        )
+        uso_residencial = st.selectbox(
+            "Si el predio está en área urbana, ¿el uso de suelo admite vivienda?",
+            opciones_si_no,
+            key="reg_uso_residencial"
+        )
+
+    with reg_col2:
+        area_restringida = st.selectbox(
+            "¿La vivienda se ubica en área de riesgo/protección, terreno declarado de utilidad pública o bien nacional de uso público?",
+            opciones_si_no,
+            key="reg_area_restringida"
+        )
+        reclamaciones = st.selectbox(
+            "¿Existen reclamaciones escritas pendientes por incumplimiento de normas urbanísticas?",
+            opciones_si_no,
+            key="reg_reclamaciones"
+        )
+        st.info(
+            "📅 El procedimiento considerado en esta investigación mantiene como referencia "
+            "el plazo señalado en la Ley N.º 20.898 hasta el **31 de diciembre de 2027**."
+        )
+
+    st.markdown("#### 📐 Superficie y avalúo")
+    dim_col1, dim_col2 = st.columns(2)
+
+    valor_superficie_default = 0.0
+    if st.session_state.datos_propiedad is not None:
+        valor_superficie_default = float(
+            st.session_state.datos_propiedad.get("superficie_total_vivienda", 0.0) or 0.0
+        )
+
+    with dim_col1:
+        superficie_regularizar = st.number_input(
+            "Superficie edificada total a regularizar (m²):",
+            min_value=0.0,
+            value=valor_superficie_default,
+            step=0.10,
+            format="%.2f",
+            key="reg_superficie"
+        )
+
+    with dim_col2:
+        avaluo_fiscal_uf = st.number_input(
+            "Avalúo fiscal de la vivienda (UF):",
+            min_value=0.0,
+            value=0.0,
+            step=10.0,
+            format="%.2f",
+            key="reg_avaluo"
+        )
+
+    # ==========================================
+    # 2. EVALUACIÓN DE ACCESO
+    # ==========================================
+    st.markdown("---")
+    st.markdown("### 🌳 2. Árbol de Orientación del Procedimiento")
+
+    respuestas_obligatorias = [
+        sin_recepcion,
+        construida_antes_ley,
+        uso_residencial,
+        area_restringida,
+        reclamaciones,
+    ]
+
+    faltan_respuestas = any(r == "Seleccione una opción..." for r in respuestas_obligatorias)
+    hay_incertidumbre = any(r == "No estoy seguro/a" for r in respuestas_obligatorias)
+
+    condiciones_comunes_confirmadas = (
+        sin_recepcion == "Sí"
+        and construida_antes_ley == "Sí"
+        and uso_residencial == "Sí"
+        and area_restringida == "No"
+        and reclamaciones == "No"
+    )
+
+    impedimento_confirmado = (
+        sin_recepcion == "No"
+        or construida_antes_ley == "No"
+        or uso_residencial == "No"
+        or area_restringida == "Sí"
+        or reclamaciones == "Sí"
+    )
+
+    posible_art1 = (
+        condiciones_comunes_confirmadas
+        and superficie_regularizar > 0
+        and superficie_regularizar <= 90
+        and avaluo_fiscal_uf > 0
+        and avaluo_fiscal_uf <= 1000
+    )
+
+    posible_art3 = (
+        condiciones_comunes_confirmadas
+        and superficie_regularizar > 0
+        and superficie_regularizar <= 140
+        and avaluo_fiscal_uf > 0
+        and avaluo_fiscal_uf <= 2000
+    )
+
+    procedimiento_orientativo = "Pendiente"
+
+    if faltan_respuestas or superficie_regularizar <= 0 or avaluo_fiscal_uf <= 0:
+        st.info(
+            "ℹ️ Completa las preguntas, la superficie y el avalúo fiscal para obtener una orientación preliminar."
+        )
+
+    elif impedimento_confirmado:
+        procedimiento_orientativo = "No se identifica acceso preliminar"
+        st.error(
+            "❌ Con los antecedentes ingresados existe al menos una condición que impide identificar "
+            "preliminarmente el acceso a los procedimientos analizados de la Ley N.º 20.898."
+        )
+        st.caption(
+            "El resultado no determina la situación jurídica definitiva del inmueble. Corresponde revisar "
+            "los antecedentes específicos con un profesional competente y la DOM."
+        )
+
+    elif hay_incertidumbre:
+        procedimiento_orientativo = "Requiere antecedentes adicionales"
+        st.warning(
+            "⚠️ Existen respuestas marcadas como 'No estoy seguro/a'. No es posible determinar una ruta "
+            "preliminar sin verificar esos antecedentes."
+        )
+
+    elif posible_art1:
+        procedimiento_orientativo = "Artículo 1°"
+        st.success(
+            "✅ **Orientación preliminar: condiciones compatibles con el procedimiento del artículo 1°.**"
+        )
+        st.write(
+            f"La superficie ingresada es **{superficie_regularizar:.2f} m²** (referencia: hasta 90 m²) "
+            f"y el avalúo informado es **{avaluo_fiscal_uf:.2f} UF** (referencia: hasta 1.000 UF)."
+        )
+        st.info(
+            "Esta ruta considera además exigencias técnicas especiales de habitabilidad, seguridad contra "
+            "incendios y estabilidad, que se revisan de manera orientativa en la sección siguiente."
+        )
+
+    elif posible_art3:
+        procedimiento_orientativo = "Artículo 3°"
+        st.success(
+            "✅ **Orientación preliminar: condiciones compatibles con el procedimiento del artículo 3°.**"
+        )
+        st.write(
+            f"La superficie ingresada es **{superficie_regularizar:.2f} m²** (referencia: hasta 140 m²) "
+            f"y el avalúo informado es **{avaluo_fiscal_uf:.2f} UF** (referencia: hasta 2.000 UF)."
+        )
+        st.warning(
+            "⚠️ En esta vía deben cumplirse las normas de habitabilidad, estabilidad y seguridad que correspondan, "
+            "además de las condiciones del procedimiento. Las excepciones urbanísticas específicas no deben "
+            "confundirse con la evaluación normal de una futura ampliación."
+        )
+
+        with st.expander("📚 Ver excepciones urbanísticas orientativas asociadas al artículo 3°"):
+            st.write("• **Antejardines:** el procedimiento contempla una excepción específica.")
+            st.write("• **Estacionamientos:** el procedimiento contempla una excepción específica.")
+            st.write("• **Altura de cierros:** se exceptúa la norma correspondiente, manteniendo el límite señalado por la ley.")
+            st.write("• **Adosamientos:** pueden existir excepciones, manteniéndose las condiciones técnicas que correspondan.")
+            st.write("• **Coeficiente de constructibilidad:** se contempla una excepción dentro de los límites del procedimiento.")
+            st.write("• **Coeficiente de ocupación de suelo/pisos superiores:** se contempla la excepción señalada por la ley.")
+
+    else:
+        procedimiento_orientativo = "Fuera de los umbrales analizados"
+        st.warning(
+            "⚠️ Con la superficie y/o avalúo ingresados no se identifica preliminarmente ninguno de los "
+            "dos procedimientos analizados en este prototipo (artículos 1° y 3°)."
+        )
+        if superficie_regularizar > 140:
+            st.write("• La superficie informada supera **140 m²**.")
+        if avaluo_fiscal_uf > 2000:
+            st.write("• El avalúo informado supera **2.000 UF**.")
+
+    # ==========================================
+    # 3. REVISIÓN TÉCNICA ARTÍCULO 1
+    # ==========================================
+    st.markdown("---")
+    st.markdown("### 🧱 3. Revisión Técnica Orientativa")
+
+    if procedimiento_orientativo == "Artículo 1°":
+        st.caption(
+            "Estas preguntas representan condiciones técnicas identificadas para el procedimiento del artículo 1°. "
+            "Su revisión no reemplaza la declaración ni el informe del profesional competente."
+        )
+
+        tec_col1, tec_col2 = st.columns(2)
+
+        with tec_col1:
+            altura_cielo = st.number_input(
+                "Altura mínima piso a cielo medida en obra terminada (m):",
+                min_value=0.0,
+                value=2.00,
+                step=0.05,
+                format="%.2f",
+                key="reg_altura_cielo"
+            )
+            locales_habitables_ventilan = st.selectbox(
+                "¿Los locales habitables cuentan al menos con una ventana que permita entrada de aire y luz exterior?",
+                opciones_si_no,
+                key="reg_vent_habitables"
+            )
+            zonas_humedas_sin_ventana = st.selectbox(
+                "¿Existen baños, cocinas o lavaderos sin ventana exterior?",
+                opciones_si_no,
+                key="reg_zonas_humedas"
+            )
+
+            ducto_016 = "No aplica"
+            if zonas_humedas_sin_ventana == "Sí":
+                ducto_016 = st.selectbox(
+                    "¿La ventilación dispone de ducto con sección libre no interrumpida de al menos 0,16 m² o una solución con tiraje forzado que corresponda?",
+                    opciones_si_no,
+                    key="reg_ducto_016"
+                )
+
+        with tec_col2:
+            resistencia_f15 = st.selectbox(
+                "Para el caso analizado, ¿los elementos/componentes soportantes cuentan con antecedente de resistencia al fuego F-15 cuando corresponde?",
+                opciones_si_no,
+                key="reg_f15"
+            )
+            vivienda_adosada = st.selectbox(
+                "¿La edificación está adosada a un deslinde?",
+                opciones_si_no,
+                key="reg_adosada"
+            )
+
+            resistencia_f60 = "No aplica"
+            if vivienda_adosada == "Sí":
+                resistencia_f60 = st.selectbox(
+                    "¿El muro de adosamiento cuenta con antecedente F-60 y llega hasta la cubierta del cuerpo adosado?",
+                    opciones_si_no,
+                    key="reg_f60"
+                )
+
+            materialidad_estructura = st.selectbox(
+                "Sistema estructural predominante de la vivienda:",
+                [
+                    "Seleccione una opción...",
+                    "Estructura de madera",
+                    "Albañilería armada/reforzada u hormigón armado",
+                    "Sistema mixto de 2 pisos",
+                    "Otro / No estoy seguro/a"
+                ],
+                key="reg_materialidad"
+            )
+            luz_maxima = st.number_input(
+                "Mayor distancia libre entre apoyos en habitaciones (m):",
+                min_value=0.0,
+                value=0.0,
+                step=0.10,
+                format="%.2f",
+                key="reg_luz_apoyos"
+            )
+
+        st.markdown("#### 🔎 Resultado técnico preliminar")
+
+        if altura_cielo >= 2.00:
+            st.success(f"✅ Altura informada: **{altura_cielo:.2f} m**. Alcanza la referencia mínima de 2,00 m considerada para esta vía.")
+        else:
+            st.error(f"❌ Altura informada: **{altura_cielo:.2f} m**. Es inferior a la referencia de 2,00 m considerada para esta vía.")
+
+        if locales_habitables_ventilan == "Sí":
+            st.success("✅ Se informó ventilación/iluminación exterior en los locales habitables.")
+        elif locales_habitables_ventilan == "No":
+            st.error("❌ Se informó al menos una condición que requiere revisión de ventilación/iluminación en locales habitables.")
+        else:
+            st.info("ℹ️ La condición de ventilación de locales habitables quedó pendiente de verificar.")
+
+        if zonas_humedas_sin_ventana == "Sí":
+            if ducto_016 == "Sí":
+                st.success("✅ Se informó una solución de ventilación para los recintos húmedos sin ventana exterior.")
+            elif ducto_016 == "No":
+                st.error("❌ Los recintos húmedos sin ventana exterior requieren revisar la solución de ventilación.")
+            else:
+                st.info("ℹ️ Debe verificarse la solución de ventilación de los recintos húmedos sin ventana exterior.")
+
+        if resistencia_f15 == "No":
+            st.error("❌ Debe revisarse el antecedente de resistencia al fuego de los elementos/componentes soportantes.")
+        elif resistencia_f15 == "Sí":
+            st.success("✅ Se informó antecedente F-15 cuando corresponde al caso analizado.")
+
+        if vivienda_adosada == "Sí":
+            if resistencia_f60 == "Sí":
+                st.success("✅ Se informó antecedente F-60 para el muro de adosamiento.")
+            elif resistencia_f60 == "No":
+                st.error("❌ Debe revisarse la resistencia al fuego y configuración del muro de adosamiento.")
+            else:
+                st.info("ℹ️ La condición F-60 del muro de adosamiento quedó pendiente de verificar.")
+
+        st.markdown("#### 🏗️ Orientación sobre proyecto de cálculo estructural")
+        orientacion_calculo = "Debe verificarse según OGUC y antecedentes del proyecto."
+
+        if materialidad_estructura == "Estructura de madera" and luz_maxima > 0:
+            if luz_maxima <= 3.0:
+                orientacion_calculo = (
+                    "La configuración informada podría encontrarse dentro de uno de los casos especiales "
+                    "considerados por la ley, sujeto a las demás condiciones y a declaración profesional."
+                )
+            else:
+                orientacion_calculo = "La luz informada supera 3,0 m; no debe asumirse la excepción por esta condición."
+
+        elif materialidad_estructura == "Albañilería armada/reforzada u hormigón armado" and luz_maxima > 0:
+            orientacion_calculo = (
+                "La excepción descrita en la ley para esta materialidad depende además de que la vivienda sea de máximo un piso "
+                "y de otras condiciones. Debe ser verificada por el profesional competente."
+            )
+
+        elif materialidad_estructura == "Sistema mixto de 2 pisos" and luz_maxima > 0:
+            orientacion_calculo = (
+                "La ley contempla un caso especial para determinadas configuraciones mixtas de dos pisos, pero requiere verificar "
+                "materialidad del primer y segundo piso, entramado de piso, luz entre apoyos y declaración profesional."
+            )
+
+        st.info(f"🏗️ {orientacion_calculo}")
+
+    elif procedimiento_orientativo == "Artículo 3°":
+        st.info(
+            "ℹ️ Para el artículo 3° la tesis consideró que deben cumplirse las normas de habitabilidad, "
+            "estabilidad y seguridad de la OGUC. La revisión técnica específica se integrará con los módulos "
+            "generales del prototipo sin aplicar automáticamente las flexibilidades del artículo 1°."
+        )
+    else:
+        st.info(
+            "La revisión técnica diferenciada se habilita cuando el árbol de orientación identifica una vía preliminar."
+        )
+
+    # ==========================================
+    # 4. CHECKLIST DOCUMENTAL
+    # ==========================================
+    st.markdown("---")
+    st.markdown("### 📑 4. Checklist Orientativo de Antecedentes")
+    st.caption(
+        "Este listado sirve únicamente para organizar antecedentes. No valida documentos ni reemplaza "
+        "la elaboración, firma o revisión profesional correspondiente."
+    )
+
+    documentos = [
+        ("Declaración simple del propietario", "reg_doc_declaracion"),
+        ("Especificaciones técnicas resumidas", "reg_doc_eett"),
+        ("Croquis de ubicación", "reg_doc_croquis"),
+        ("Plano de emplazamiento", "reg_doc_emplazamiento"),
+        ("Planos de arquitectura", "reg_doc_planos"),
+        ("Cuadro e información de superficies", "reg_doc_superficies"),
+        ("Informe del profesional competente", "reg_doc_informe"),
+        ("Antecedentes para acreditar antigüedad de la edificación", "reg_doc_antiguedad"),
+        ("Certificado de avalúo fiscal", "reg_doc_avaluo"),
+        ("Formulario/certificado de estadísticas de edificación, cuando corresponda", "reg_doc_estadisticas"),
+    ]
+
+    docs_marcados = []
+    doc_col1, doc_col2 = st.columns(2)
+    mitad_docs = (len(documentos) + 1) // 2
+
+    for idx, (nombre_doc, clave_doc) in enumerate(documentos):
+        columna = doc_col1 if idx < mitad_docs else doc_col2
+        with columna:
+            tiene_doc = st.checkbox(nombre_doc, key=clave_doc)
+            docs_marcados.append((nombre_doc, tiene_doc))
+
+    total_docs = len(documentos)
+    cantidad_docs = sum(1 for _, marcado in docs_marcados if marcado)
+    st.progress(cantidad_docs / total_docs if total_docs else 0)
+    st.caption(f"Antecedentes marcados: **{cantidad_docs} de {total_docs}**")
+
+    faltantes_docs = [nombre for nombre, marcado in docs_marcados if not marcado]
+    if faltantes_docs:
+        with st.expander("📌 Ver antecedentes aún no marcados"):
+            for nombre in faltantes_docs:
+                st.write(f"• {nombre}")
+    else:
+        st.success("✅ Todos los antecedentes del checklist orientativo fueron marcados.")
+
+    # ==========================================
+    # 5. RESUMEN Y GUARDADO
+    # ==========================================
+    st.markdown("---")
+    st.markdown("### 💾 5. Resumen de la Orientación")
+
+    resumen_reg1, resumen_reg2, resumen_reg3 = st.columns(3)
+    with resumen_reg1:
+        st.metric("Superficie informada", f"{superficie_regularizar:.2f} m²")
+    with resumen_reg2:
+        st.metric("Avalúo informado", f"{avaluo_fiscal_uf:.2f} UF")
+    with resumen_reg3:
+        st.metric("Ruta preliminar", procedimiento_orientativo)
+
+    if st.button("💾 Guardar Orientación de Regularización", type="primary"):
+        st.session_state.resultado_regularizacion = {
+            "procedimiento_orientativo": procedimiento_orientativo,
+            "superficie_m2": float(superficie_regularizar),
+            "avaluo_uf": float(avaluo_fiscal_uf),
+            "sin_recepcion": sin_recepcion,
+            "construida_antes_ley": construida_antes_ley,
+            "uso_residencial": uso_residencial,
+            "area_restringida": area_restringida,
+            "reclamaciones": reclamaciones,
+            "documentos_marcados": [nombre for nombre, marcado in docs_marcados if marcado],
+            "documentos_pendientes": faltantes_docs,
+        }
+        st.success("✅ Orientación preliminar de regularización guardada correctamente.")
+
+    if st.session_state.resultado_regularizacion is not None:
+        with st.expander("✅ Ver última orientación guardada"):
+            reg_guardada = st.session_state.resultado_regularizacion
+            st.write(f"**Ruta preliminar:** {reg_guardada['procedimiento_orientativo']}")
+            st.write(f"**Superficie:** {reg_guardada['superficie_m2']:.2f} m²")
+            st.write(f"**Avalúo:** {reg_guardada['avaluo_uf']:.2f} UF")
+            st.write(f"**Antecedentes pendientes del checklist:** {len(reg_guardada['documentos_pendientes'])}")
+
+    st.markdown("---")
+    st.info(
+        "📌 **Ruta diferenciada:** este módulo se mantiene separado de la evaluación de una futura ampliación. "
+        "Las flexibilidades o excepciones de la Ley N.º 20.898 no se aplican automáticamente al diseño de una obra nueva."
+    )
+
