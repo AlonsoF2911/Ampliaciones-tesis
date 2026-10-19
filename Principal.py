@@ -5,7 +5,7 @@ from matplotlib.patches import Rectangle, Patch
 from pathlib import Path
 from io import BytesIO
 
-# VERSION: PASO3_GEOMETRIA_URBANISTICA_LEY20898_2026_10_19
+# VERSION: PASO4_MUROS_EXISTENTES_LOSCAT_2026_10_19
 
 # ==========================================
 # CONFIGURACIÓN DE LA PÁGINA
@@ -160,6 +160,64 @@ def cargar_base_normativa():
             )
 
     return base
+
+
+@st.cache_data
+def cargar_soluciones_muros():
+    """Carga las soluciones constructivas de muro seleccionadas para el prototipo."""
+    carpeta_proyecto = Path(__file__).resolve().parent
+    ruta_excel = carpeta_proyecto / "Base_Normativa_PRC_San_Miguel.xlsx"
+
+    if not ruta_excel.exists():
+        return None
+
+    try:
+        soluciones = pd.read_excel(ruta_excel, sheet_name="Soluciones_Muros")
+    except Exception:
+        return None
+
+    soluciones.columns = soluciones.columns.str.strip()
+
+    columnas_numericas = [
+        "Espesor_Rev_Int_mm",
+        "Espesor_Aislante_mm",
+        "Densidad_Aislante_kg_m3",
+        "Espesor_Placa_mm",
+        "Espesor_Aislacion_Ext_mm",
+        "Densidad_Aislacion_Ext_kg_m3",
+        "Espesor_Rev_Ext_mm",
+        "U_W_m2K",
+        "Rt_m2K_W",
+        "U_Max_Zona_D",
+        "Rt_Min_Zona_D",
+    ]
+
+    for columna in columnas_numericas:
+        if columna in soluciones.columns:
+            soluciones[columna] = pd.to_numeric(soluciones[columna], errors="coerce")
+
+    columnas_texto = [
+        "Codigo_Solucion",
+        "Elemento",
+        "Sistema",
+        "Estructura_Principal",
+        "Revestimiento_Interior",
+        "Barrera_Vapor",
+        "Aislante_Entre_Estructura",
+        "Placa_Estructural",
+        "Aislacion_Exterior",
+        "Barrera_Humedad",
+        "Revestimiento_Exterior",
+        "Compatibilidad_Zona_D",
+        "Fuente",
+        "Observacion",
+    ]
+
+    for columna in columnas_texto:
+        if columna in soluciones.columns:
+            soluciones[columna] = soluciones[columna].fillna("").astype(str).str.strip()
+
+    return soluciones
 
 
 def buscar_norma_residencial(base, zona, superficie_terreno):
@@ -3735,6 +3793,14 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
     zona_residencial_automatica = None
     evaluacion_ocupacion_art3 = "No evaluada"
     evaluacion_constructibilidad_art3 = "No evaluada"
+    resultado_muro_regularizacion = {
+        "estado": "No evaluado",
+        "sistema_ingresado": None,
+        "codigo_referencia": None,
+        "u_referencia": None,
+        "rt_referencia": None,
+        "diferencias": [],
+    }
 
     # ==========================================
     # 1. DATOS DEL INMUEBLE A REGULARIZAR
@@ -4446,10 +4512,495 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
         )
 
     # ==========================================
-    # 6. CHECKLIST DOCUMENTAL
+    # 6. REVISIÓN CONSTRUCTIVA Y TÉRMICA DE MUROS
     # ==========================================
     st.markdown("---")
-    st.markdown("### 📑 6. Checklist Orientativo de Antecedentes")
+    st.markdown("### 🧱 6. Revisión Constructiva y Térmica del Muro Existente")
+    st.caption(
+        "Describe el muro perimetral predominante de la vivienda. El prototipo comparará la configuración "
+        "ingresada con las soluciones de referencia seleccionadas desde LOSCAT para la Zona Térmica D. "
+        "La comparación es orientativa y no reemplaza una memoria de cálculo, ensayo o certificación profesional."
+    )
+
+    try:
+        base_muros = cargar_soluciones_muros()
+    except Exception:
+        base_muros = None
+
+    if base_muros is None or base_muros.empty:
+        st.warning(
+            "⚠️ No fue posible cargar la hoja **Soluciones_Muros** desde `Base_Normativa_PRC_San_Miguel.xlsx`. "
+            "Para utilizar esta revisión debes subir también la versión actualizada de la base normativa."
+        )
+    else:
+        opciones_sistema_muro = [
+            "Seleccione una opción...",
+            "Entramado de madera",
+            "Entramado de acero galvanizado",
+            "Albañilería con EIFS",
+            "Otro sistema",
+            "No sé cómo está construido",
+        ]
+
+        sistema_muro_reg = st.selectbox(
+            "Sistema predominante del muro perimetral existente:",
+            opciones_sistema_muro,
+            key="reg_muro_sistema"
+        )
+
+        fila_ref_muro = None
+        datos_muro_ingresados = {}
+        diferencias_muro = []
+
+        if sistema_muro_reg in [
+            "Entramado de madera",
+            "Entramado de acero galvanizado",
+            "Albañilería con EIFS",
+        ]:
+            coincidencias = base_muros[
+                base_muros["Sistema"].str.lower() == sistema_muro_reg.lower()
+            ]
+
+            if not coincidencias.empty:
+                fila_ref_muro = coincidencias.iloc[0]
+
+        if sistema_muro_reg == "Entramado de madera":
+            st.markdown("#### 🪵 Composición informada – entramado de madera")
+            muro_col1, muro_col2 = st.columns(2)
+
+            with muro_col1:
+                estructura_muro = st.selectbox(
+                    "Estructura principal:",
+                    ["No sé", "Pino 2x4", "Pino 2x3", "Otra"],
+                    key="reg_muro_mad_estructura"
+                )
+                rev_int_muro = st.selectbox(
+                    "Revestimiento interior:",
+                    ["No sé", "Yeso-cartón", "Madera", "Sin revestimiento", "Otro"],
+                    key="reg_muro_mad_rev_int"
+                )
+                esp_rev_int_muro = st.number_input(
+                    "Espesor del revestimiento interior (mm):",
+                    min_value=0.0, value=0.0, step=0.5, format="%.1f",
+                    key="reg_muro_mad_esp_rev_int"
+                )
+                aislante_muro = st.selectbox(
+                    "Aislante entre pies derechos:",
+                    ["No sé", "Lana de fibra de vidrio", "Lana mineral", "EPS", "Sin aislación", "Otro"],
+                    key="reg_muro_mad_aislante"
+                )
+                esp_aislante_muro = st.number_input(
+                    "Espesor del aislante entre pies derechos (mm):",
+                    min_value=0.0, value=0.0, step=5.0, format="%.1f",
+                    key="reg_muro_mad_esp_aislante"
+                )
+
+            with muro_col2:
+                placa_muro = st.selectbox(
+                    "Placa estructural/exterior:",
+                    ["No sé", "OSB estructural", "Terciado", "Sin placa", "Otra"],
+                    key="reg_muro_mad_placa"
+                )
+                esp_placa_muro = st.number_input(
+                    "Espesor de la placa (mm):",
+                    min_value=0.0, value=0.0, step=0.5, format="%.1f",
+                    key="reg_muro_mad_esp_placa"
+                )
+                aisl_ext_muro = st.selectbox(
+                    "Aislación exterior:",
+                    ["No sé", "EPS", "Lana mineral", "Sin aislación exterior", "Otra"],
+                    key="reg_muro_mad_aisl_ext"
+                )
+                esp_aisl_ext_muro = st.number_input(
+                    "Espesor de la aislación exterior (mm):",
+                    min_value=0.0, value=0.0, step=5.0, format="%.1f",
+                    key="reg_muro_mad_esp_aisl_ext"
+                )
+                rev_ext_muro = st.selectbox(
+                    "Revestimiento exterior:",
+                    ["No sé", "Fibrocemento", "Siding", "Madera", "Estuco", "Otro"],
+                    key="reg_muro_mad_rev_ext"
+                )
+                esp_rev_ext_muro = st.number_input(
+                    "Espesor del revestimiento exterior (mm):",
+                    min_value=0.0, value=0.0, step=0.5, format="%.1f",
+                    key="reg_muro_mad_esp_rev_ext"
+                )
+
+            datos_muro_ingresados = {
+                "Estructura_Principal": estructura_muro,
+                "Revestimiento_Interior": rev_int_muro,
+                "Espesor_Rev_Int_mm": esp_rev_int_muro,
+                "Aislante_Entre_Estructura": aislante_muro,
+                "Espesor_Aislante_mm": esp_aislante_muro,
+                "Placa_Estructural": placa_muro,
+                "Espesor_Placa_mm": esp_placa_muro,
+                "Aislacion_Exterior": aisl_ext_muro,
+                "Espesor_Aislacion_Ext_mm": esp_aisl_ext_muro,
+                "Revestimiento_Exterior": rev_ext_muro,
+                "Espesor_Rev_Ext_mm": esp_rev_ext_muro,
+            }
+
+        elif sistema_muro_reg == "Entramado de acero galvanizado":
+            st.markdown("#### 🔩 Composición informada – entramado de acero galvanizado")
+            muro_col1, muro_col2 = st.columns(2)
+
+            with muro_col1:
+                estructura_muro = st.selectbox(
+                    "Perfil estructural principal:",
+                    ["No sé", "Perfil 60C085", "Otro perfil"],
+                    key="reg_muro_ac_estructura"
+                )
+                rev_int_muro = st.selectbox(
+                    "Revestimiento interior:",
+                    ["No sé", "Yeso-cartón", "Otro"],
+                    key="reg_muro_ac_rev_int"
+                )
+                esp_rev_int_muro = st.number_input(
+                    "Espesor del revestimiento interior (mm):",
+                    min_value=0.0, value=0.0, step=0.5, format="%.1f",
+                    key="reg_muro_ac_esp_rev_int"
+                )
+                aislante_muro = st.selectbox(
+                    "Aislante entre montantes:",
+                    ["No sé", "Lana de fibra de vidrio", "Lana mineral", "Sin aislación", "Otro"],
+                    key="reg_muro_ac_aislante"
+                )
+                esp_aislante_muro = st.number_input(
+                    "Espesor del aislante entre montantes (mm):",
+                    min_value=0.0, value=0.0, step=5.0, format="%.1f",
+                    key="reg_muro_ac_esp_aislante"
+                )
+
+            with muro_col2:
+                placa_muro = st.selectbox(
+                    "Placa estructural:",
+                    ["No sé", "OSB estructural", "Otra", "Sin placa"],
+                    key="reg_muro_ac_placa"
+                )
+                esp_placa_muro = st.number_input(
+                    "Espesor de la placa (mm):",
+                    min_value=0.0, value=0.0, step=0.5, format="%.1f",
+                    key="reg_muro_ac_esp_placa"
+                )
+                aisl_ext_muro = st.selectbox(
+                    "Aislación exterior:",
+                    ["No sé", "EPS", "Lana mineral", "Sin aislación exterior", "Otra"],
+                    key="reg_muro_ac_aisl_ext"
+                )
+                esp_aisl_ext_muro = st.number_input(
+                    "Espesor de la aislación exterior (mm):",
+                    min_value=0.0, value=0.0, step=5.0, format="%.1f",
+                    key="reg_muro_ac_esp_aisl_ext"
+                )
+                rev_ext_muro = st.selectbox(
+                    "Revestimiento exterior:",
+                    ["No sé", "Fibrocemento", "Siding", "Otro"],
+                    key="reg_muro_ac_rev_ext"
+                )
+                esp_rev_ext_muro = st.number_input(
+                    "Espesor del revestimiento exterior (mm):",
+                    min_value=0.0, value=0.0, step=0.5, format="%.1f",
+                    key="reg_muro_ac_esp_rev_ext"
+                )
+
+            datos_muro_ingresados = {
+                "Estructura_Principal": estructura_muro,
+                "Revestimiento_Interior": rev_int_muro,
+                "Espesor_Rev_Int_mm": esp_rev_int_muro,
+                "Aislante_Entre_Estructura": aislante_muro,
+                "Espesor_Aislante_mm": esp_aislante_muro,
+                "Placa_Estructural": placa_muro,
+                "Espesor_Placa_mm": esp_placa_muro,
+                "Aislacion_Exterior": aisl_ext_muro,
+                "Espesor_Aislacion_Ext_mm": esp_aisl_ext_muro,
+                "Revestimiento_Exterior": rev_ext_muro,
+                "Espesor_Rev_Ext_mm": esp_rev_ext_muro,
+            }
+
+        elif sistema_muro_reg == "Albañilería con EIFS":
+            st.markdown("#### 🧱 Composición informada – albañilería con aislación exterior")
+            muro_col1, muro_col2 = st.columns(2)
+
+            with muro_col1:
+                estructura_muro = st.selectbox(
+                    "Tipo de albañilería:",
+                    [
+                        "No sé",
+                        "Ladrillo cerámico Santiago 7",
+                        "Otro ladrillo cerámico",
+                        "Bloque de hormigón",
+                        "Otra"
+                    ],
+                    key="reg_muro_alb_estructura"
+                )
+                esp_muro_base = st.number_input(
+                    "Espesor nominal aproximado del muro base (mm):",
+                    min_value=0.0, value=0.0, step=5.0, format="%.1f",
+                    key="reg_muro_alb_esp_base"
+                )
+                mortero_ref = st.selectbox(
+                    "¿La solución utiliza mortero 1:3 y junta aproximada de 15 ± 3 mm?",
+                    opciones_si_no,
+                    key="reg_muro_alb_mortero"
+                )
+
+            with muro_col2:
+                aisl_ext_muro = st.selectbox(
+                    "Sistema de aislación exterior:",
+                    ["No sé", "EIFS con EPS", "Otro sistema EIFS", "Sin aislación exterior", "Otro"],
+                    key="reg_muro_alb_aisl_ext"
+                )
+                esp_aisl_ext_muro = st.number_input(
+                    "Espesor del aislante exterior (mm):",
+                    min_value=0.0, value=0.0, step=5.0, format="%.1f",
+                    key="reg_muro_alb_esp_aisl_ext"
+                )
+                densidad_eps_muro = st.number_input(
+                    "Densidad del EPS exterior, si se conoce (kg/m³):",
+                    min_value=0.0, value=0.0, step=1.0, format="%.1f",
+                    key="reg_muro_alb_densidad_eps"
+                )
+
+            datos_muro_ingresados = {
+                "Estructura_Principal": estructura_muro,
+                "Espesor_Muro_Base_mm": esp_muro_base,
+                "Mortero_Referencia": mortero_ref,
+                "Aislacion_Exterior": aisl_ext_muro,
+                "Espesor_Aislacion_Ext_mm": esp_aisl_ext_muro,
+                "Densidad_Aislacion_Ext_kg_m3": densidad_eps_muro,
+            }
+
+        if fila_ref_muro is not None and datos_muro_ingresados:
+            st.markdown("#### 🔎 Comparación con solución de referencia")
+
+            # Funciones auxiliares locales para comparar sin atribuir prestaciones cuando faltan datos.
+            def _texto_igual(valor_ingresado, valor_ref):
+                return str(valor_ingresado).strip().lower() == str(valor_ref).strip().lower()
+
+            def _numero_igual(valor_ingresado, valor_ref, tolerancia=0.26):
+                try:
+                    if pd.isna(valor_ref):
+                        return None
+                    return abs(float(valor_ingresado) - float(valor_ref)) <= tolerancia
+                except Exception:
+                    return None
+
+            estado_comparacion = {"conocidos": 0, "totales": 0, "todos": True}
+
+            def registrar_texto(nombre, ingresado, columna_ref, desconocidos=None):
+                if desconocidos is None:
+                    desconocidos = {"no sé", "seleccione una opción...", "no estoy seguro/a", ""}
+                estado_comparacion["totales"] += 1
+                if str(ingresado).strip().lower() in desconocidos:
+                    estado_comparacion["todos"] = False
+                    diferencias_muro.append(f"{nombre}: dato no informado o no conocido.")
+                    return
+                estado_comparacion["conocidos"] += 1
+                esperado = fila_ref_muro.get(columna_ref, "")
+                if not _texto_igual(ingresado, esperado):
+                    estado_comparacion["todos"] = False
+                    diferencias_muro.append(f"{nombre}: ingresado '{ingresado}' · referencia '{esperado}'.")
+
+            def registrar_numero(nombre, ingresado, columna_ref, tolerancia=0.26):
+                estado_comparacion["totales"] += 1
+                if ingresado is None or float(ingresado) <= 0:
+                    estado_comparacion["todos"] = False
+                    diferencias_muro.append(f"{nombre}: espesor/característica no informada.")
+                    return
+                esperado = fila_ref_muro.get(columna_ref, None)
+                comparacion = _numero_igual(ingresado, esperado, tolerancia)
+                if comparacion is None:
+                    estado_comparacion["todos"] = False
+                    diferencias_muro.append(f"{nombre}: la referencia no permite comparación automática.")
+                    return
+                estado_comparacion["conocidos"] += 1
+                if not comparacion:
+                    estado_comparacion["todos"] = False
+                    diferencias_muro.append(f"{nombre}: ingresado {float(ingresado):.1f} mm · referencia {float(esperado):.1f} mm.")
+
+            if sistema_muro_reg in ["Entramado de madera", "Entramado de acero galvanizado"]:
+                registrar_texto("Estructura principal", datos_muro_ingresados["Estructura_Principal"], "Estructura_Principal")
+                registrar_texto("Revestimiento interior", datos_muro_ingresados["Revestimiento_Interior"], "Revestimiento_Interior")
+                registrar_numero("Espesor revestimiento interior", datos_muro_ingresados["Espesor_Rev_Int_mm"], "Espesor_Rev_Int_mm")
+                registrar_texto("Aislante interior", datos_muro_ingresados["Aislante_Entre_Estructura"], "Aislante_Entre_Estructura")
+                registrar_numero("Espesor aislante interior", datos_muro_ingresados["Espesor_Aislante_mm"], "Espesor_Aislante_mm")
+                registrar_texto("Placa estructural", datos_muro_ingresados["Placa_Estructural"], "Placa_Estructural")
+                registrar_numero("Espesor placa estructural", datos_muro_ingresados["Espesor_Placa_mm"], "Espesor_Placa_mm")
+                registrar_texto("Aislación exterior", datos_muro_ingresados["Aislacion_Exterior"], "Aislacion_Exterior")
+                registrar_numero("Espesor aislación exterior", datos_muro_ingresados["Espesor_Aislacion_Ext_mm"], "Espesor_Aislacion_Ext_mm")
+                registrar_texto("Revestimiento exterior", datos_muro_ingresados["Revestimiento_Exterior"], "Revestimiento_Exterior")
+                registrar_numero("Espesor revestimiento exterior", datos_muro_ingresados["Espesor_Rev_Ext_mm"], "Espesor_Rev_Ext_mm")
+
+            elif sistema_muro_reg == "Albañilería con EIFS":
+                registrar_texto("Tipo de albañilería", datos_muro_ingresados["Estructura_Principal"], "Estructura_Principal")
+
+                # La solución seleccionada usa ladrillo de 140 mm de ancho nominal.
+                estado_comparacion["totales"] += 1
+                if datos_muro_ingresados["Espesor_Muro_Base_mm"] <= 0:
+                    estado_comparacion["todos"] = False
+                    diferencias_muro.append("Espesor muro base: dato no informado.")
+                else:
+                    estado_comparacion["conocidos"] += 1
+                    if abs(float(datos_muro_ingresados["Espesor_Muro_Base_mm"]) - 140.0) > 2.0:
+                        estado_comparacion["todos"] = False
+                        diferencias_muro.append(
+                            f"Espesor muro base: ingresado {datos_muro_ingresados['Espesor_Muro_Base_mm']:.1f} mm · referencia 140 mm."
+                        )
+
+                estado_comparacion["totales"] += 1
+                if datos_muro_ingresados["Mortero_Referencia"] == "Sí":
+                    estado_comparacion["conocidos"] += 1
+                elif datos_muro_ingresados["Mortero_Referencia"] == "No":
+                    estado_comparacion["conocidos"] += 1
+                    estado_comparacion["todos"] = False
+                    diferencias_muro.append("Mortero/junta: no coincide con la configuración de referencia 1:3 y 15 ± 3 mm.")
+                else:
+                    estado_comparacion["todos"] = False
+                    diferencias_muro.append("Mortero/junta: condición no verificada.")
+
+                registrar_texto("Aislación exterior", datos_muro_ingresados["Aislacion_Exterior"], "Aislacion_Exterior")
+                registrar_numero("Espesor aislación exterior", datos_muro_ingresados["Espesor_Aislacion_Ext_mm"], "Espesor_Aislacion_Ext_mm")
+
+                estado_comparacion["totales"] += 1
+                if datos_muro_ingresados["Densidad_Aislacion_Ext_kg_m3"] <= 0:
+                    estado_comparacion["todos"] = False
+                    diferencias_muro.append("Densidad del EPS: dato no informado.")
+                else:
+                    estado_comparacion["conocidos"] += 1
+                    esperado_densidad = fila_ref_muro.get("Densidad_Aislacion_Ext_kg_m3", None)
+                    if pd.isna(esperado_densidad) or abs(float(datos_muro_ingresados["Densidad_Aislacion_Ext_kg_m3"]) - float(esperado_densidad)) > 0.6:
+                        estado_comparacion["todos"] = False
+                        diferencias_muro.append(
+                            f"Densidad EPS: ingresada {datos_muro_ingresados['Densidad_Aislacion_Ext_kg_m3']:.1f} kg/m³ · referencia {float(esperado_densidad):.1f} kg/m³."
+                        )
+
+            codigo_ref = str(fila_ref_muro.get("Codigo_Solucion", ""))
+            u_ref = fila_ref_muro.get("U_W_m2K", None)
+            rt_ref = fila_ref_muro.get("Rt_m2K_W", None)
+            u_max_ref = fila_ref_muro.get("U_Max_Zona_D", None)
+            rt_min_ref = fila_ref_muro.get("Rt_Min_Zona_D", None)
+
+            if estado_comparacion["todos"] and estado_comparacion["conocidos"] == estado_comparacion["totales"]:
+                resultado_muro_regularizacion = {
+                    "estado": "Coincidencia con solución de referencia",
+                    "sistema_ingresado": sistema_muro_reg,
+                    "codigo_referencia": codigo_ref,
+                    "u_referencia": float(u_ref) if pd.notna(u_ref) else None,
+                    "rt_referencia": float(rt_ref) if pd.notna(rt_ref) else None,
+                    "diferencias": [],
+                }
+                st.success(
+                    f"✅ **Coincidencia con solución de referencia {codigo_ref}.** "
+                    "La configuración ingresada coincide con los parámetros críticos registrados en la base del prototipo."
+                )
+
+                ref_col1, ref_col2, ref_col3, ref_col4 = st.columns(4)
+                with ref_col1:
+                    st.metric("U de referencia", f"{float(u_ref):.2f} W/m²K")
+                with ref_col2:
+                    st.metric("Rt de referencia", f"{float(rt_ref):.2f} m²K/W")
+                with ref_col3:
+                    st.metric("U máx. Zona D", f"{float(u_max_ref):.2f} W/m²K")
+                with ref_col4:
+                    st.metric("Rt mín. Zona D", f"{float(rt_min_ref):.2f} m²K/W")
+
+                if (pd.notna(u_ref) and pd.notna(u_max_ref) and float(u_ref) <= float(u_max_ref)) or (
+                    pd.notna(rt_ref) and pd.notna(rt_min_ref) and float(rt_ref) >= float(rt_min_ref)
+                ):
+                    st.success(
+                        "🌡️ La **solución de referencia** presenta un desempeño térmico compatible con los valores "
+                        "considerados para muros perimetrales de Zona Térmica D."
+                    )
+            else:
+                if estado_comparacion["conocidos"] == 0:
+                    estado_muro = "No verificable"
+                else:
+                    estado_muro = "Coincidencia parcial / requiere verificación"
+
+                resultado_muro_regularizacion = {
+                    "estado": estado_muro,
+                    "sistema_ingresado": sistema_muro_reg,
+                    "codigo_referencia": codigo_ref,
+                    "u_referencia": None,
+                    "rt_referencia": None,
+                    "diferencias": diferencias_muro,
+                }
+
+                st.warning(
+                    f"⚠️ **{estado_muro}.** La configuración fue comparada con la solución {codigo_ref}, "
+                    "pero no coincide completamente o faltan antecedentes. Por esta razón el prototipo **no asigna "
+                    "automáticamente el valor U ni Rt de la solución LOSCAT** al muro existente."
+                )
+
+                with st.expander("🔎 Ver diferencias o antecedentes pendientes"):
+                    for diferencia in diferencias_muro:
+                        st.write(f"• {diferencia}")
+
+            with st.expander("📚 Ver solución LOSCAT utilizada como referencia"):
+                st.write(f"**Código:** {codigo_ref}")
+                st.write(f"**Sistema:** {fila_ref_muro.get('Sistema', '')}")
+                st.write(f"**Estructura principal:** {fila_ref_muro.get('Estructura_Principal', '')}")
+                if fila_ref_muro.get("Aislante_Entre_Estructura", ""):
+                    st.write(
+                        f"**Aislación interior:** {fila_ref_muro.get('Aislante_Entre_Estructura', '')} "
+                        f"{fila_ref_muro.get('Espesor_Aislante_mm', '')} mm"
+                    )
+                if fila_ref_muro.get("Aislacion_Exterior", ""):
+                    st.write(
+                        f"**Aislación exterior:** {fila_ref_muro.get('Aislacion_Exterior', '')} "
+                        f"{fila_ref_muro.get('Espesor_Aislacion_Ext_mm', '')} mm"
+                    )
+                st.write(f"**Fuente:** {fila_ref_muro.get('Fuente', '')}")
+                if fila_ref_muro.get("Observacion", ""):
+                    st.write(f"**Observación:** {fila_ref_muro.get('Observacion', '')}")
+
+        elif sistema_muro_reg == "Otro sistema":
+            descripcion_otro_muro = st.text_area(
+                "Describe los materiales y espesores que conozcas:",
+                placeholder="Ej.: ladrillo, estuco interior, 20 mm de aislación exterior...",
+                key="reg_muro_otro_descripcion"
+            )
+            resultado_muro_regularizacion = {
+                "estado": "No verificable con las soluciones registradas",
+                "sistema_ingresado": "Otro sistema",
+                "codigo_referencia": None,
+                "u_referencia": None,
+                "rt_referencia": None,
+                "diferencias": [descripcion_otro_muro] if descripcion_otro_muro else [],
+            }
+            st.info(
+                "ℹ️ La base actual del prototipo contiene un conjunto acotado de soluciones de referencia. "
+                "La descripción ingresada deberá revisarse mediante una solución acreditada, ensayo o memoria de cálculo cuando corresponda."
+            )
+
+        elif sistema_muro_reg == "No sé cómo está construido":
+            resultado_muro_regularizacion = {
+                "estado": "No verificable por falta de antecedentes",
+                "sistema_ingresado": "No identificado",
+                "codigo_referencia": None,
+                "u_referencia": None,
+                "rt_referencia": None,
+                "diferencias": ["El usuario no conoce la composición del muro existente."],
+            }
+            st.info(
+                "ℹ️ No se asignará un valor térmico al muro. Para verificarlo se requiere identificar su composición "
+                "y espesores o contar con antecedentes técnicos de la solución constructiva."
+            )
+
+        elif sistema_muro_reg == "Seleccione una opción...":
+            st.info("Selecciona el sistema de muro para iniciar la comparación constructiva.")
+
+        st.caption(
+            "🔥 La coincidencia térmica con una solución de referencia **no acredita por sí sola resistencia al fuego F-15 o F-60**, "
+            "ni reemplaza la verificación de estabilidad o el informe del profesional competente."
+        )
+
+    # ==========================================
+    # 7. CHECKLIST DOCUMENTAL
+    # ==========================================
+    st.markdown("---")
+    st.markdown("### 📑 7. Checklist Orientativo de Antecedentes")
     st.caption(
         "Este listado sirve únicamente para organizar antecedentes. No valida documentos ni reemplaza "
         "la elaboración, firma o revisión profesional correspondiente."
@@ -4492,10 +5043,10 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
         st.success("✅ Todos los antecedentes del checklist orientativo fueron marcados.")
 
     # ==========================================
-    # 7. RESUMEN Y GUARDADO
+    # 8. RESUMEN Y GUARDADO
     # ==========================================
     st.markdown("---")
-    st.markdown("### 💾 7. Resumen de la Orientación")
+    st.markdown("### 💾 8. Resumen de la Orientación")
 
     resumen_reg1, resumen_reg2, resumen_reg3, resumen_reg4 = st.columns(4)
     with resumen_reg1:
@@ -4549,6 +5100,7 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
             "coef_constructibilidad_prc_referencia": coef_constructibilidad_prc_reg,
             "evaluacion_ocupacion_art3": evaluacion_ocupacion_art3,
             "evaluacion_constructibilidad_art3": evaluacion_constructibilidad_art3,
+            "revision_muro": resultado_muro_regularizacion,
             "sin_recepcion": sin_recepcion,
             "construida_antes_ley": construida_antes_ley,
             "uso_residencial": uso_residencial,
@@ -4571,6 +5123,8 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
             if reg_guardada.get("coef_constructibilidad_real") is not None:
                 st.write(f"**Coeficiente real de constructibilidad:** {reg_guardada['coef_constructibilidad_real']:.2f}")
             st.write(f"**Antecedentes pendientes del checklist:** {len(reg_guardada['documentos_pendientes'])}")
+            if reg_guardada.get("revision_muro"):
+                st.write(f"**Revisión del muro:** {reg_guardada['revision_muro'].get('estado', 'No evaluado')}")
 
     st.markdown("---")
     st.info(
