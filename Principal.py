@@ -1,4 +1,4 @@
-# VERSION: PASO7_SOLUCIONES_FUTURA_AMPLIACION_2026_10_19
+# VERSION: PASO8_PUZZLE_FRENTE_IMAGENES_2026_10_19
 # VERSION: PASO6_RESULTADO_FINAL_REGULARIZACION_2026_10_19
 import streamlit as st
 import pandas as pd
@@ -405,6 +405,59 @@ def formatear_tramo_m2(tramo):
 
 
 # ==========================================
+# RECURSOS VISUALES Y REFERENCIAS GEOMÉTRICAS
+# ==========================================
+CARPETA_PROYECTO = Path(__file__).resolve().parent
+
+IMAGENES_SOLUCIONES = {
+    "muro_madera": "detalle_muro_madera.png",
+    "muro_acero": "detalle_muro_acero.png",
+    "muro_albanileria": "detalle_muro_albanileria_eifs.png",
+    "piso_radier": "detalle_radier.png",
+    "piso_ventilado": "detalle_piso_ventilado.png",
+    "techumbre_madera": "detalle_techumbre_madera.png",
+}
+
+def mostrar_imagen_solucion(clave, caption=None, ancho=None):
+    """Muestra un detalle constructivo si el archivo está disponible en el proyecto."""
+    nombre = IMAGENES_SOLUCIONES.get(clave)
+    if not nombre:
+        return False
+    ruta = CARPETA_PROYECTO / nombre
+    if not ruta.exists():
+        st.caption(f"🖼️ Detalle visual no disponible: falta `{nombre}` en el repositorio.")
+        return False
+    kwargs = {"caption": caption} if caption else {}
+    if ancho is not None:
+        kwargs["width"] = ancho
+    else:
+        kwargs["use_container_width"] = True
+    st.image(str(ruta), **kwargs)
+    return True
+
+def clave_imagen_muro(sistema):
+    sistema = str(sistema or "").strip().lower()
+    if "madera" in sistema:
+        return "muro_madera"
+    if "acero" in sistema:
+        return "muro_acero"
+    if "albañiler" in sistema or "albaniler" in sistema or "eifs" in sistema:
+        return "muro_albanileria"
+    return None
+
+def calcular_antejardin_referencia(datos):
+    """
+    Devuelve el antejardín mínimo de referencia usado por el editor de futura ampliación.
+    Se adopta un criterio conservador cuando la excepción depende de verificar el tramo/cuadra.
+    """
+    via = str(datos.get("via_frente", "") or "").strip()
+    if via == "Gran Avenida José Miguel Carrera":
+        return 0.0
+    # Santa Rosa y Lo Ovalle pueden requerir 5 m en ciertos tramos; mientras no se
+    # acredite esa condición, el editor usa 3 m como referencia y mantiene la advertencia.
+    return 3.0
+
+# ==========================================
 # CROQUIS AUTOMÁTICO PRELIMINAR
 # ==========================================
 def crear_croquis_preliminar(datos, modulos):
@@ -428,6 +481,7 @@ def crear_croquis_preliminar(datos, modulos):
     derecha = 0.0 if datos.get("adosado_derecho", False) else float(datos.get("distancia_derecha", 0) or 0)
     posterior = 0.0 if datos.get("adosado_posterior", False) else float(datos.get("distancia_posterior", 0) or 0)
     antejardin = float(datos.get("antejardin_actual", 0) or 0)
+    antejardin_minimo = calcular_antejardin_referencia(datos)
 
     # Envolvente rectangular aproximada de la vivienda actual.
     casa_x = izquierda
@@ -530,6 +584,7 @@ def crear_croquis_preliminar(datos, modulos):
     desplazamiento_izq = 0.0
     desplazamiento_der = 0.0
     desplazamiento_post = 0.0
+    desplazamiento_frente = 0.0
     separacion = max(min(ancho_terreno, largo_terreno) * 0.01, 0.10)
 
     validaciones = []
@@ -572,6 +627,11 @@ def crear_croquis_preliminar(datos, modulos):
             y = casa_y + casa_largo
             desplazamiento_post += modulo_ancho + separacion
 
+        elif ubicacion == "Parte frontal de la vivienda (hacia la calle)":
+            x = casa_x + desplazamiento_frente
+            y = casa_y - modulo_largo
+            desplazamiento_frente += modulo_ancho + separacion
+
         else:
             validaciones.append(
                 {
@@ -589,7 +649,7 @@ def crear_croquis_preliminar(datos, modulos):
             and (y + modulo_largo) <= largo_terreno + 1e-9
         )
 
-        respeta_frente = y >= antejardin - 1e-9
+        respeta_frente = y >= antejardin_minimo - 1e-9
         cumple_geometria = dentro_terreno and respeta_frente
 
         color_modulo = "#f8c471" if cumple_geometria else "#f1948a"
@@ -1085,6 +1145,7 @@ def obtener_geometria_referencia(datos):
         else float(datos.get("distancia_posterior", 0) or 0)
     )
     antejardin = float(datos.get("antejardin_actual", 0) or 0)
+    antejardin_minimo = calcular_antejardin_referencia(datos)
 
     casa_x = izquierda
     casa_y = antejardin
@@ -1105,6 +1166,7 @@ def obtener_geometria_referencia(datos):
         "ancho_terreno": ancho_terreno,
         "largo_terreno": largo_terreno,
         "antejardin": antejardin,
+        "antejardin_minimo": antejardin_minimo,
         "casa_x": casa_x,
         "casa_y": casa_y,
         "casa_ancho": casa_ancho,
@@ -1159,6 +1221,10 @@ def calcular_posicion_inicial_puzzle(datos, modulo):
         elif ubicacion == "Parte posterior de la vivienda":
             x = g["casa_x"] + desplazamiento
             y = g["casa_y"] + g["casa_largo"]
+
+        elif ubicacion == "Parte frontal de la vivienda (hacia la calle)":
+            x = g["casa_x"] + desplazamiento
+            y = g["casa_y"] - largo_modulo
 
         else:
             x = g["casa_x"]
@@ -1411,10 +1477,14 @@ def pieza_dentro_terreno(pieza, g):
     )
 
 
-def aplicar_encaje_magnetico(datos, modulos, piso, clave, tipo, umbral=0.35):
+def aplicar_encaje_magnetico(datos, modulos, piso, clave, tipo, umbral=0.50):
     """
-    Encaja una pieza con bordes del terreno, antejardín o piezas cercanas.
-    El objetivo es que dos rectángulos puedan quedar exactamente lado a lado.
+    Encaja una pieza por proximidad REAL de sus bordes.
+
+    A diferencia de la versión anterior, no exige que la pieza esté alineada
+    simultáneamente en X e Y para detectar un borde cercano. Si las proyecciones
+    de dos rectángulos se solapan en el eje perpendicular, basta con acercar un
+    borde al otro para que se produzca el encaje.
     """
 
     g = obtener_geometria_referencia(datos)
@@ -1424,53 +1494,83 @@ def aplicar_encaje_magnetico(datos, modulos, piso, clave, tipo, umbral=0.35):
     if seleccionada is None:
         return False
 
-    actual_x = seleccionada["x"]
-    actual_y = seleccionada["y"]
-    w = seleccionada["ancho"]
-    h = seleccionada["largo"]
+    actual_x = float(seleccionada["x"])
+    actual_y = float(seleccionada["y"])
+    w = float(seleccionada["ancho"])
+    h = float(seleccionada["largo"])
 
     candidatos = []
 
-    # Bordes útiles del terreno y línea de antejardín.
-    for cx in [0.0, g["ancho_terreno"] - w]:
-        candidatos.append((cx, actual_y, "borde del terreno"))
+    def agregar(cx, cy, distancia, motivo):
+        if distancia <= umbral + 1e-9:
+            candidatos.append((float(distancia), float(cx), float(cy), motivo))
 
-    limites_y = [0.0, g["largo_terreno"] - h]
-    if piso == "Piso 1":
-        limites_y.append(g["antejardin"])
+    # 1) Bordes laterales y posterior del terreno.
+    agregar(0.0, actual_y, abs(actual_x), "deslinde izquierdo del terreno")
+    agregar(
+        g["ancho_terreno"] - w,
+        actual_y,
+        abs((actual_x + w) - g["ancho_terreno"]),
+        "deslinde derecho del terreno"
+    )
+    agregar(
+        actual_x,
+        g["largo_terreno"] - h,
+        abs((actual_y + h) - g["largo_terreno"]),
+        "deslinde posterior del terreno"
+    )
 
-    for cy in limites_y:
-        candidatos.append((actual_x, cy, "línea de referencia"))
+    # En Piso 1, una futura ampliación se encaja hacia la línea mínima de antejardín,
+    # no hacia el borde de calle cuando eso significaría invadir el antejardín.
+    if piso == "Piso 1" and tipo == "ampliacion":
+        y_frente = float(g.get("antejardin_minimo", 0.0))
+        agregar(actual_x, y_frente, abs(actual_y - y_frente), "línea mínima de antejardín")
+    else:
+        agregar(actual_x, 0.0, abs(actual_y), "frente del terreno")
 
-    # Encaje lado a lado y alineación de bordes con todas las otras piezas.
+    # 2) Encaje con vivienda existente u otros módulos.
     for otra in piezas:
         if otra["clave"] == clave:
             continue
 
-        ox, oy = otra["x"], otra["y"]
-        ow, oh = otra["ancho"], otra["largo"]
+        ox, oy = float(otra["x"]), float(otra["y"])
+        ow, oh = float(otra["ancho"]), float(otra["largo"])
 
-        alineaciones_y = [actual_y, oy, oy + oh - h]
-        alineaciones_x = [actual_x, ox, ox + ow - w]
+        # Solape de las proyecciones. Un pequeño margen permite encajar también
+        # cuando las esquinas están apenas separadas.
+        solape_vertical = min(actual_y + h, oy + oh) - max(actual_y, oy)
+        solape_horizontal = min(actual_x + w, ox + ow) - max(actual_x, ox)
 
-        for cy in alineaciones_y:
-            candidatos.append((ox - w, cy, f"lado izquierdo de otra pieza"))
-            candidatos.append((ox + ow, cy, f"lado derecho de otra pieza"))
+        if solape_vertical >= -umbral:
+            # Borde derecho de la seleccionada con borde izquierdo de la otra.
+            target_x = ox - w
+            agregar(target_x, actual_y, abs((actual_x + w) - ox), "borde izquierdo de otra pieza")
 
-        for cx in alineaciones_x:
-            candidatos.append((cx, oy - h, f"debajo de otra pieza"))
-            candidatos.append((cx, oy + oh, f"sobre otra pieza"))
+            # Borde izquierdo de la seleccionada con borde derecho de la otra.
+            target_x = ox + ow
+            agregar(target_x, actual_y, abs(actual_x - (ox + ow)), "borde derecho de otra pieza")
 
-    mejor = None
-    mejor_distancia = None
+        if solape_horizontal >= -umbral:
+            # Borde superior de seleccionada con borde inferior de otra.
+            target_y = oy - h
+            agregar(actual_x, target_y, abs((actual_y + h) - oy), "borde frontal de otra pieza")
 
-    for cx, cy, motivo in candidatos:
-        dx = cx - actual_x
-        dy = cy - actual_y
+            # Borde inferior de seleccionada con borde superior de otra.
+            target_y = oy + oh
+            agregar(actual_x, target_y, abs(actual_y - (oy + oh)), "borde posterior de otra pieza")
 
-        if max(abs(dx), abs(dy)) > umbral + 1e-9:
-            continue
+        # Alineaciones auxiliares de caras cuando ya están casi lado a lado.
+        if solape_vertical >= -umbral:
+            agregar(ox, actual_y, abs(actual_x - ox), "alineación lateral")
+            agregar(ox + ow - w, actual_y, abs((actual_x + w) - (ox + ow)), "alineación lateral")
+        if solape_horizontal >= -umbral:
+            agregar(actual_x, oy, abs(actual_y - oy), "alineación frontal/posterior")
+            agregar(actual_x, oy + oh - h, abs((actual_y + h) - (oy + oh)), "alineación frontal/posterior")
 
+    # Se prueba desde el borde más cercano al más lejano.
+    candidatos.sort(key=lambda item: item[0])
+
+    for distancia, cx, cy, motivo in candidatos:
         candidata = dict(seleccionada)
         candidata["x"] = cx
         candidata["y"] = cy
@@ -1478,7 +1578,11 @@ def aplicar_encaje_magnetico(datos, modulos, piso, clave, tipo, umbral=0.35):
         if not pieza_dentro_terreno(candidata, g):
             continue
 
-        if tipo == "ampliacion" and piso == "Piso 1" and cy < g["antejardin"] - 1e-9:
+        if (
+            tipo == "ampliacion"
+            and piso == "Piso 1"
+            and cy < float(g.get("antejardin_minimo", 0.0)) - 1e-9
+        ):
             continue
 
         # No encajar en una posición que se monte sobre otra pieza.
@@ -1493,23 +1597,18 @@ def aplicar_encaje_magnetico(datos, modulos, piso, clave, tipo, umbral=0.35):
         if colision:
             continue
 
-        distancia = (dx ** 2 + dy ** 2) ** 0.5
-        if mejor_distancia is None or distancia < mejor_distancia:
-            mejor = (cx, cy, motivo)
-            mejor_distancia = distancia
+        nombre_estado = "posiciones_vivienda" if tipo == "vivienda" else "posiciones_puzzle"
+        posiciones = {
+            k: dict(v)
+            for k, v in st.session_state[nombre_estado].items()
+        }
+        posiciones[clave]["x"] = float(cx)
+        posiciones[clave]["y"] = float(cy)
+        st.session_state[nombre_estado] = posiciones
+        st.session_state["ultimo_encaje_puzzle"] = motivo
+        return True
 
-    if mejor is None:
-        return False
-
-    nombre_estado = "posiciones_vivienda" if tipo == "vivienda" else "posiciones_puzzle"
-    posiciones = {
-        k: dict(v)
-        for k, v in st.session_state[nombre_estado].items()
-    }
-    posiciones[clave]["x"] = float(mejor[0])
-    posiciones[clave]["y"] = float(mejor[1])
-    st.session_state[nombre_estado] = posiciones
-    return True
+    return False
 
 
 def validar_piezas_puzzle(datos, modulos, piso):
@@ -1525,8 +1624,8 @@ def validar_piezas_puzzle(datos, modulos, piso):
             errores.append("sale fuera del terreno")
 
         if pieza["tipo"] == "ampliacion" and piso == "Piso 1":
-            if pieza["y"] < g["antejardin"] - 1e-9:
-                errores.append("invade el antejardín medido")
+            if pieza["y"] < g.get("antejardin_minimo", 0.0) - 1e-9:
+                errores.append("invade el antejardín mínimo de referencia")
 
         if pieza["tipo"] == "ampliacion" and piso == "Piso 2":
             dentro_huella_referencia = (
@@ -2952,10 +3051,22 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
                         "Seleccione una ubicación...",
                         "Lado izquierdo de la vivienda",
                         "Lado derecho de la vivienda",
-                        "Parte posterior de la vivienda"
+                        "Parte posterior de la vivienda",
+                        "Parte frontal de la vivienda (hacia la calle)"
                     ],
                     key=f"ubicacion_ampliacion_{i}"
                 )
+
+                if ubicacion_modulo == "Parte frontal de la vivienda (hacia la calle)":
+                    st.caption(
+                        "La ampliación se ubicará hacia el frente del predio. El croquis y el puzle "
+                        "verificarán que no invada el antejardín mínimo de referencia."
+                    )
+                    if datos.get("via_frente") in ["Avenida Santa Rosa", "Avenida / Callejón Lo Ovalle"]:
+                        st.warning(
+                            "⚠️ En esta vía pueden existir tramos con exigencia histórica de 5 m. "
+                            "El editor usa 3 m como referencia preliminar y esta condición debe verificarse antes de definir la ubicación final."
+                        )
 
                 rotado_modulo = st.checkbox(
                     "🔄 Rotar módulo 90° en el croquis",
@@ -3383,6 +3494,12 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
             "📐 El origen del dibujo se considera desde la esquina inferior izquierda del terreno: "
             "X aumenta hacia la derecha e Y aumenta desde la calle hacia el deslinde posterior."
         )
+        g_puzzle_info = obtener_geometria_referencia(datos)
+        st.caption(
+            f"Frente del predio: Y = 0,00 m · Línea mínima de antejardín usada por el editor: "
+            f"Y = {g_puzzle_info.get('antejardin_minimo', 0.0):.2f} m · Frente de la vivienda existente: "
+            f"Y ≈ {g_puzzle_info.get('casa_y', 0.0):.2f} m."
+        )
 
         modulos_puzzle = [
             modulo
@@ -3444,8 +3561,8 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
                     value=True,
                     key=f"encaje_magnetico_{piso_puzzle}",
                     help=(
-                        "Cuando una pieza queda cerca del borde de otra, del terreno o de la línea de antejardín, "
-                        "se ajusta automáticamente para que los bordes coincidan."
+                        "Detecta bordes cercanos de la vivienda, otros módulos, el terreno o la línea mínima de antejardín "
+                        "y ajusta la pieza para que queden exactamente contiguos."
                     )
                 )
 
@@ -3459,8 +3576,8 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
                 )
 
             st.caption(
-                "🧲 Con el encaje magnético activado, si una pieza queda a unos centímetros de otra, "
-                "el programa intenta dejarla exactamente al lado, sin montarla encima."
+                "🧲 El encaje ahora trabaja borde con borde: basta acercar la pieza al costado de la vivienda, "
+                "otro módulo o un límite válido del terreno. El ajuste automático usa una tolerancia de 0,50 m."
             )
 
             if tipo_visible == "Vivienda existente":
@@ -3658,10 +3775,13 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
                             piso_puzzle,
                             clave_seleccionada,
                             tipo_interno,
-                            umbral=0.60
+                            umbral=1.00
                         )
                         if not encontro:
-                            st.toast("No se encontró un borde cercano para encajar.")
+                            st.toast("No se encontró un borde compatible dentro de 1,00 m.")
+                        else:
+                            motivo = st.session_state.get("ultimo_encaje_puzzle", "borde cercano")
+                            st.toast(f"🧲 Pieza encajada con {motivo}.")
                         st.rerun()
 
                 boton_reiniciar, boton_reiniciar_piso = st.columns(2)
@@ -3846,6 +3966,14 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
                 fila_muro = mapa_muros_futura[muro_elegido_futura]
                 solucion_muro_futura = _fila_a_dict_seguro(fila_muro)
 
+                clave_img_muro = clave_imagen_muro(fila_muro.get("Sistema", ""))
+                if clave_img_muro:
+                    with st.expander("🖼️ Ver detalle visual de la solución de muro", expanded=True):
+                        mostrar_imagen_solucion(
+                            clave_img_muro,
+                            caption=f"Detalle visual de referencia — {fila_muro.get('Codigo_Solucion', '')} · {fila_muro.get('Sistema', '')}"
+                        )
+
                 col_muro_a, col_muro_b, col_muro_c = st.columns(3)
                 with col_muro_a:
                     st.metric("Transmitancia U", _texto_valor_futuro(fila_muro.get("U_W_m2K"), 2, " W/m²K"))
@@ -3961,6 +4089,13 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
                         f"{fila_piso1.get('Sistema', '')}"
                     )
 
+                    clave_img_piso1 = "piso_radier" if condicion_busqueda_p1 == "Apoyado sobre terreno" else "piso_ventilado"
+                    with st.expander("🖼️ Ver detalle visual del piso seleccionado", expanded=True):
+                        mostrar_imagen_solucion(
+                            clave_img_piso1,
+                            caption=f"Detalle visual de referencia — {fila_piso1.get('Sistema', '')}"
+                        )
+
                     if condicion_busqueda_p1 == "Apoyado sobre terreno":
                         c1, c2, c3 = st.columns(3)
                         with c1:
@@ -4040,6 +4175,12 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
                         fila_piso2 = coincidencias_p2.iloc[0]
                         solucion_piso2_futura = _fila_a_dict_seguro(fila_piso2)
 
+                        with st.expander("🖼️ Ver detalle visual del piso ventilado", expanded=True):
+                            mostrar_imagen_solucion(
+                                "piso_ventilado",
+                                caption=f"Detalle visual de referencia — {fila_piso2.get('Codigo_Solucion', '')} · {fila_piso2.get('Sistema', '')}"
+                            )
+
                         c1, c2, c3 = st.columns(3)
                         with c1:
                             st.metric("U referencia", _texto_valor_futuro(fila_piso2.get("U_W_m2K"), 2, " W/m²K"))
@@ -4094,6 +4235,12 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
             if tech_elegida_futura in mapa_tech_futura:
                 fila_tech = mapa_tech_futura[tech_elegida_futura]
                 solucion_techumbre_futura = _fila_a_dict_seguro(fila_tech)
+
+                with st.expander("🖼️ Ver detalle visual de la techumbre", expanded=True):
+                    mostrar_imagen_solucion(
+                        "techumbre_madera",
+                        caption=f"Detalle visual de referencia — {fila_tech.get('Codigo_Solucion', '')} · {fila_tech.get('Sistema', '')}"
+                    )
 
                 col_t1, col_t2, col_t3 = st.columns(3)
                 with col_t1:
@@ -5349,6 +5496,18 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
             if not coincidencias.empty:
                 fila_ref_muro = coincidencias.iloc[0]
 
+        if fila_ref_muro is not None:
+            clave_img_reg_muro = clave_imagen_muro(sistema_muro_reg)
+            if clave_img_reg_muro:
+                with st.expander("🖼️ Ver solución visual de referencia", expanded=False):
+                    mostrar_imagen_solucion(
+                        clave_img_reg_muro,
+                        caption=f"Referencia visual para comparar con el muro existente — {fila_ref_muro.get('Codigo_Solucion', '')}"
+                    )
+                    st.caption(
+                        "La imagen sirve para reconocer la composición de referencia; por sí sola no demuestra que el muro existente coincida con ella."
+                    )
+
         if sistema_muro_reg == "Entramado de madera":
             st.markdown("#### 🪵 Composición informada – entramado de madera")
             muro_col1, muro_col2 = st.columns(2)
@@ -5822,6 +5981,15 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
             fila_ref_piso = referencia_piso.iloc[0] if not referencia_piso.empty else None
 
             st.markdown("#### 🧱 Piso apoyado directamente sobre terreno")
+            with st.expander("🖼️ Ver detalle visual de referencia del radier", expanded=False):
+                mostrar_imagen_solucion(
+                    "piso_radier",
+                    caption="Detalle visual de referencia — radier de hormigón sobre base granular"
+                )
+                st.caption(
+                    "La imagen corresponde a la referencia constructiva utilizada por el prototipo. "
+                    "La verificación térmica se realiza respecto de la aislación exterior del sobrecimiento."
+                )
             st.info(
                 "ℹ️ En esta alternativa, los espesores de ripio y radier se muestran como **criterios constructivos de referencia**. "
                 "La revisión térmica se concentra en la aislación exterior del sobrecimiento para Zona Térmica D."
@@ -5924,6 +6092,14 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
                             st.write(f"• {diferencia}")
 
         elif tipo_piso_reg == "Piso ventilado de madera":
+            with st.expander("🖼️ Ver detalle visual de referencia del piso ventilado", expanded=False):
+                mostrar_imagen_solucion(
+                    "piso_ventilado",
+                    caption="Detalle visual de referencia — piso ventilado de entramado de madera con aislación"
+                )
+                st.caption(
+                    "Utiliza la imagen para reconocer la disposición general de capas; la coincidencia se determina con los datos ingresados."
+                )
             referencia_piso = base_pisos[
                 base_pisos["Condicion_Piso"].str.lower() == "ventilado"
             ]
@@ -6191,6 +6367,14 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
 
         if tipo_techumbre_reg == "Cerchas de madera con lana de fibra de vidrio sobre cielo horizontal":
             fila_ref_tech = base_techumbres.iloc[0]
+            with st.expander("🖼️ Ver detalle visual de referencia de la techumbre", expanded=False):
+                mostrar_imagen_solucion(
+                    "techumbre_madera",
+                    caption="Detalle visual de referencia — cerchas de madera con lana de fibra de vidrio sobre cielo horizontal"
+                )
+                st.caption(
+                    "La imagen es una ayuda de reconocimiento; la verificación se realiza comparando la composición y espesores informados."
+                )
             st.markdown("#### 🏠 Composición informada – techumbre liviana")
             tech_col1, tech_col2 = st.columns(2)
 
