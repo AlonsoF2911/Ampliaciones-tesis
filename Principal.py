@@ -5,7 +5,7 @@ from matplotlib.patches import Rectangle, Patch
 from pathlib import Path
 from io import BytesIO
 
-# VERSION: PASO2_RUTAS_SEPARADAS_REGULARIZACION_LEY20898_2026_10_19
+# VERSION: PASO3_GEOMETRIA_URBANISTICA_LEY20898_2026_10_19
 
 # ==========================================
 # CONFIGURACIÓN DE LA PÁGINA
@@ -3703,8 +3703,8 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
     st.markdown("## 📋 Orientación para Edificación Existente – Ley N.º 20.898")
     st.write(
         "Este módulo está destinado a **edificaciones existentes sin regularizar**. "
-        "Su función es orientar preliminarmente respecto de los procedimientos especiales "
-        "considerados en la Ley N.º 20.898 y sus modificaciones."
+        "Su función es organizar los antecedentes del inmueble y entregar una orientación preliminar "
+        "respecto de los procedimientos especiales considerados en la Ley N.º 20.898 y sus modificaciones."
     )
 
     st.warning(
@@ -3713,18 +3713,278 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
         "debe ser revisada por el profesional competente y por la Dirección de Obras Municipales."
     )
 
-    st.markdown("---")
+    opciones_si_no = ["Seleccione una opción...", "Sí", "No", "No estoy seguro/a"]
+
+    # Variables que se utilizarán durante toda la evaluación.
+    superficie_terreno_reg = 0.0
+    superficie_piso1_reg = 0.0
+    superficie_piso2_reg = 0.0
+    superficie_otros_pisos_reg = 0.0
+    superficie_regularizar = 0.0
+    numero_pisos_reg = 1
+    zona_regularizacion = "Seleccione una zona..."
+    zona_codigo_reg = None
+    fuente_datos_regularizacion = "Ingreso manual"
+    coef_ocupacion_suelo_real = None
+    coef_ocupacion_piso2_real = None
+    coef_constructibilidad_real = None
+    coef_ocupacion_relevante_art3 = None
+    norma_prc_regularizacion = None
+    coef_ocupacion_prc_reg = None
+    coef_constructibilidad_prc_reg = None
+    zona_residencial_automatica = None
+    evaluacion_ocupacion_art3 = "No evaluada"
+    evaluacion_constructibilidad_art3 = "No evaluada"
 
     # ==========================================
-    # 1. CONDICIONES GENERALES
+    # 1. DATOS DEL INMUEBLE A REGULARIZAR
     # ==========================================
-    st.markdown("### 🧭 1. Condiciones Generales de la Edificación Existente")
+    st.markdown("---")
+    st.markdown("### 🏠 1. Datos del Inmueble a Regularizar")
+    st.caption(
+        "Estos datos permiten calcular la ocupación real del predio y la constructibilidad de la edificación existente. "
+        "Si ya completaste 'Datos del Terreno', puedes reutilizar esa información."
+    )
+
+    tiene_datos_guardados = st.session_state.datos_propiedad is not None
+
+    if tiene_datos_guardados:
+        modo_datos_regularizacion = st.radio(
+            "¿Cómo deseas ingresar los datos geométricos?",
+            ["Usar datos guardados de la propiedad", "Ingresar datos manualmente"],
+            horizontal=True,
+            key="reg_modo_datos"
+        )
+    else:
+        modo_datos_regularizacion = "Ingresar datos manualmente"
+        st.info(
+            "ℹ️ No existen datos guardados desde el módulo 'Datos del Terreno'. "
+            "Puedes ingresar aquí los antecedentes de la vivienda existente."
+        )
+
+    if modo_datos_regularizacion == "Usar datos guardados de la propiedad":
+        datos_reg = st.session_state.datos_propiedad
+        fuente_datos_regularizacion = "Datos guardados de la propiedad"
+
+        superficie_terreno_reg = float(datos_reg.get("superficie_terreno", 0.0) or 0.0)
+        superficie_piso1_reg = float(datos_reg.get("superficie_piso1", 0.0) or 0.0)
+        superficie_piso2_reg = float(datos_reg.get("superficie_piso2", 0.0) or 0.0)
+        superficie_otros_pisos_reg = 0.0
+        superficie_regularizar = float(datos_reg.get("superficie_total_vivienda", 0.0) or 0.0)
+        numero_pisos_reg = 2 if superficie_piso2_reg > 0 else 1
+        zona_regularizacion = datos_reg.get("zona_completa", "Seleccione una zona...")
+        zona_codigo_reg = datos_reg.get("zona_codigo")
+
+        st.success("✅ Se utilizarán los antecedentes guardados en 'Datos del Terreno'.")
+
+        guard_col1, guard_col2, guard_col3, guard_col4 = st.columns(4)
+        with guard_col1:
+            st.metric("🌳 Terreno", f"{superficie_terreno_reg:.2f} m²")
+        with guard_col2:
+            st.metric("🏠 Piso 1", f"{superficie_piso1_reg:.2f} m²")
+        with guard_col3:
+            st.metric("🏘️ Piso 2", f"{superficie_piso2_reg:.2f} m²")
+        with guard_col4:
+            st.metric("📐 Total existente", f"{superficie_regularizar:.2f} m²")
+
+        st.caption(
+            f"Zona guardada: **{zona_regularizacion}** · Número de pisos identificado: **{numero_pisos_reg}**"
+        )
+
+    else:
+        fuente_datos_regularizacion = "Ingreso manual"
+        st.markdown("#### 📐 Geometría existente")
+
+        man_col1, man_col2 = st.columns(2)
+        with man_col1:
+            superficie_terreno_reg = st.number_input(
+                "Superficie total del terreno (m²):",
+                min_value=0.0,
+                value=0.0,
+                step=0.10,
+                format="%.2f",
+                key="reg_superficie_terreno_manual"
+            )
+        with man_col2:
+            numero_pisos_reg = st.selectbox(
+                "Número de pisos de la edificación existente:",
+                [1, 2, "3 o más"],
+                key="reg_numero_pisos_manual"
+            )
+
+        pisos_col1, pisos_col2 = st.columns(2)
+        with pisos_col1:
+            superficie_piso1_reg = st.number_input(
+                "Superficie construida del Piso 1 (m²):",
+                min_value=0.0,
+                value=0.0,
+                step=0.10,
+                format="%.2f",
+                key="reg_superficie_piso1_manual"
+            )
+
+        with pisos_col2:
+            if numero_pisos_reg in [2, "3 o más"]:
+                superficie_piso2_reg = st.number_input(
+                    "Superficie construida del Piso 2 (m²):",
+                    min_value=0.0,
+                    value=0.0,
+                    step=0.10,
+                    format="%.2f",
+                    key="reg_superficie_piso2_manual"
+                )
+            else:
+                superficie_piso2_reg = 0.0
+                st.metric("Superficie Piso 2", "0,00 m²")
+
+        if numero_pisos_reg == "3 o más":
+            superficie_otros_pisos_reg = st.number_input(
+                "Superficie construida conjunta de los pisos 3 y superiores (m²):",
+                min_value=0.0,
+                value=0.0,
+                step=0.10,
+                format="%.2f",
+                key="reg_superficie_otros_pisos_manual"
+            )
+            st.warning(
+                "⚠️ El prototipo desarrolla la revisión geométrica detallada principalmente para viviendas de hasta dos pisos. "
+                "En edificaciones de tres o más pisos, algunas verificaciones quedarán sujetas a revisión profesional."
+            )
+        else:
+            superficie_otros_pisos_reg = 0.0
+
+        superficie_regularizar = (
+            float(superficie_piso1_reg)
+            + float(superficie_piso2_reg)
+            + float(superficie_otros_pisos_reg)
+        )
+
+        st.metric("🏠 Superficie edificada total calculada", f"{superficie_regularizar:.2f} m²")
+
+        zona_regularizacion = st.selectbox(
+            "Zona según Plan Regulador Comunal de San Miguel:",
+            [
+                "Seleccione una zona...",
+                "ZU-1 - Comercial Preferente y Residencial",
+                "ZU-2 - Residencial de Renovación",
+                "ZU-3 - Industrial Exclusiva",
+                "ZU-4 - Industrial Mixta",
+                "ZU-5 - Equipamiento Regional de Salud",
+                "ZU-6 - Ferroviaria",
+                "No estoy seguro/a"
+            ],
+            key="reg_zona_manual"
+        )
+
+        if zona_regularizacion.startswith("ZU-"):
+            zona_codigo_reg = zona_regularizacion.split(" - ")[0]
+
+    st.markdown("#### 💰 Avalúo fiscal")
+    avaluo_fiscal_uf = st.number_input(
+        "Avalúo fiscal de la vivienda (UF):",
+        min_value=0.0,
+        value=0.0,
+        step=10.0,
+        format="%.2f",
+        key="reg_avaluo"
+    )
+
+    # Cálculos geométricos reales de la edificación existente.
+    if superficie_terreno_reg > 0:
+        coef_ocupacion_suelo_real = superficie_piso1_reg / superficie_terreno_reg
+        coef_constructibilidad_real = superficie_regularizar / superficie_terreno_reg
+
+        if superficie_piso2_reg > 0:
+            coef_ocupacion_piso2_real = superficie_piso2_reg / superficie_terreno_reg
+            coef_ocupacion_relevante_art3 = max(
+                coef_ocupacion_suelo_real,
+                coef_ocupacion_piso2_real
+            )
+        else:
+            coef_ocupacion_piso2_real = 0.0
+            coef_ocupacion_relevante_art3 = coef_ocupacion_suelo_real
+
+        calc_col1, calc_col2, calc_col3 = st.columns(3)
+        with calc_col1:
+            st.metric("Coef. ocupación real Piso 1", f"{coef_ocupacion_suelo_real:.2f}")
+        with calc_col2:
+            if superficie_piso2_reg > 0:
+                st.metric("Coef. ocupación real Piso 2", f"{coef_ocupacion_piso2_real:.2f}")
+            else:
+                st.metric("Coef. ocupación real Piso 2", "No aplica")
+        with calc_col3:
+            st.metric("Coef. constructibilidad real", f"{coef_constructibilidad_real:.2f}")
+    else:
+        st.info("ℹ️ Ingresa la superficie del terreno para calcular los coeficientes reales de la edificación.")
+
+    # Consulta de la base PRC como referencia, sin mezclarla automáticamente con las excepciones de la ley.
+    base_normativa_reg = None
+    try:
+        base_normativa_reg = cargar_base_normativa()
+    except Exception:
+        base_normativa_reg = None
+
+    if base_normativa_reg is not None and zona_codigo_reg:
+        filas_zona_reg = base_normativa_reg[
+            base_normativa_reg["Zona"].str.upper() == zona_codigo_reg.upper()
+        ].copy()
+
+        if not filas_zona_reg.empty:
+            zona_residencial_automatica = bool(
+                (filas_zona_reg["Residencial_General"].str.upper() == "SI").any()
+            )
+
+            if zona_residencial_automatica:
+                st.success(
+                    f"✅ La zona **{zona_codigo_reg}** se encuentra registrada en la base del prototipo como compatible "
+                    "con uso residencial general."
+                )
+            else:
+                st.warning(
+                    f"⚠️ La zona **{zona_codigo_reg}** no se encuentra registrada como zona de uso residencial general. "
+                    "Este antecedente requiere revisión antes de continuar con una orientación de regularización residencial."
+                )
+
+        if superficie_terreno_reg > 0:
+            norma_prc_regularizacion = buscar_norma_residencial(
+                base_normativa_reg,
+                zona_codigo_reg,
+                superficie_terreno_reg
+            )
+
+            if norma_prc_regularizacion is not None:
+                if pd.notna(norma_prc_regularizacion["Coef_Ocupacion_1a3_Pisos"]):
+                    coef_ocupacion_prc_reg = float(
+                        norma_prc_regularizacion["Coef_Ocupacion_1a3_Pisos"]
+                    )
+                if pd.notna(norma_prc_regularizacion["Coef_Constructibilidad"]):
+                    coef_constructibilidad_prc_reg = float(
+                        norma_prc_regularizacion["Coef_Constructibilidad"]
+                    )
+
+                with st.expander("📚 Ver coeficientes PRC de referencia del predio"):
+                    st.write(f"**Zona:** {zona_codigo_reg}")
+                    st.write(
+                        f"**Tramo aplicado:** {formatear_tramo_m2(norma_prc_regularizacion['Tramo_Superficie_PRC'])}"
+                    )
+                    if coef_ocupacion_prc_reg is not None:
+                        st.write(f"**Coeficiente de ocupación PRC:** {coef_ocupacion_prc_reg:.2f}")
+                    if coef_constructibilidad_prc_reg is not None:
+                        st.write(f"**Coeficiente de constructibilidad PRC:** {coef_constructibilidad_prc_reg:.2f}")
+                    st.caption(
+                        "Estos valores se muestran como referencia. En el artículo 3° existen excepciones específicas "
+                        "que se evalúan separadamente en este módulo."
+                    )
+
+    # ==========================================
+    # 2. CONDICIONES GENERALES
+    # ==========================================
+    st.markdown("---")
+    st.markdown("### 🧭 2. Condiciones Generales de la Edificación Existente")
     st.caption(
         "Responde según los antecedentes disponibles. Cuando no tengas certeza, selecciona "
         "'No estoy seguro/a' para que el sistema mantenga la condición como pendiente de revisión."
     )
-
-    opciones_si_no = ["Seleccione una opción...", "Sí", "No", "No estoy seguro/a"]
 
     reg_col1, reg_col2 = st.columns(2)
 
@@ -3739,11 +3999,23 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
             opciones_si_no,
             key="reg_antiguedad"
         )
-        uso_residencial = st.selectbox(
-            "Si el predio está en área urbana, ¿el uso de suelo admite vivienda?",
-            opciones_si_no,
-            key="reg_uso_residencial"
-        )
+
+        if zona_residencial_automatica is True:
+            uso_residencial = "Sí"
+            st.info(
+                f"🏘️ **Uso residencial:** se utilizará la compatibilidad registrada para la zona {zona_codigo_reg}."
+            )
+        elif zona_residencial_automatica is False:
+            uso_residencial = "No"
+            st.warning(
+                f"🏘️ **Uso residencial:** la base normativa no identifica la zona {zona_codigo_reg} como residencial general."
+            )
+        else:
+            uso_residencial = st.selectbox(
+                "Si el predio está en área urbana, ¿el uso de suelo admite vivienda?",
+                opciones_si_no,
+                key="reg_uso_residencial"
+            )
 
     with reg_col2:
         area_restringida = st.selectbox(
@@ -3761,40 +4033,11 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
             "el plazo señalado en la Ley N.º 20.898 hasta el **31 de diciembre de 2027**."
         )
 
-    st.markdown("#### 📐 Superficie y avalúo")
-    dim_col1, dim_col2 = st.columns(2)
-
-    valor_superficie_default = 0.0
-    if st.session_state.datos_propiedad is not None:
-        valor_superficie_default = float(
-            st.session_state.datos_propiedad.get("superficie_total_vivienda", 0.0) or 0.0
-        )
-
-    with dim_col1:
-        superficie_regularizar = st.number_input(
-            "Superficie edificada total a regularizar (m²):",
-            min_value=0.0,
-            value=valor_superficie_default,
-            step=0.10,
-            format="%.2f",
-            key="reg_superficie"
-        )
-
-    with dim_col2:
-        avaluo_fiscal_uf = st.number_input(
-            "Avalúo fiscal de la vivienda (UF):",
-            min_value=0.0,
-            value=0.0,
-            step=10.0,
-            format="%.2f",
-            key="reg_avaluo"
-        )
-
     # ==========================================
-    # 2. EVALUACIÓN DE ACCESO
+    # 3. EVALUACIÓN DE ACCESO
     # ==========================================
     st.markdown("---")
-    st.markdown("### 🌳 2. Árbol de Orientación del Procedimiento")
+    st.markdown("### 🌳 3. Árbol de Orientación del Procedimiento")
 
     respuestas_obligatorias = [
         sin_recepcion,
@@ -3843,7 +4086,7 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
 
     if faltan_respuestas or superficie_regularizar <= 0 or avaluo_fiscal_uf <= 0:
         st.info(
-            "ℹ️ Completa las preguntas, la superficie y el avalúo fiscal para obtener una orientación preliminar."
+            "ℹ️ Completa las preguntas, la geometría de la vivienda y el avalúo fiscal para obtener una orientación preliminar."
         )
 
     elif impedimento_confirmado:
@@ -3870,12 +4113,14 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
             "✅ **Orientación preliminar: condiciones compatibles con el procedimiento del artículo 1°.**"
         )
         st.write(
-            f"La superficie ingresada es **{superficie_regularizar:.2f} m²** (referencia: hasta 90 m²) "
-            f"y el avalúo informado es **{avaluo_fiscal_uf:.2f} UF** (referencia: hasta 1.000 UF)."
+            f"La superficie edificada total calculada es **{superficie_regularizar:.2f} m²** "
+            f"(referencia: hasta 90 m²) y el avalúo informado es **{avaluo_fiscal_uf:.2f} UF** "
+            "(referencia: hasta 1.000 UF)."
         )
         st.info(
-            "Esta ruta considera además exigencias técnicas especiales de habitabilidad, seguridad contra "
-            "incendios y estabilidad, que se revisan de manera orientativa en la sección siguiente."
+            "Esta ruta considera exigencias técnicas especiales de habitabilidad, seguridad contra incendios "
+            "y estabilidad. Los coeficientes urbanísticos se muestran como información de contexto, pero no se "
+            "aplican en este prototipo como el mismo filtro utilizado para una futura ampliación."
         )
 
     elif posible_art3:
@@ -3884,22 +4129,15 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
             "✅ **Orientación preliminar: condiciones compatibles con el procedimiento del artículo 3°.**"
         )
         st.write(
-            f"La superficie ingresada es **{superficie_regularizar:.2f} m²** (referencia: hasta 140 m²) "
-            f"y el avalúo informado es **{avaluo_fiscal_uf:.2f} UF** (referencia: hasta 2.000 UF)."
+            f"La superficie edificada total calculada es **{superficie_regularizar:.2f} m²** "
+            f"(referencia: hasta 140 m²) y el avalúo informado es **{avaluo_fiscal_uf:.2f} UF** "
+            "(referencia: hasta 2.000 UF)."
         )
         st.warning(
-            "⚠️ En esta vía deben cumplirse las normas de habitabilidad, estabilidad y seguridad que correspondan, "
-            "además de las condiciones del procedimiento. Las excepciones urbanísticas específicas no deben "
-            "confundirse con la evaluación normal de una futura ampliación."
+            "⚠️ En esta vía deben cumplirse las normas de habitabilidad, estabilidad y seguridad que correspondan. "
+            "Además, determinadas normas urbanísticas cuentan con excepciones específicas que deben evaluarse "
+            "sin confundirlas con la revisión normal de una futura ampliación."
         )
-
-        with st.expander("📚 Ver excepciones urbanísticas orientativas asociadas al artículo 3°"):
-            st.write("• **Antejardines:** el procedimiento contempla una excepción específica.")
-            st.write("• **Estacionamientos:** el procedimiento contempla una excepción específica.")
-            st.write("• **Altura de cierros:** se exceptúa la norma correspondiente, manteniendo el límite señalado por la ley.")
-            st.write("• **Adosamientos:** pueden existir excepciones, manteniéndose las condiciones técnicas que correspondan.")
-            st.write("• **Coeficiente de constructibilidad:** se contempla una excepción dentro de los límites del procedimiento.")
-            st.write("• **Coeficiente de ocupación de suelo/pisos superiores:** se contempla la excepción señalada por la ley.")
 
     else:
         procedimiento_orientativo = "Fuera de los umbrales analizados"
@@ -3913,10 +4151,133 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
             st.write("• El avalúo informado supera **2.000 UF**.")
 
     # ==========================================
-    # 3. REVISIÓN TÉCNICA ARTÍCULO 1
+    # 4. REVISIÓN URBANÍSTICA ESPECIAL ARTÍCULO 3
     # ==========================================
     st.markdown("---")
-    st.markdown("### 🧱 3. Revisión Técnica Orientativa")
+    st.markdown("### 📐 4. Revisión Urbanística Especial")
+
+    if procedimiento_orientativo == "Artículo 3°":
+        st.caption(
+            "En esta sección se evalúan separadamente las excepciones relacionadas con ocupación de suelo/pisos "
+            "superiores y constructibilidad previstas para esta vía de regularización."
+        )
+
+        if superficie_terreno_reg <= 0:
+            st.warning(
+                "⚠️ No es posible calcular los coeficientes porque falta la superficie del terreno."
+            )
+        else:
+            st.markdown("#### 📍 Coeficiente de ocupación")
+
+            ocup_col1, ocup_col2, ocup_col3 = st.columns(3)
+            with ocup_col1:
+                st.metric("Ocupación Piso 1", f"{coef_ocupacion_suelo_real:.2f}")
+            with ocup_col2:
+                if superficie_piso2_reg > 0:
+                    st.metric("Ocupación Piso 2", f"{coef_ocupacion_piso2_real:.2f}")
+                else:
+                    st.metric("Ocupación Piso 2", "No aplica")
+            with ocup_col3:
+                st.metric("Límite especial Art. 3°", "0,80")
+
+            if numero_pisos_reg == "3 o más":
+                st.warning(
+                    "⚠️ La edificación tiene tres o más pisos. El prototipo puede calcular la ocupación del Piso 1 y Piso 2, "
+                    "pero no dispone del área individual de cada piso superior para revisar completamente este criterio."
+                )
+
+            if coef_ocupacion_relevante_art3 is not None:
+                if coef_ocupacion_relevante_art3 <= 0.80 + 1e-9:
+                    evaluacion_ocupacion_art3 = "Dentro del límite especial de 0,80"
+                    st.success(
+                        f"✅ El mayor coeficiente calculado entre las plantas informadas es **{coef_ocupacion_relevante_art3:.2f}**, "
+                        "por lo que se encuentra dentro del límite especial de **0,80** considerado para esta excepción."
+                    )
+                else:
+                    evaluacion_ocupacion_art3 = "Supera el límite especial de 0,80"
+                    st.error(
+                        f"❌ El mayor coeficiente calculado es **{coef_ocupacion_relevante_art3:.2f}**, superior a **0,80**. "
+                        "Con estos antecedentes no puede asumirse la excepción especial de ocupación del artículo 3°."
+                    )
+
+            st.markdown("#### 🏗️ Coeficiente de constructibilidad")
+            cons_col1, cons_col2, cons_col3 = st.columns(3)
+            with cons_col1:
+                st.metric("Constructibilidad real", f"{coef_constructibilidad_real:.2f}")
+            with cons_col2:
+                st.metric("Número de pisos", str(numero_pisos_reg))
+            with cons_col3:
+                if coef_constructibilidad_prc_reg is not None:
+                    st.metric("Coef. PRC de referencia", f"{coef_constructibilidad_prc_reg:.2f}")
+                else:
+                    st.metric("Coef. PRC de referencia", "No disponible")
+
+            if numero_pisos_reg in [1, 2]:
+                evaluacion_constructibilidad_art3 = "Excepción aplicable preliminarmente por altura ≤ 2 pisos"
+                st.success(
+                    "✅ La edificación informada no supera **dos pisos**. Para esta vía, el artículo 3° contempla "
+                    "una excepción al coeficiente de constructibilidad bajo esa condición."
+                )
+                if (
+                    coef_constructibilidad_prc_reg is not None
+                    and coef_constructibilidad_real is not None
+                    and coef_constructibilidad_real > coef_constructibilidad_prc_reg
+                ):
+                    st.info(
+                        f"ℹ️ El coeficiente real (**{coef_constructibilidad_real:.2f}**) supera el valor PRC de referencia "
+                        f"(**{coef_constructibilidad_prc_reg:.2f}**), pero esta diferencia no se utiliza aquí como rechazo "
+                        "automático porque se está evaluando la excepción específica del artículo 3°."
+                    )
+            else:
+                evaluacion_constructibilidad_art3 = "La excepción de constructibilidad no puede asumirse por superar 2 pisos"
+                st.warning(
+                    "⚠️ La edificación supera dos pisos. No debe aplicarse automáticamente la excepción al coeficiente "
+                    "de constructibilidad prevista para construcciones de hasta dos pisos."
+                )
+
+                if coef_constructibilidad_prc_reg is not None and coef_constructibilidad_real is not None:
+                    if coef_constructibilidad_real <= coef_constructibilidad_prc_reg + 1e-9:
+                        st.success(
+                            f"✅ Como referencia, el coeficiente real (**{coef_constructibilidad_real:.2f}**) no supera "
+                            f"el coeficiente PRC identificado (**{coef_constructibilidad_prc_reg:.2f}**). "
+                            "La situación completa debe ser revisada profesionalmente."
+                        )
+                    else:
+                        st.error(
+                            f"❌ Como referencia, el coeficiente real (**{coef_constructibilidad_real:.2f}**) supera "
+                            f"el coeficiente PRC identificado (**{coef_constructibilidad_prc_reg:.2f}**). "
+                            "Al no poder asumirse la excepción por altura, esta situación requiere revisión normativa específica."
+                        )
+                else:
+                    st.info(
+                        "ℹ️ No fue posible identificar automáticamente un coeficiente PRC residencial de referencia. "
+                        "Debe revisarse la norma urbanística aplicable al predio."
+                    )
+
+        with st.expander("📚 Ver otras excepciones urbanísticas orientativas asociadas al artículo 3°"):
+            st.write("• **Antejardines:** el procedimiento contempla una excepción específica.")
+            st.write("• **Estacionamientos:** el procedimiento contempla una excepción específica.")
+            st.write("• **Altura de cierros:** se exceptúa la norma correspondiente, manteniendo el límite señalado por la ley.")
+            st.write("• **Adosamientos:** pueden existir excepciones, manteniéndose las condiciones técnicas que correspondan.")
+            st.write("• **Constructibilidad:** la excepción se condiciona a que la construcción no supere dos pisos, incluyendo mansardas.")
+            st.write("• **Ocupación de suelo o pisos superiores:** la excepción se considera mientras el coeficiente resultante no sea superior a 0,80.")
+
+    elif procedimiento_orientativo == "Artículo 1°":
+        st.info(
+            "ℹ️ Para la orientación del artículo 1° este prototipo no aplica automáticamente los coeficientes de ocupación "
+            "y constructibilidad del PRC como el mismo filtro utilizado para una futura ampliación. Los valores calculados "
+            "se conservan como antecedentes geométricos de la vivienda existente."
+        )
+    else:
+        st.info(
+            "La revisión urbanística diferenciada se habilita cuando el árbol de orientación identifica una vía preliminar."
+        )
+
+    # ==========================================
+    # 5. REVISIÓN TÉCNICA ARTÍCULO 1
+    # ==========================================
+    st.markdown("---")
+    st.markdown("### 🧱 5. Revisión Técnica Orientativa")
 
     if procedimiento_orientativo == "Artículo 1°":
         st.caption(
@@ -3941,7 +4302,7 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
                 key="reg_vent_habitables"
             )
             zonas_humedas_sin_ventana = st.selectbox(
-                "¿Existen baños, cocinas o lavaderos sin ventana exterior?",
+                "¿Existen baños, cocinas o lavaderos sin ventana exterior para renovación de aire?",
                 opciones_si_no,
                 key="reg_zonas_humedas"
             )
@@ -3949,7 +4310,7 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
             ducto_016 = "No aplica"
             if zonas_humedas_sin_ventana == "Sí":
                 ducto_016 = st.selectbox(
-                    "¿La ventilación dispone de ducto con sección libre no interrumpida de al menos 0,16 m² o una solución con tiraje forzado que corresponda?",
+                    "¿Cuentan con ducto de ventilación o solución equivalente conforme a la condición aplicable?",
                     opciones_si_no,
                     key="reg_ducto_016"
                 )
@@ -3997,9 +4358,13 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
         st.markdown("#### 🔎 Resultado técnico preliminar")
 
         if altura_cielo >= 2.00:
-            st.success(f"✅ Altura informada: **{altura_cielo:.2f} m**. Alcanza la referencia mínima de 2,00 m considerada para esta vía.")
+            st.success(
+                f"✅ Altura informada: **{altura_cielo:.2f} m**. Alcanza la referencia mínima de 2,00 m considerada para esta vía."
+            )
         else:
-            st.error(f"❌ Altura informada: **{altura_cielo:.2f} m**. Es inferior a la referencia de 2,00 m considerada para esta vía.")
+            st.error(
+                f"❌ Altura informada: **{altura_cielo:.2f} m**. Es inferior a la referencia de 2,00 m considerada para esta vía."
+            )
 
         if locales_habitables_ventilan == "Sí":
             st.success("✅ Se informó ventilación/iluminación exterior en los locales habitables.")
@@ -4033,33 +4398,47 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
         orientacion_calculo = "Debe verificarse según OGUC y antecedentes del proyecto."
 
         if materialidad_estructura == "Estructura de madera" and luz_maxima > 0:
-            if luz_maxima <= 3.0:
+            if numero_pisos_reg in [1, 2] and luz_maxima <= 3.0:
                 orientacion_calculo = (
                     "La configuración informada podría encontrarse dentro de uno de los casos especiales "
-                    "considerados por la ley, sujeto a las demás condiciones y a declaración profesional."
+                    "considerados por la ley para estructura de madera, sujeto a las demás condiciones y a declaración profesional."
                 )
-            else:
+            elif luz_maxima > 3.0:
                 orientacion_calculo = "La luz informada supera 3,0 m; no debe asumirse la excepción por esta condición."
+            else:
+                orientacion_calculo = "La cantidad de pisos informada requiere una revisión específica antes de asumir la excepción."
 
         elif materialidad_estructura == "Albañilería armada/reforzada u hormigón armado" and luz_maxima > 0:
-            orientacion_calculo = (
-                "La excepción descrita en la ley para esta materialidad depende además de que la vivienda sea de máximo un piso "
-                "y de otras condiciones. Debe ser verificada por el profesional competente."
-            )
+            if numero_pisos_reg == 1 and luz_maxima <= 3.0:
+                orientacion_calculo = (
+                    "La configuración informada podría encontrarse dentro del caso especial descrito para vivienda de un piso "
+                    "en albañilería armada/reforzada u hormigón armado, sujeto a declaración profesional."
+                )
+            else:
+                orientacion_calculo = (
+                    "La excepción descrita para esta materialidad requiere, entre otras condiciones, máximo un piso y luces "
+                    "entre apoyos no superiores a 3,0 m. Debe ser verificada por el profesional competente."
+                )
 
         elif materialidad_estructura == "Sistema mixto de 2 pisos" and luz_maxima > 0:
-            orientacion_calculo = (
-                "La ley contempla un caso especial para determinadas configuraciones mixtas de dos pisos, pero requiere verificar "
-                "materialidad del primer y segundo piso, entramado de piso, luz entre apoyos y declaración profesional."
-            )
+            if numero_pisos_reg == 2 and luz_maxima <= 3.0:
+                orientacion_calculo = (
+                    "La ley contempla un caso especial para determinadas configuraciones mixtas de dos pisos. "
+                    "Debe verificarse además la materialidad de cada nivel, el entramado de piso y la declaración profesional."
+                )
+            else:
+                orientacion_calculo = (
+                    "La configuración informada no permite asumir automáticamente el caso especial del sistema mixto. "
+                    "Debe revisarse la cantidad de pisos, la luz entre apoyos y la configuración estructural completa."
+                )
 
         st.info(f"🏗️ {orientacion_calculo}")
 
     elif procedimiento_orientativo == "Artículo 3°":
         st.info(
-            "ℹ️ Para el artículo 3° la tesis consideró que deben cumplirse las normas de habitabilidad, "
-            "estabilidad y seguridad de la OGUC. La revisión técnica específica se integrará con los módulos "
-            "generales del prototipo sin aplicar automáticamente las flexibilidades del artículo 1°."
+            "ℹ️ Para el artículo 3° deben cumplirse las normas de habitabilidad, estabilidad y seguridad de la OGUC. "
+            "La revisión técnica específica se integrará con los módulos generales del prototipo, sin aplicar automáticamente "
+            "las flexibilidades técnicas propias del artículo 1°."
         )
     else:
         st.info(
@@ -4067,10 +4446,10 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
         )
 
     # ==========================================
-    # 4. CHECKLIST DOCUMENTAL
+    # 6. CHECKLIST DOCUMENTAL
     # ==========================================
     st.markdown("---")
-    st.markdown("### 📑 4. Checklist Orientativo de Antecedentes")
+    st.markdown("### 📑 6. Checklist Orientativo de Antecedentes")
     st.caption(
         "Este listado sirve únicamente para organizar antecedentes. No valida documentos ni reemplaza "
         "la elaboración, firma o revisión profesional correspondiente."
@@ -4113,24 +4492,63 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
         st.success("✅ Todos los antecedentes del checklist orientativo fueron marcados.")
 
     # ==========================================
-    # 5. RESUMEN Y GUARDADO
+    # 7. RESUMEN Y GUARDADO
     # ==========================================
     st.markdown("---")
-    st.markdown("### 💾 5. Resumen de la Orientación")
+    st.markdown("### 💾 7. Resumen de la Orientación")
 
-    resumen_reg1, resumen_reg2, resumen_reg3 = st.columns(3)
+    resumen_reg1, resumen_reg2, resumen_reg3, resumen_reg4 = st.columns(4)
     with resumen_reg1:
-        st.metric("Superficie informada", f"{superficie_regularizar:.2f} m²")
+        st.metric("Superficie edificada", f"{superficie_regularizar:.2f} m²")
     with resumen_reg2:
         st.metric("Avalúo informado", f"{avaluo_fiscal_uf:.2f} UF")
     with resumen_reg3:
+        if coef_ocupacion_suelo_real is not None:
+            st.metric("Ocupación Piso 1", f"{coef_ocupacion_suelo_real:.2f}")
+        else:
+            st.metric("Ocupación Piso 1", "Pendiente")
+    with resumen_reg4:
         st.metric("Ruta preliminar", procedimiento_orientativo)
+
+    if procedimiento_orientativo == "Artículo 3°":
+        st.markdown("#### 📌 Síntesis urbanística del artículo 3°")
+        sint_col1, sint_col2 = st.columns(2)
+        with sint_col1:
+            st.write(f"**Ocupación:** {evaluacion_ocupacion_art3}")
+        with sint_col2:
+            st.write(f"**Constructibilidad:** {evaluacion_constructibilidad_art3}")
 
     if st.button("💾 Guardar Orientación de Regularización", type="primary"):
         st.session_state.resultado_regularizacion = {
             "procedimiento_orientativo": procedimiento_orientativo,
+            "fuente_datos": fuente_datos_regularizacion,
+            "superficie_terreno_m2": float(superficie_terreno_reg),
+            "superficie_piso1_m2": float(superficie_piso1_reg),
+            "superficie_piso2_m2": float(superficie_piso2_reg),
+            "superficie_otros_pisos_m2": float(superficie_otros_pisos_reg),
             "superficie_m2": float(superficie_regularizar),
+            "numero_pisos": numero_pisos_reg,
+            "zona_codigo": zona_codigo_reg,
             "avaluo_uf": float(avaluo_fiscal_uf),
+            "coef_ocupacion_suelo_real": (
+                float(coef_ocupacion_suelo_real)
+                if coef_ocupacion_suelo_real is not None
+                else None
+            ),
+            "coef_ocupacion_piso2_real": (
+                float(coef_ocupacion_piso2_real)
+                if coef_ocupacion_piso2_real is not None
+                else None
+            ),
+            "coef_constructibilidad_real": (
+                float(coef_constructibilidad_real)
+                if coef_constructibilidad_real is not None
+                else None
+            ),
+            "coef_ocupacion_prc_referencia": coef_ocupacion_prc_reg,
+            "coef_constructibilidad_prc_referencia": coef_constructibilidad_prc_reg,
+            "evaluacion_ocupacion_art3": evaluacion_ocupacion_art3,
+            "evaluacion_constructibilidad_art3": evaluacion_constructibilidad_art3,
             "sin_recepcion": sin_recepcion,
             "construida_antes_ley": construida_antes_ley,
             "uso_residencial": uso_residencial,
@@ -4145,8 +4563,13 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
         with st.expander("✅ Ver última orientación guardada"):
             reg_guardada = st.session_state.resultado_regularizacion
             st.write(f"**Ruta preliminar:** {reg_guardada['procedimiento_orientativo']}")
-            st.write(f"**Superficie:** {reg_guardada['superficie_m2']:.2f} m²")
+            st.write(f"**Superficie del terreno:** {reg_guardada.get('superficie_terreno_m2', 0.0):.2f} m²")
+            st.write(f"**Superficie edificada:** {reg_guardada['superficie_m2']:.2f} m²")
             st.write(f"**Avalúo:** {reg_guardada['avaluo_uf']:.2f} UF")
+            if reg_guardada.get("coef_ocupacion_suelo_real") is not None:
+                st.write(f"**Coeficiente real de ocupación Piso 1:** {reg_guardada['coef_ocupacion_suelo_real']:.2f}")
+            if reg_guardada.get("coef_constructibilidad_real") is not None:
+                st.write(f"**Coeficiente real de constructibilidad:** {reg_guardada['coef_constructibilidad_real']:.2f}")
             st.write(f"**Antecedentes pendientes del checklist:** {len(reg_guardada['documentos_pendientes'])}")
 
     st.markdown("---")
@@ -4154,4 +4577,3 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
         "📌 **Ruta diferenciada:** este módulo se mantiene separado de la evaluación de una futura ampliación. "
         "Las flexibilidades o excepciones de la Ley N.º 20.898 no se aplican automáticamente al diseño de una obra nueva."
     )
-
