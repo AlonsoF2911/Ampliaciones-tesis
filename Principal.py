@@ -1,4 +1,5 @@
-# VERSION: PASO8_PUZZLE_FRENTE_IMAGENES_2026_10_19
+# VERSION: PASO9_ALTURA_VANOS_DISTANCIAMIENTOS_ADOSAMIENTO_2026_10_19
+# BASE: PASO8_PUZZLE_FRENTE_IMAGENES_2026_10_19
 # VERSION: PASO6_RESULTADO_FINAL_REGULARIZACION_2026_10_19
 import streamlit as st
 import pandas as pd
@@ -6,6 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle, Patch
 from pathlib import Path
 from io import BytesIO
+import math
 
 # VERSION: PASO5_ENVOLVENTE_EXISTENTE_PISOS_TECHUMBRES_2026_10_19
 
@@ -1754,10 +1756,13 @@ def crear_croquis_puzzle(datos, modulos, piso, modulo_seleccionado=None):
             fontsize=7
         )
 
-    # Piso 2: mostrar como sombra las piezas reales configuradas del Piso 1.
+    # Piso 2: mostrar el Piso 1 únicamente como REFERENCIA FIJA.
+    # Ni la vivienda ni las ampliaciones del Piso 1 entran en la lista editable
+    # del Piso 2; por lo tanto, no pueden seleccionarse ni moverse desde esta vista.
     if piso == "Piso 2":
         piezas_piso1 = construir_lista_piezas(datos, modulos, "Piso 1")
         sectores_p1 = [p for p in piezas_piso1 if p["tipo"] == "vivienda"]
+        ampliaciones_p1_ref = [p for p in piezas_piso1 if p["tipo"] == "ampliacion"]
 
         if sectores_p1:
             for pieza in sectores_p1:
@@ -1770,7 +1775,7 @@ def crear_croquis_puzzle(datos, modulos, piso, modulo_seleccionado=None):
                         edgecolor="#7f8c8d",
                         linewidth=1.1,
                         linestyle="--",
-                        alpha=0.45,
+                        alpha=0.42,
                         zorder=1
                     )
                 )
@@ -1789,10 +1794,38 @@ def crear_croquis_puzzle(datos, modulos, piso, modulo_seleccionado=None):
                 )
             )
 
+        # Si ya existe una ampliación propuesta en Piso 1, también se muestra
+        # como sombra para entender qué elemento puede servir de apoyo al Piso 2.
+        # Se dibuja con baja opacidad y NO se incorpora a validaciones ni controles.
+        for pieza in ampliaciones_p1_ref:
+            ax.add_patch(
+                Rectangle(
+                    (pieza["x"], pieza["y"]),
+                    pieza["ancho"],
+                    pieza["largo"],
+                    facecolor="#f8c471",
+                    edgecolor="#b9770e",
+                    linewidth=1.1,
+                    linestyle="--",
+                    alpha=0.28,
+                    zorder=1
+                )
+            )
+            ax.text(
+                pieza["x"] + pieza["ancho"] / 2,
+                pieza["y"] + pieza["largo"] / 2,
+                f"AMPL. P1 {pieza['numero']}\nREFERENCIA FIJA",
+                ha="center",
+                va="center",
+                fontsize=6,
+                color="#7d6608",
+                zorder=2
+            )
+
         ax.text(
             g["casa_x"],
             max(g["casa_y"] - 0.25, 0),
-            "Huella Piso 1 (referencia)",
+            "Piso 1 = referencia fija (no editable desde Piso 2)",
             ha="left",
             va="top",
             fontsize=7,
@@ -1864,11 +1897,20 @@ def crear_croquis_puzzle(datos, modulos, piso, modulo_seleccionado=None):
     )
 
     leyenda = [
-        Patch(facecolor="#85c1e9", edgecolor="#1b4f72", label="Vivienda existente"),
-        Patch(facecolor="#f8c471", edgecolor="#935116", label="Futura ampliación"),
+        Patch(facecolor="#85c1e9", edgecolor="#1b4f72", label="Vivienda existente del piso editado"),
+        Patch(facecolor="#f8c471", edgecolor="#935116", label="Futura ampliación del piso editado"),
         Patch(facecolor="#f9e79f", edgecolor="#9a7d0a", label="Requiere revisión"),
         Patch(facecolor="#f1948a", edgecolor="#922b21", label="Posición con conflicto"),
     ]
+    if piso == "Piso 2":
+        leyenda.append(
+            Patch(
+                facecolor="#f8c471",
+                edgecolor="#b9770e",
+                alpha=0.28,
+                label="Ampliación Piso 1 (referencia fija)"
+            )
+        )
 
     ax.legend(
         handles=leyenda,
@@ -1901,6 +1943,84 @@ def crear_croquis_puzzle(datos, modulos, piso, modulo_seleccionado=None):
     buffer_png.seek(0)
 
     return fig, validaciones, buffer_png
+
+
+def distancia_minima_oguc_263(altura_m, tiene_vano):
+    """Distanciamiento mínimo de referencia según tabla del art. 2.6.3 OGUC."""
+    altura = float(altura_m or 0)
+    if altura <= 0:
+        return None
+    if altura <= 3.5:
+        return 3.0 if tiene_vano else 1.4
+    if altura <= 7.0:
+        return 3.0 if tiene_vano else 2.5
+    return 4.0
+
+
+def altura_maxima_rasante_rm(distancia_m, angulo_grados=70.0):
+    """
+    Aproximación geométrica de rasante para la Región Metropolitana,
+    suponiendo terreno horizontal y aplicación desde suelo natural.
+    """
+    distancia = max(float(distancia_m or 0), 0.0)
+    return distancia * math.tan(math.radians(float(angulo_grados)))
+
+
+def unir_longitudes_intervalos(intervalos, tolerancia=1e-9):
+    """Longitud de la unión de intervalos 1D, evitando duplicar tramos superpuestos."""
+    limpios = []
+    for inicio, fin in intervalos:
+        a = float(min(inicio, fin))
+        b = float(max(inicio, fin))
+        if b - a > tolerancia:
+            limpios.append((a, b))
+    if not limpios:
+        return 0.0
+    limpios.sort()
+    total = 0.0
+    ini, fin = limpios[0]
+    for a, b in limpios[1:]:
+        if a <= fin + tolerancia:
+            fin = max(fin, b)
+        else:
+            total += fin - ini
+            ini, fin = a, b
+    total += fin - ini
+    return float(total)
+
+
+def calcular_adosamiento_futuro(datos, modulos, tolerancia=0.05):
+    """
+    Estima la longitud en planta de futuras ampliaciones que tocan los
+    deslindes izquierdo, derecho o posterior. Los tramos superpuestos entre
+    pisos se contabilizan una sola vez.
+    """
+    g = obtener_geometria_referencia(datos)
+    intervalos = {"Izquierdo": [], "Derecho": [], "Posterior": []}
+
+    for modulo in modulos:
+        if float(modulo.get("superficie", 0) or 0) <= 0:
+            continue
+        clave = clave_modulo_puzzle(modulo)
+        posicion = st.session_state.posiciones_puzzle.get(clave)
+        if posicion is None:
+            posicion = calcular_posicion_inicial_puzzle(datos, modulo)
+        ancho, largo = dimensiones_pieza(modulo, posicion)
+        x = float(posicion.get("x", 0) or 0)
+        y = float(posicion.get("y", 0) or 0)
+
+        if abs(x) <= tolerancia:
+            intervalos["Izquierdo"].append((y, y + largo))
+        if abs((x + ancho) - g["ancho_terreno"]) <= tolerancia:
+            intervalos["Derecho"].append((y, y + largo))
+        if abs((y + largo) - g["largo_terreno"]) <= tolerancia:
+            intervalos["Posterior"].append((x, x + ancho))
+
+    return {
+        "Izquierdo": unir_longitudes_intervalos(intervalos["Izquierdo"]),
+        "Derecho": unir_longitudes_intervalos(intervalos["Derecho"]),
+        "Posterior": unir_longitudes_intervalos(intervalos["Posterior"]),
+    }
 
 
 # ==========================================
@@ -3881,16 +4001,342 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
                         )
 
             if piso_puzzle == "Piso 2":
+                st.info(
+                    "🔒 **Edición independiente por piso:** al editar Piso 2, solo se pueden seleccionar y mover piezas del Piso 2. "
+                    "La vivienda y cualquier ampliación del Piso 1 se muestran únicamente como **referencia fija** y no responden a los controles."
+                )
                 st.warning(
-                    "⚠️ En el segundo piso puedes mover libremente los sectores existentes para representar dónde están realmente. "
-                    "Si una futura ampliación queda fuera de la huella del primer piso, el programa la marca para **revisión estructural**, "
-                    "pero no la considera automáticamente imposible."
+                    "⚠️ Si una futura ampliación de Piso 2 queda fuera de la huella del primer piso, el programa la marca para "
+                    "**revisión estructural**, pero no la considera automáticamente imposible."
                 )
 
             st.success(
                 "🧲 **Consejo:** para unir dos piezas, muévelas hasta quedar cerca. "
                 "Con el encaje magnético activado, el sistema intentará dejar sus bordes exactamente coincidentes."
             )
+
+        st.markdown("---")
+
+        # ==========================================
+        # 6.1 ALTURA, VANOS, DISTANCIAMIENTOS Y ADOSAMIENTO
+        # ==========================================
+        st.markdown("### 📐 6.1 Altura, Vanos, Distanciamientos y Adosamiento")
+        st.info(
+            "Esta revisión usa la posición actual de cada módulo en el puzle. Para las partes aisladas se compara "
+            "la distancia a los deslindes laterales y posterior con la tabla del **art. 2.6.3 OGUC**, considerando "
+            "la altura y la existencia de vanos. Para la Región Metropolitana también se muestra una comprobación "
+            "geométrica preliminar de la rasante de **70°**. Si una pieza queda contigua al deslinde, se trata como "
+            "posible adosamiento y se revisan separadamente las condiciones generales del **art. 2.6.2**."
+        )
+        st.caption(
+            "Para esta herramienta, 'vano' significa una abertura relevante en la fachada hacia el deslinde, como ventana o puerta. "
+            "La revisión es preliminar y supone terreno horizontal para el cálculo simplificado de rasante."
+        )
+
+        revision_emplazamiento_futura = {
+            "modulos": [],
+            "adosamientos": {},
+            "pendientes": [],
+            "observaciones": [],
+            "criterio_rasante_rm_grados": 70.0,
+        }
+
+        g_empl = obtener_geometria_referencia(datos)
+        modulos_validos_empl = [
+            m for m in modulos_puzzle
+            if float(m.get("superficie", 0) or 0) > 0
+        ]
+
+        if not modulos_validos_empl:
+            st.warning("⚠️ Agrega al menos un módulo de ampliación para realizar esta revisión.")
+            revision_emplazamiento_futura["pendientes"].append("No existen módulos de ampliación para revisar.")
+        else:
+            for modulo in modulos_validos_empl:
+                numero = modulo.get("numero")
+                piso_mod = modulo.get("piso", "Piso 1")
+                clave_mod = clave_modulo_puzzle(modulo)
+                posicion_mod = st.session_state.posiciones_puzzle.get(clave_mod)
+                if posicion_mod is None:
+                    posicion_mod = calcular_posicion_inicial_puzzle(datos, modulo)
+
+                ancho_mod, largo_mod = dimensiones_pieza(modulo, posicion_mod)
+                x_mod = float(posicion_mod.get("x", 0) or 0)
+                y_mod = float(posicion_mod.get("y", 0) or 0)
+
+                dist_izq = max(x_mod, 0.0)
+                dist_der = max(g_empl["ancho_terreno"] - (x_mod + ancho_mod), 0.0)
+                dist_post = max(g_empl["largo_terreno"] - (y_mod + largo_mod), 0.0)
+                dist_frente = max(y_mod, 0.0)
+
+                with st.expander(
+                    f"🏗️ Módulo {numero} — {piso_mod} · altura y fachadas",
+                    expanded=(len(modulos_validos_empl) == 1)
+                ):
+                    st.write(
+                        f"**Posición actual en puzle:** X {x_mod:.2f} m · Y {y_mod:.2f} m · "
+                        f"dimensiones en planta {ancho_mod:.2f} × {largo_mod:.2f} m."
+                    )
+
+                    col_altura, col_info = st.columns([1, 2])
+                    with col_altura:
+                        altura_mod = st.number_input(
+                            "Altura total desde suelo natural (m):",
+                            min_value=0.0,
+                            max_value=20.0,
+                            value=0.0,
+                            step=0.10,
+                            format="%.2f",
+                            key=f"altura_total_modulo_{numero}_{piso_mod.replace(' ', '_')}",
+                            help=(
+                                "Ingrese la altura total de la parte de ampliación desde el suelo natural hasta el punto más alto "
+                                "de la fachada que se está revisando. En Piso 2 debe considerar la altura total desde terreno, no solo la altura del recinto."
+                            )
+                        )
+                    with col_info:
+                        if altura_mod <= 0:
+                            st.warning("⚠️ Altura pendiente. Sin este dato no se puede cerrar la revisión de distanciamientos ni rasante.")
+                        else:
+                            st.success(f"Altura declarada para esta revisión: **{altura_mod:.2f} m**.")
+
+                    st.markdown("**¿La fachada de este módulo tiene vanos orientados hacia cada deslinde?**")
+                    v1, v2, v3 = st.columns(3)
+                    with v1:
+                        vano_izq = st.checkbox(
+                            "Vanos hacia deslinde izquierdo",
+                            key=f"vano_izq_mod_{numero}_{piso_mod.replace(' ', '_')}"
+                        )
+                    with v2:
+                        vano_der = st.checkbox(
+                            "Vanos hacia deslinde derecho",
+                            key=f"vano_der_mod_{numero}_{piso_mod.replace(' ', '_')}"
+                        )
+                    with v3:
+                        vano_post = st.checkbox(
+                            "Vanos hacia deslinde posterior",
+                            key=f"vano_post_mod_{numero}_{piso_mod.replace(' ', '_')}"
+                        )
+
+                    tolerancia_ados = 0.05
+                    lados = [
+                        ("Izquierdo", dist_izq, vano_izq),
+                        ("Derecho", dist_der, vano_der),
+                        ("Posterior", dist_post, vano_post),
+                    ]
+                    filas_revision = []
+                    resultados_lados = []
+
+                    for lado, distancia_real, tiene_vano in lados:
+                        es_adosado = distancia_real <= tolerancia_ados
+                        if altura_mod <= 0:
+                            filas_revision.append({
+                                "Deslinde": lado,
+                                "Distancia actual": f"{distancia_real:.2f} m",
+                                "Vanos": "Sí" if tiene_vano else "No",
+                                "Mínimo OGUC": "Pendiente altura",
+                                "Rasante 70°": "Pendiente altura",
+                                "Resultado": "⚠️ Pendiente",
+                            })
+                            resultados_lados.append({
+                                "lado": lado,
+                                "estado": "pendiente",
+                                "distancia": distancia_real,
+                                "vano": bool(tiene_vano),
+                            })
+                            continue
+
+                        if es_adosado:
+                            estado = "ok" if altura_mod <= 3.5 + 1e-9 else "observacion"
+                            texto_estado = (
+                                "🟨 Posible adosamiento"
+                                if altura_mod <= 3.5 + 1e-9
+                                else "⚠️ Revisar excepción de altura"
+                            )
+                            filas_revision.append({
+                                "Deslinde": lado,
+                                "Distancia actual": "0,00 m (adosado)",
+                                "Vanos": "Sí" if tiene_vano else "No",
+                                "Mínimo OGUC": "No aplica 2.6.3 a parte adosada",
+                                "Rasante 70°": "No aplica a parte adosada",
+                                "Resultado": texto_estado,
+                            })
+                            resultados_lados.append({
+                                "lado": lado,
+                                "estado": estado,
+                                "tipo": "adosado",
+                                "distancia": distancia_real,
+                                "vano": bool(tiene_vano),
+                                "altura": float(altura_mod),
+                            })
+                            if altura_mod > 3.5 + 1e-9:
+                                revision_emplazamiento_futura["observaciones"].append(
+                                    f"Módulo {numero}: altura {altura_mod:.2f} m en adosamiento {lado.lower()} supera la altura general de 3,50 m; revisar si procede excepción por edificación vecina aprobada."
+                                )
+                            if tiene_vano:
+                                revision_emplazamiento_futura["observaciones"].append(
+                                    f"Módulo {numero}: se declaró vano en muro adosado hacia el deslinde {lado.lower()}; requiere revisar autorización del vecino, seguridad y proyecto estructural."
+                                )
+                        else:
+                            minimo = distancia_minima_oguc_263(altura_mod, tiene_vano)
+                            altura_rasante = altura_maxima_rasante_rm(distancia_real, 70.0)
+                            cumple_dist = distancia_real + 1e-9 >= float(minimo)
+                            cumple_ras = altura_mod <= altura_rasante + 1e-9
+                            cumple = cumple_dist and cumple_ras
+                            filas_revision.append({
+                                "Deslinde": lado,
+                                "Distancia actual": f"{distancia_real:.2f} m",
+                                "Vanos": "Sí" if tiene_vano else "No",
+                                "Mínimo OGUC": f"{minimo:.2f} m",
+                                "Rasante 70°": f"H máx. aprox. {altura_rasante:.2f} m",
+                                "Resultado": "✅ Compatible" if cumple else "❌ Revisar",
+                            })
+                            resultados_lados.append({
+                                "lado": lado,
+                                "estado": "ok" if cumple else "error",
+                                "tipo": "aislado",
+                                "distancia": float(distancia_real),
+                                "vano": bool(tiene_vano),
+                                "altura": float(altura_mod),
+                                "distancia_minima": float(minimo),
+                                "altura_maxima_rasante_aprox": float(altura_rasante),
+                                "cumple_distanciamiento": bool(cumple_dist),
+                                "cumple_rasante_aprox": bool(cumple_ras),
+                            })
+                            if not cumple_dist:
+                                revision_emplazamiento_futura["observaciones"].append(
+                                    f"Módulo {numero}: distancia al deslinde {lado.lower()} ({distancia_real:.2f} m) es menor al mínimo preliminar de {minimo:.2f} m para la altura/vanos declarados."
+                                )
+                            if not cumple_ras:
+                                revision_emplazamiento_futura["observaciones"].append(
+                                    f"Módulo {numero}: con la aproximación de rasante 70° y terreno horizontal, la altura {altura_mod:.2f} m supera la altura geométrica aproximada de {altura_rasante:.2f} m hacia el deslinde {lado.lower()}."
+                                )
+
+                    st.dataframe(pd.DataFrame(filas_revision), use_container_width=True, hide_index=True)
+
+                    if piso_mod == "Piso 1":
+                        antejardin_ref = float(g_empl.get("antejardin_minimo", 0.0) or 0.0)
+                        if dist_frente + 1e-9 >= antejardin_ref:
+                            st.success(
+                                f"✅ **Frente:** el módulo comienza a {dist_frente:.2f} m desde la línea frontal del terreno; "
+                                f"la referencia de antejardín usada por el prototipo es {antejardin_ref:.2f} m."
+                            )
+                        else:
+                            st.error(
+                                f"❌ **Frente:** el módulo comienza a {dist_frente:.2f} m y entra en la franja de antejardín de referencia ({antejardin_ref:.2f} m)."
+                            )
+                    else:
+                        st.caption(
+                            f"Frente del módulo de Piso 2: Y = {dist_frente:.2f} m. La proyección de pisos superiores sobre antejardín/cuerpos salientes requiere una revisión específica y no se aprueba automáticamente aquí."
+                        )
+
+                    revision_emplazamiento_futura["modulos"].append({
+                        "numero": numero,
+                        "piso": piso_mod,
+                        "altura_total_m": float(altura_mod),
+                        "posicion": {"x": x_mod, "y": y_mod},
+                        "dimensiones": {"ancho": ancho_mod, "largo": largo_mod},
+                        "vanos": {
+                            "izquierdo": bool(vano_izq),
+                            "derecho": bool(vano_der),
+                            "posterior": bool(vano_post),
+                        },
+                        "distancias": {
+                            "izquierdo": dist_izq,
+                            "derecho": dist_der,
+                            "posterior": dist_post,
+                            "frente": dist_frente,
+                        },
+                        "resultados_lados": resultados_lados,
+                    })
+                    if altura_mod <= 0:
+                        revision_emplazamiento_futura["pendientes"].append(
+                            f"Ingresar altura total del módulo {numero} ({piso_mod})."
+                        )
+
+            # Resumen de adosamiento de toda la futura ampliación.
+            st.markdown("#### 🧱 Revisión global de adosamiento")
+            st.caption(
+                "El sistema identifica como contacto con deslinde las piezas ubicadas a 5 cm o menos. "
+                "La longitud se calcula como unión de tramos para no duplicar módulos superpuestos entre pisos."
+            )
+
+            ados_futuro = calcular_adosamiento_futuro(datos, modulos_validos_empl, tolerancia=0.05)
+            existentes_adicionales = {"Izquierdo": 0.0, "Derecho": 0.0, "Posterior": 0.0}
+
+            lados_config = [
+                ("Izquierdo", "adosado_izquierdo", g_empl["largo_terreno"]),
+                ("Derecho", "adosado_derecho", g_empl["largo_terreno"]),
+                ("Posterior", "adosado_posterior", g_empl["ancho_terreno"]),
+            ]
+
+            cols_ados = st.columns(3)
+            for idx, (lado, flag_datos, largo_deslinde) in enumerate(lados_config):
+                with cols_ados[idx]:
+                    if datos.get(flag_datos, False):
+                        existentes_adicionales[lado] = st.number_input(
+                            f"Adosamiento existente adicional — {lado.lower()} (m):",
+                            min_value=0.0,
+                            max_value=float(max(largo_deslinde, 0.0)),
+                            value=0.0,
+                            step=0.10,
+                            format="%.2f",
+                            key=f"ados_existente_adicional_{lado.lower()}",
+                            help=(
+                                "Ingrese solo la longitud existente que deba sumarse al tramo futuro y que no quede ya representada/solapada por la ampliación del puzle."
+                            )
+                        )
+                    else:
+                        st.caption(f"{lado}: no se declaró adosamiento existente en Datos del Terreno.")
+
+            filas_adosamiento = []
+            for lado, flag_datos, largo_deslinde in lados_config:
+                futuro = float(ados_futuro.get(lado, 0.0) or 0.0)
+                existente = float(existentes_adicionales.get(lado, 0.0) or 0.0)
+                total = futuro + existente
+                porcentaje = (total / largo_deslinde * 100.0) if largo_deslinde > 0 else 0.0
+                cumple_40 = porcentaje <= 40.0 + 1e-9
+                filas_adosamiento.append({
+                    "Deslinde": lado,
+                    "Largo deslinde": f"{largo_deslinde:.2f} m",
+                    "Futuro detectado": f"{futuro:.2f} m",
+                    "Existente adicional": f"{existente:.2f} m",
+                    "Total preliminar": f"{total:.2f} m",
+                    "% adosamiento": f"{porcentaje:.1f}%",
+                    "Límite general": "40%",
+                    "Resultado": "✅ Dentro del 40%" if cumple_40 else "❌ Supera 40%",
+                })
+                revision_emplazamiento_futura["adosamientos"][lado] = {
+                    "largo_deslinde_m": float(largo_deslinde),
+                    "longitud_futura_m": futuro,
+                    "longitud_existente_adicional_m": existente,
+                    "longitud_total_preliminar_m": total,
+                    "porcentaje_preliminar": porcentaje,
+                    "cumple_limite_general_40": bool(cumple_40),
+                }
+                if not cumple_40:
+                    revision_emplazamiento_futura["observaciones"].append(
+                        f"Adosamiento {lado.lower()}: el total preliminar equivale a {porcentaje:.1f}% del deslinde y supera el límite general de 40%; revisar si existe una excepción aplicable."
+                    )
+
+            st.dataframe(pd.DataFrame(filas_adosamiento), use_container_width=True, hide_index=True)
+
+            if any(float(v) > 0.0 for v in ados_futuro.values()):
+                st.warning(
+                    "🔥 **Hay futura ampliación en contacto con uno o más deslindes.** Además de longitud y altura, debe verificarse "
+                    "la envolvente de adosamiento de 45°, la solución de aguas lluvia y la resistencia al fuego que corresponda. "
+                    "La solución térmica seleccionada para el muro **no acredita por sí sola** el desempeño al fuego."
+                )
+                st.caption(
+                    "El prototipo no automatiza la envolvente tridimensional de 45° ni las excepciones por coincidencia con una edificación vecina aprobada; esas condiciones quedan para revisión profesional."
+                )
+
+            if revision_emplazamiento_futura["observaciones"]:
+                with st.expander("⚠️ Ver observaciones de emplazamiento", expanded=True):
+                    for obs in revision_emplazamiento_futura["observaciones"]:
+                        st.write(f"• {obs}")
+            elif not revision_emplazamiento_futura["pendientes"]:
+                st.success(
+                    "✅ Con los datos ingresados, no se detectaron conflictos preliminares de distanciamiento, rasante simplificada o porcentaje general de adosamiento."
+                )
 
         st.markdown("---")
 
@@ -4328,6 +4774,8 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
             pendientes_tecnicos_futura.append("piso de la ampliación en Piso 2")
         if solucion_techumbre_futura is None:
             pendientes_tecnicos_futura.append("techumbre")
+        if revision_emplazamiento_futura.get("pendientes"):
+            pendientes_tecnicos_futura.append("altura / emplazamiento de uno o más módulos")
 
         if pendientes_tecnicos_futura:
             st.warning(
@@ -4406,6 +4854,7 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
                         "solucion_piso1": solucion_piso1_futura,
                         "solucion_piso2": solucion_piso2_futura,
                         "solucion_techumbre": solucion_techumbre_futura,
+                        "revision_emplazamiento": revision_emplazamiento_futura,
                         "pendientes_tecnicos": list(pendientes_tecnicos_futura),
                     }
 
@@ -4440,6 +4889,16 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
                         f"• Módulo {modulo['numero']} — {modulo['piso']} — "
                         f"{modulo['largo']:.2f} m × {modulo['ancho']:.2f} m — "
                         f"{modulo['superficie']:.2f} m² — {modulo['ubicacion']}{rotacion}"
+                    )
+
+                revision_guardada = propuesta.get("revision_emplazamiento", {})
+                if revision_guardada:
+                    st.markdown("**Revisión de emplazamiento guardada:**")
+                    n_obs = len(revision_guardada.get("observaciones", []))
+                    n_pend = len(revision_guardada.get("pendientes", []))
+                    st.write(
+                        f"• Módulos revisados: {len(revision_guardada.get('modulos', []))} · "
+                        f"Observaciones: {n_obs} · Pendientes: {n_pend}"
                     )
 
                 st.markdown("**Soluciones constructivas guardadas:**")
