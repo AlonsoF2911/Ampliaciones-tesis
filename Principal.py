@@ -1,4 +1,4 @@
-# VERSION: PASO10_MURO_F60_ADOSAMIENTO_SIN_CROQUIS_PRELIMINAR_2026_11_02
+# VERSION: PASO11_AJUSTES_PISO_ADOSAMIENTO_2026_11_02
 # BASE: PASO8_PUZZLE_FRENTE_IMAGENES_2026_10_19
 # VERSION: PASO6_RESULTADO_FINAL_REGULARIZACION_2026_10_19
 import streamlit as st
@@ -1996,12 +1996,8 @@ def unir_longitudes_intervalos(intervalos, tolerancia=1e-9):
     return float(total)
 
 
-def calcular_adosamiento_futuro(datos, modulos, tolerancia=0.05):
-    """
-    Estima la longitud en planta de futuras ampliaciones que tocan los
-    deslindes izquierdo, derecho o posterior. Los tramos superpuestos entre
-    pisos se contabilizan una sola vez.
-    """
+def obtener_intervalos_adosamiento_futuro(datos, modulos, tolerancia=0.05):
+    """Devuelve los tramos de futura ampliación que contactan cada deslinde."""
     g = obtener_geometria_referencia(datos)
     intervalos = {"Izquierdo": [], "Derecho": [], "Posterior": []}
 
@@ -2023,11 +2019,47 @@ def calcular_adosamiento_futuro(datos, modulos, tolerancia=0.05):
         if abs((y + largo) - g["largo_terreno"]) <= tolerancia:
             intervalos["Posterior"].append((x, x + ancho))
 
-    return {
-        "Izquierdo": unir_longitudes_intervalos(intervalos["Izquierdo"]),
-        "Derecho": unir_longitudes_intervalos(intervalos["Derecho"]),
-        "Posterior": unir_longitudes_intervalos(intervalos["Posterior"]),
-    }
+    return intervalos
+
+
+def obtener_intervalos_adosamiento_existente(datos, tolerancia=0.05):
+    """
+    Detecta desde el puzle los tramos de la vivienda existente que ya contactan
+    los deslindes. Los sectores coincidentes entre Piso 1 y Piso 2 se unen y se
+    contabilizan una sola vez.
+    """
+    g = obtener_geometria_referencia(datos)
+    intervalos = {"Izquierdo": [], "Derecho": [], "Posterior": []}
+
+    for piso in ["Piso 1", "Piso 2"]:
+        clave_lista = "sectores_piso1" if piso == "Piso 1" else "sectores_piso2"
+        for sector in datos.get(clave_lista, []):
+            if float(sector.get("superficie", 0) or 0) <= 0:
+                continue
+            clave = clave_sector_vivienda(piso, sector)
+            posicion = st.session_state.posiciones_vivienda.get(clave)
+            if posicion is None:
+                posicion = calcular_posiciones_iniciales_vivienda(datos, piso).get(clave)
+            if posicion is None:
+                continue
+            ancho, largo = dimensiones_pieza(sector, posicion)
+            x = float(posicion.get("x", 0) or 0)
+            y = float(posicion.get("y", 0) or 0)
+
+            if abs(x) <= tolerancia:
+                intervalos["Izquierdo"].append((y, y + largo))
+            if abs((x + ancho) - g["ancho_terreno"]) <= tolerancia:
+                intervalos["Derecho"].append((y, y + largo))
+            if abs((y + largo) - g["largo_terreno"]) <= tolerancia:
+                intervalos["Posterior"].append((x, x + ancho))
+
+    return intervalos
+
+
+def calcular_adosamiento_futuro(datos, modulos, tolerancia=0.05):
+    """Longitud futura por deslinde, sin duplicar tramos superpuestos entre pisos."""
+    intervalos = obtener_intervalos_adosamiento_futuro(datos, modulos, tolerancia)
+    return {lado: unir_longitudes_intervalos(tramos) for lado, tramos in intervalos.items()}
 
 
 # ==========================================
@@ -3964,7 +3996,7 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
                         if es_adosado:
                             estado = "ok" if altura_mod <= 3.5 + 1e-9 else "observacion"
                             texto_estado = (
-                                "🟨 Posible adosamiento"
+                                "🟨 Adosamiento detectado"
                                 if altura_mod <= 3.5 + 1e-9
                                 else "⚠️ Revisar excepción de altura"
                             )
@@ -4076,63 +4108,63 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
                 "La longitud se calcula como unión de tramos para no duplicar módulos superpuestos entre pisos."
             )
 
-            ados_futuro = calcular_adosamiento_futuro(datos, modulos_validos_empl, tolerancia=0.05)
+            intervalos_futuros = obtener_intervalos_adosamiento_futuro(
+                datos, modulos_validos_empl, tolerancia=0.05
+            )
+            intervalos_existentes = obtener_intervalos_adosamiento_existente(
+                datos, tolerancia=0.05
+            )
+            ados_futuro = {
+                lado: unir_longitudes_intervalos(intervalos_futuros[lado])
+                for lado in intervalos_futuros
+            }
+            ados_existente = {
+                lado: unir_longitudes_intervalos(intervalos_existentes[lado])
+                for lado in intervalos_existentes
+            }
             hay_adosamiento_futuro = any(float(v or 0) > 0.0 for v in ados_futuro.values())
-            existentes_adicionales = {"Izquierdo": 0.0, "Derecho": 0.0, "Posterior": 0.0}
 
             lados_config = [
-                ("Izquierdo", "adosado_izquierdo", g_empl["largo_terreno"]),
-                ("Derecho", "adosado_derecho", g_empl["largo_terreno"]),
-                ("Posterior", "adosado_posterior", g_empl["ancho_terreno"]),
+                ("Izquierdo", g_empl["largo_terreno"]),
+                ("Derecho", g_empl["largo_terreno"]),
+                ("Posterior", g_empl["ancho_terreno"]),
             ]
 
-            cols_ados = st.columns(3)
-            for idx, (lado, flag_datos, largo_deslinde) in enumerate(lados_config):
-                with cols_ados[idx]:
-                    if datos.get(flag_datos, False):
-                        existentes_adicionales[lado] = st.number_input(
-                            f"Adosamiento existente adicional — {lado.lower()} (m):",
-                            min_value=0.0,
-                            max_value=float(max(largo_deslinde, 0.0)),
-                            value=0.0,
-                            step=0.10,
-                            format="%.2f",
-                            key=f"ados_existente_adicional_{lado.lower()}",
-                            help=(
-                                "Ingrese solo la longitud existente que deba sumarse al tramo futuro y que no quede ya representada/solapada por la ampliación del puzle."
-                            )
-                        )
-                    else:
-                        st.caption(f"{lado}: no se declaró adosamiento existente en Datos del Terreno.")
+            st.info(
+                "ℹ️ La longitud de la vivienda existente ya adosada se detecta automáticamente desde el puzle. "
+                "El total corresponde a la **unión real de los tramos existentes y futuros**, por lo que si un Piso 2 "
+                "queda sobre un tramo ya ocupado en Piso 1, ese sector no se cuenta dos veces."
+            )
 
             filas_adosamiento = []
-            for lado, flag_datos, largo_deslinde in lados_config:
+            for lado, largo_deslinde in lados_config:
                 futuro = float(ados_futuro.get(lado, 0.0) or 0.0)
-                existente = float(existentes_adicionales.get(lado, 0.0) or 0.0)
-                total = futuro + existente
+                existente = float(ados_existente.get(lado, 0.0) or 0.0)
+                intervalos_union = list(intervalos_existentes.get(lado, [])) + list(intervalos_futuros.get(lado, []))
+                total = unir_longitudes_intervalos(intervalos_union)
                 porcentaje = (total / largo_deslinde * 100.0) if largo_deslinde > 0 else 0.0
                 cumple_40 = porcentaje <= 40.0 + 1e-9
                 filas_adosamiento.append({
                     "Deslinde": lado,
                     "Largo deslinde": f"{largo_deslinde:.2f} m",
+                    "Vivienda existente ya adosada": f"{existente:.2f} m",
                     "Futuro detectado": f"{futuro:.2f} m",
-                    "Existente adicional": f"{existente:.2f} m",
-                    "Total preliminar": f"{total:.2f} m",
+                    "Total sin duplicar": f"{total:.2f} m",
                     "% adosamiento": f"{porcentaje:.1f}%",
                     "Límite general": "40%",
                     "Resultado": "✅ Dentro del 40%" if cumple_40 else "❌ Supera 40%",
                 })
                 revision_emplazamiento_futura["adosamientos"][lado] = {
                     "largo_deslinde_m": float(largo_deslinde),
+                    "longitud_existente_detectada_m": existente,
                     "longitud_futura_m": futuro,
-                    "longitud_existente_adicional_m": existente,
-                    "longitud_total_preliminar_m": total,
+                    "longitud_total_union_m": total,
                     "porcentaje_preliminar": porcentaje,
                     "cumple_limite_general_40": bool(cumple_40),
                 }
                 if not cumple_40:
                     revision_emplazamiento_futura["observaciones"].append(
-                        f"Adosamiento {lado.lower()}: el total preliminar equivale a {porcentaje:.1f}% del deslinde y supera el límite general de 40%; revisar si existe una excepción aplicable."
+                        f"Adosamiento {lado.lower()}: la unión de vivienda existente y futura equivale a {porcentaje:.1f}% del deslinde y supera el límite general de 40%; revisar si existe una excepción aplicable."
                     )
 
             st.dataframe(pd.DataFrame(filas_adosamiento), use_container_width=True, hide_index=True)
@@ -4421,21 +4453,29 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
             # Piso 1: normalmente apoyado sobre terreno, aunque se permite indicar una solución elevada/ventilada.
             if superficie_ampliacion_piso1 > 0:
                 st.markdown("**Ampliación ubicada en Piso 1**")
-                condicion_piso1_futura = st.radio(
-                    "Condición constructiva predominante del piso de la ampliación en primer nivel:",
-                    ["Apoyado sobre terreno", "Ventilado/elevado"],
-                    horizontal=True,
-                    key="futura_condicion_piso1"
+                opciones_piso1 = ["Seleccione una solución..."]
+                mapa_piso1 = {}
+                for _, fila_op_p1 in base_pisos_futura.iterrows():
+                    condicion_op = str(fila_op_p1.get("Condicion_Piso", "")).strip().lower()
+                    if condicion_op not in {"apoyado sobre terreno", "ventilado"}:
+                        continue
+                    etiqueta_op = f"{fila_op_p1.get('Codigo_Solucion', '')} — {fila_op_p1.get('Sistema', '')}"
+                    opciones_piso1.append(etiqueta_op)
+                    mapa_piso1[etiqueta_op] = fila_op_p1
+
+                piso1_elegido = st.selectbox(
+                    "Solución propuesta para el piso de la ampliación en primer nivel:",
+                    opciones_piso1,
+                    key="futura_condicion_piso1_select"
                 )
 
-                condicion_busqueda_p1 = (
-                    "Apoyado sobre terreno"
-                    if condicion_piso1_futura == "Apoyado sobre terreno"
-                    else "Ventilado"
-                )
-                coincidencias_p1 = base_pisos_futura[
-                    base_pisos_futura["Condicion_Piso"].str.lower() == condicion_busqueda_p1.lower()
-                ]
+                if piso1_elegido in mapa_piso1:
+                    fila_piso1 = mapa_piso1[piso1_elegido]
+                    condicion_busqueda_p1 = str(fila_piso1.get("Condicion_Piso", ""))
+                    coincidencias_p1 = base_pisos_futura.loc[[fila_piso1.name]]
+                else:
+                    condicion_busqueda_p1 = ""
+                    coincidencias_p1 = base_pisos_futura.iloc[0:0]
 
                 if not coincidencias_p1.empty:
                     fila_piso1 = coincidencias_p1.iloc[0]
@@ -4498,16 +4538,24 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
             # Piso 2: se distingue un entrepiso interior de un piso que forma parte de la envolvente por estar expuesto abajo.
             if superficie_ampliacion_piso2 > 0:
                 st.markdown("**Ampliación ubicada en Piso 2**")
-                condicion_piso2_futura = st.radio(
-                    "Condición del piso del segundo nivel:",
-                    [
-                        "Entrepiso sobre recinto cerrado",
-                        "Piso expuesto/ventilado hacia el exterior"
-                    ],
-                    key="futura_condicion_piso2"
+                opciones_piso2 = ["Seleccione una solución...", "Entrepiso sobre recinto cerrado — definición estructural"]
+                mapa_piso2 = {}
+                coincidencias_vent_p2 = base_pisos_futura[
+                    base_pisos_futura["Condicion_Piso"].str.lower() == "ventilado"
+                ]
+                for _, fila_op_p2 in coincidencias_vent_p2.iterrows():
+                    etiqueta_op = f"{fila_op_p2.get('Codigo_Solucion', '')} — {fila_op_p2.get('Sistema', '')}"
+                    opciones_piso2.append(etiqueta_op)
+                    mapa_piso2[etiqueta_op] = fila_op_p2
+
+                piso2_elegido = st.selectbox(
+                    "Solución propuesta para el piso del segundo nivel:",
+                    opciones_piso2,
+                    key="futura_condicion_piso2_select"
                 )
 
-                if condicion_piso2_futura == "Entrepiso sobre recinto cerrado":
+                if piso2_elegido == "Entrepiso sobre recinto cerrado — definición estructural":
+                    condicion_piso2_futura = "Entrepiso sobre recinto cerrado"
                     solucion_piso2_futura = {
                         "Condicion_Piso": condicion_piso2_futura,
                         "Codigo_Solucion": None,
@@ -4524,12 +4572,11 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
                         "porque el elemento puede no formar parte de la envolvente térmica exterior. La estructura del "
                         "entrepiso debe ser definida y revisada según las condiciones reales del proyecto."
                     )
-                else:
-                    coincidencias_p2 = base_pisos_futura[
-                        base_pisos_futura["Condicion_Piso"].str.lower() == "ventilado"
-                    ]
+                elif piso2_elegido in mapa_piso2:
+                    condicion_piso2_futura = "Piso expuesto/ventilado hacia el exterior"
+                    fila_piso2 = mapa_piso2[piso2_elegido]
+                    coincidencias_p2 = base_pisos_futura.loc[[fila_piso2.name]]
                     if not coincidencias_p2.empty:
-                        fila_piso2 = coincidencias_p2.iloc[0]
                         solucion_piso2_futura = _fila_a_dict_seguro(fila_piso2)
 
                         with st.expander("🖼️ Ver detalle visual del piso ventilado", expanded=True):
