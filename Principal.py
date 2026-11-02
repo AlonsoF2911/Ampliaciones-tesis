@@ -1,4 +1,4 @@
-# VERSION: PASO15_INICIO_RED_DISENO_2026_11_02
+# VERSION: PASO16_DATOS_TERRENO_COLOR_2026_11_02
 # BASE: PASO8_PUZZLE_FRENTE_IMAGENES_2026_10_19
 # VERSION: PASO6_RESULTADO_FINAL_REGULARIZACION_2026_10_19
 import streamlit as st
@@ -146,6 +146,160 @@ st.markdown("""
         font-weight: 700;
         font-size: 17px;
         margin: 6px 0 10px 0;
+    }
+
+    /* ==========================================
+       DATOS DEL TERRENO - PASO 16
+       ========================================== */
+    .datos-hero {
+        background: linear-gradient(135deg, #14532D 0%, #1E7B44 58%, #2E8B57 100%);
+        color: white;
+        padding: 24px 26px;
+        border-radius: 14px;
+        margin-bottom: 14px;
+        box-shadow: 0 7px 18px rgba(20, 83, 45, 0.18);
+    }
+
+    .datos-hero h2 {
+        margin: 0 0 7px 0;
+        font-size: 28px;
+        font-weight: 800;
+        color: white;
+    }
+
+    .datos-hero p {
+        margin: 0;
+        color: #EAF7EF;
+        font-size: 15px;
+        line-height: 1.55;
+    }
+
+    .datos-pasos {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin: 4px 0 22px 0;
+    }
+
+    .datos-paso {
+        background: white;
+        border: 1px solid #D9E5DE;
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-size: 13px;
+        font-weight: 700;
+        color: #334139;
+        box-shadow: 0 2px 7px rgba(0,0,0,0.035);
+    }
+
+    .datos-paso span {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        color: white;
+        margin-right: 6px;
+        font-size: 12px;
+    }
+
+    .paso-verde span { background: #2E7D32; }
+    .paso-azul span { background: #1976D2; }
+    .paso-ambar span { background: #D88700; }
+    .paso-oscuro span { background: #14532D; }
+
+    .datos-section {
+        padding: 14px 18px;
+        border-radius: 12px;
+        margin: 8px 0 14px 0;
+        border-left: 7px solid;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.04);
+    }
+
+    .datos-section .numero {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        color: white;
+        font-weight: 800;
+        margin-right: 8px;
+    }
+
+    .datos-section .titulo {
+        font-size: 20px;
+        font-weight: 800;
+        vertical-align: middle;
+    }
+
+    .datos-section .descripcion {
+        display: block;
+        margin: 5px 0 0 40px;
+        font-size: 13px;
+        line-height: 1.45;
+        color: #55635A;
+    }
+
+    .sec-ubicacion {
+        background: linear-gradient(90deg, #EAF6ED 0%, #F8FCF9 100%);
+        border-left-color: #2E7D32;
+    }
+    .sec-ubicacion .numero { background: #2E7D32; }
+    .sec-ubicacion .titulo { color: #205B26; }
+
+    .sec-medicion {
+        background: linear-gradient(90deg, #E9F3FC 0%, #F8FBFE 100%);
+        border-left-color: #1976D2;
+    }
+    .sec-medicion .numero { background: #1976D2; }
+    .sec-medicion .titulo { color: #155A9C; }
+
+    .sec-emplazamiento {
+        background: linear-gradient(90deg, #FFF4DD 0%, #FFFDF8 100%);
+        border-left-color: #D88700;
+    }
+    .sec-emplazamiento .numero { background: #D88700; }
+    .sec-emplazamiento .titulo { color: #8A5700; }
+
+    .sec-prc {
+        background: linear-gradient(90deg, #E6F1EA 0%, #F7FBF8 100%);
+        border-left-color: #14532D;
+    }
+    .sec-prc .numero { background: #14532D; }
+    .sec-prc .titulo { color: #14532D; }
+
+    .datos-subtitulo {
+        font-size: 17px;
+        font-weight: 800;
+        margin: 13px 0 8px 0;
+        padding: 8px 12px;
+        border-radius: 8px;
+        background: #F7FAF8;
+        border-left: 4px solid #6F9D7F;
+        color: #264D33;
+    }
+
+    .datos-resumen {
+        background: linear-gradient(135deg, #EDF7F1 0%, #F7FBF9 100%);
+        border: 1px solid #CFE3D6;
+        border-top: 5px solid #1E7B44;
+        border-radius: 13px;
+        padding: 15px 18px 8px 18px;
+        margin: 18px 0 12px 0;
+    }
+
+    .datos-resumen-titulo {
+        color: #14532D;
+        font-size: 21px;
+        font-weight: 800;
+        margin-bottom: 2px;
+    }
+
+    @media (max-width: 900px) {
+        .datos-pasos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -2849,18 +3003,34 @@ if menu_seleccionado == "🏠 Inicio":
 # ==========================================
 elif menu_seleccionado == "🏡 Datos del Terreno":
 
-    st.markdown("## 🏡 Ingreso de Datos del Terreno")
     st.markdown(
-        "Por favor, ingrese la información de la propiedad "
-        "para comenzar con la validación normativa."
+        """
+        <div class="datos-hero">
+            <h2>🏡 Datos del Terreno y Vivienda Existente</h2>
+            <p>Registra los antecedentes básicos del predio y de la vivienda. Con esta información, el prototipo podrá orientar los cálculos urbanísticos y preparar la futura ampliación.</p>
+        </div>
+        <div class="datos-pasos">
+            <div class="datos-paso paso-verde"><span>1</span>Ubicación</div>
+            <div class="datos-paso paso-azul"><span>2</span>Mediciones</div>
+            <div class="datos-paso paso-ambar"><span>3</span>Emplazamiento</div>
+            <div class="datos-paso paso-oscuro"><span>4</span>Revisión PRC</div>
+        </div>
+        """,
+        unsafe_allow_html=True
     )
-    st.markdown("---")
 
     # ==========================================
     # 1. UBICACIÓN
     # ==========================================
-    st.markdown('<div class="caja-blanca">', unsafe_allow_html=True)
-    st.markdown("### 📍 1. Ubicación de la Propiedad")
+    st.markdown(
+        """
+        <div class="datos-section sec-ubicacion">
+            <span class="numero">1</span><span class="titulo">📍 Ubicación de la Propiedad</span>
+            <span class="descripcion">Identifica la zona del Plan Regulador Comunal y registra una referencia del inmueble.</span>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     st.info(
         "🗺️ **¿No sabes en qué zona se encuentra tu propiedad?** "
@@ -2908,20 +3078,26 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
             placeholder="Ej: Av. El Llano Subercaseaux 1234"
         )
 
-    st.markdown('</div>', unsafe_allow_html=True)
 
     # ==========================================
     # 2. MEDICIONES
     # ==========================================
-    st.markdown('<div class="caja-blanca">', unsafe_allow_html=True)
-    st.markdown("### 📏 2. Mediciones del Terreno y Vivienda")
+    st.markdown(
+        """
+        <div class="datos-section sec-medicion">
+            <span class="numero">2</span><span class="titulo">📏 Mediciones del Terreno y Vivienda</span>
+            <span class="descripcion">Ingresa las dimensiones para calcular automáticamente las superficies del terreno y de la vivienda existente.</span>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     st.write(
         "Ingrese las dimensiones del terreno y de la vivienda. "
         "El software calculará automáticamente las superficies "
         "en metros cuadrados."
     )
 
-    st.markdown("#### 🌳 Dimensiones del Terreno")
+    st.markdown('<div class="datos-subtitulo">🌳 Dimensiones del Terreno</div>', unsafe_allow_html=True)
     col3, col4 = st.columns(2)
 
     with col3:
@@ -2956,7 +3132,7 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
         )
 
     st.markdown("---")
-    st.markdown("#### 🏠 Superficie Construida de la Vivienda")
+    st.markdown('<div class="datos-subtitulo">🏠 Superficie Construida de la Vivienda</div>', unsafe_allow_html=True)
     st.write(
         "Si la vivienda no tiene una forma rectangular, "
         "divida cada piso en sectores rectangulares simples "
@@ -2969,7 +3145,7 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
 
     with columna_mediciones:
         # PISO 1
-        st.markdown("### 🏠 Piso 1")
+        st.markdown('<div class="datos-subtitulo">🏠 Piso 1</div>', unsafe_allow_html=True)
         st.caption(
             "Ingrese el largo y ancho de cada habitación o sector. "
             "Si el piso tiene una forma irregular, puede agregar más sectores."
@@ -3036,7 +3212,7 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
         st.markdown("---")
 
         # PISO 2
-        st.markdown("### 🏘️ Piso 2")
+        st.markdown('<div class="datos-subtitulo">🏘️ Piso 2</div>', unsafe_allow_html=True)
         tiene_piso2 = st.checkbox(
             "La vivienda cuenta con segundo piso",
             key="tiene_piso2"
@@ -3128,7 +3304,7 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
 
     superficie_total_vivienda = superficie_piso1 + superficie_piso2
 
-    st.markdown("### 🧮 Superficie Construida Total")
+    st.markdown('<div class="datos-subtitulo">🧮 Superficie Construida Total</div>', unsafe_allow_html=True)
     resumen_p1, resumen_p2, resumen_total = st.columns(3)
 
     with resumen_p1:
@@ -3152,13 +3328,19 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
             "acompañado de memoria de cálculo y planos de estructura."
         )
 
-    st.markdown('</div>', unsafe_allow_html=True)
 
     # ==========================================
     # 3. DISTANCIAMIENTOS
     # ==========================================
-    st.markdown('<div class="caja-blanca">', unsafe_allow_html=True)
-    st.markdown("### 📐 3. Distanciamientos y Emplazamiento")
+    st.markdown(
+        """
+        <div class="datos-section sec-emplazamiento">
+            <span class="numero">3</span><span class="titulo">📐 Distanciamientos y Emplazamiento</span>
+            <span class="descripcion">Registra la relación de la vivienda con los deslindes, el antejardín y la vía que enfrenta el predio.</span>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     st.write(
         "Ingrese las distancias actuales entre la vivienda y los límites del terreno."
     )
@@ -3227,7 +3409,7 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
             distancia_posterior = 0.0
 
     st.markdown("---")
-    st.markdown("#### 🌿 Antejardín (espacio entre la calle y la vivienda)")
+    st.markdown('<div class="datos-subtitulo">🌿 Antejardín · espacio entre la calle y la vivienda</div>', unsafe_allow_html=True)
     st.caption(
         "Mida la distancia entre la línea frontal del terreno y la parte más cercana de la vivienda."
     )
@@ -3279,7 +3461,7 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
             format="%.2f"
         )
 
-    st.markdown("##### 🧾 Validación preliminar de antejardín")
+    st.markdown("##### 🧾 Revisión preliminar de antejardín")
 
     if via_frente == "Seleccione una opción...":
         st.info(
@@ -3357,11 +3539,10 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
                 )
 
     st.caption(
-        "ℹ️ Esta validación corresponde a la regla general del PRC. "
+        "ℹ️ Esta revisión corresponde a la regla general del PRC. "
         "La aplicación de procedimientos especiales de regularización puede modificar las exigencias aplicables."
     )
 
-    st.markdown('</div>', unsafe_allow_html=True)
 
     # ==========================================
     # VARIABLES PRC
@@ -3377,8 +3558,15 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
     # ==========================================
     # 4. VALIDACIÓN AUTOMÁTICA PRC
     # ==========================================
-    st.markdown('<div class="caja-blanca">', unsafe_allow_html=True)
-    st.markdown("### 🧾 4. Validación Automática según PRC")
+    st.markdown(
+        """
+        <div class="datos-section sec-prc">
+            <span class="numero">4</span><span class="titulo">🧾 Revisión Automática según PRC</span>
+            <span class="descripcion">El prototipo consulta la base normativa de San Miguel para orientar la ocupación de suelo y la constructibilidad aplicables al predio.</span>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     st.write(
         "A partir de la zona seleccionada y de la superficie del terreno, el software consulta "
         "automáticamente la base normativa del Plan Regulador Comunal de San Miguel."
@@ -3403,7 +3591,7 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
         st.info("Seleccione primero la zona del PRC correspondiente a la propiedad.")
 
     elif superficie_terreno <= 0:
-        st.info("Ingrese el largo y ancho del terreno para realizar la validación normativa.")
+        st.info("Ingrese el largo y ancho del terreno para realizar la revisión normativa preliminar.")
 
     else:
         zona_codigo = sector_casa.split(" - ")[0]
@@ -3481,7 +3669,7 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
                     margen_primer_piso = superficie_maxima_ocupacion - superficie_piso1
                     margen_constructibilidad = superficie_maxima_construible - superficie_total_vivienda
 
-                    st.markdown("#### 🧮 Resultados Normativos")
+                    st.markdown('<div class="datos-subtitulo">🧮 Resultados Normativos</div>', unsafe_allow_html=True)
                     resultado_col1, resultado_col2 = st.columns(2)
 
                     with resultado_col1:
@@ -3502,7 +3690,7 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
                             f"{superficie_terreno:.2f} m² × {coef_constructibilidad:.2f}"
                         )
 
-                    st.markdown("#### 🏗️ Superficie Disponible Preliminar")
+                    st.markdown('<div class="datos-subtitulo">🏗️ Superficie Disponible Preliminar</div>', unsafe_allow_html=True)
                     disponible_col1, disponible_col2 = st.columns(2)
 
                     with disponible_col1:
@@ -3528,7 +3716,7 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
                             )
 
                     if superficie_total_vivienda > 0:
-                        st.markdown("#### ✅ Comparación con la Vivienda Actual")
+                        st.markdown('<div class="datos-subtitulo">✅ Comparación con la Vivienda Actual</div>', unsafe_allow_html=True)
 
                         if margen_primer_piso >= 0:
                             st.success(
@@ -3559,12 +3747,19 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
                         if norma["Fuente"]:
                             st.write(f"**Fuente:** {norma['Fuente']}")
 
-    st.markdown('</div>', unsafe_allow_html=True)
 
     # ==========================================
     # RESUMEN
     # ==========================================
-    st.markdown("### 📋 Resumen de la Propiedad")
+    st.markdown(
+        """
+        <div class="datos-resumen">
+            <div class="datos-resumen-titulo">📋 Resumen de la Propiedad</div>
+            <div style="font-size:13px;color:#557061;">Síntesis de los datos ingresados y de los márgenes urbanísticos calculados hasta este punto.</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     resumen_col1, resumen_col2, resumen_col3, resumen_col4 = st.columns(4)
 
     with resumen_col1:
