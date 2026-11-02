@@ -1,4 +1,4 @@
-# VERSION: PASO18_LEY_MONO_COLOR_2026_11_02
+# VERSION: PASO19_PANEL_RUTAS_2026_11_02
 # BASE: PASO8_PUZZLE_FRENTE_IMAGENES_2026_10_19
 # VERSION: PASO6_RESULTADO_FINAL_REGULARIZACION_2026_10_19
 import streamlit as st
@@ -120,6 +120,76 @@ st.markdown("""
 
     [data-testid="stSidebar"] hr {
         border-color: rgba(30, 123, 68, 0.28);
+    }
+
+    /* Navegación por rutas - PASO 19 */
+    .nav-bloque-inicio {
+        background: rgba(255,255,255,0.78);
+        border: 1px solid rgba(20,83,45,0.18);
+        border-left: 5px solid #14532D;
+        border-radius: 10px;
+        padding: 10px 12px;
+        margin: 8px 0 8px 0;
+        color: #123524;
+        font-weight: 800;
+        font-size: 14px;
+        letter-spacing: 0.2px;
+    }
+
+    .nav-ruta-ampliacion {
+        background: linear-gradient(135deg, rgba(23,92,125,0.13), rgba(255,255,255,0.72));
+        border: 1px solid rgba(23,92,125,0.20);
+        border-left: 5px solid #175C7D;
+        border-radius: 10px;
+        padding: 10px 12px;
+        margin: 16px 0 8px 0;
+        color: #123E53;
+    }
+
+    .nav-ruta-regularizacion {
+        background: linear-gradient(135deg, rgba(169,78,47,0.14), rgba(255,255,255,0.72));
+        border: 1px solid rgba(169,78,47,0.22);
+        border-left: 5px solid #A94E2F;
+        border-radius: 10px;
+        padding: 10px 12px;
+        margin: 18px 0 8px 0;
+        color: #713520;
+    }
+
+    .nav-ruta-titulo {
+        font-size: 14px;
+        font-weight: 850;
+        margin-bottom: 2px;
+    }
+
+    .nav-ruta-desc {
+        font-size: 11.5px;
+        line-height: 1.35;
+        opacity: 0.82;
+    }
+
+    [data-testid="stSidebar"] div[data-testid="stButton"] > button {
+        border-radius: 9px;
+        min-height: 2.55rem;
+        font-weight: 650;
+        border: 1px solid rgba(20,83,45,0.16);
+        box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+
+    [data-testid="stSidebar"] div[data-testid="stButton"] > button:hover {
+        border-color: #1E7B44;
+        transform: translateY(-1px);
+    }
+
+    .nav-estado {
+        margin-top: 20px;
+        padding-top: 12px;
+        border-top: 1px solid rgba(30,123,68,0.25);
+        color: #14532D;
+        font-weight: 800;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: .4px;
     }
 
     .aviso-orientativo {
@@ -3149,27 +3219,73 @@ def generar_informe_pdf_futura_ampliacion(datos, propuesta):
     return buffer.getvalue()
 
 # ==========================================
-# BARRA LATERAL
+# BARRA LATERAL - NAVEGACIÓN POR RUTAS
 # ==========================================
+if "menu_principal" not in st.session_state:
+    st.session_state.menu_principal = "🏠 Inicio"
+
 with st.sidebar:
     st.markdown("### ⚙️ Panel de Navegación")
+    st.caption("Seleccione una etapa del prototipo.")
 
-    menu_seleccionado = st.radio(
-        "Seleccione un módulo:",
-        (
-            "🏠 Inicio",
-            "🏡 Datos del Terreno",
-            "🧱 Futura Ampliación",
-            "📋 Regularización Ley 20.898"
-        )
+    # INICIO
+    st.markdown(
+        '<div class="nav-bloque-inicio">🏠 INICIO</div>',
+        unsafe_allow_html=True
     )
+    if st.button(
+        "🏠 Inicio",
+        use_container_width=True,
+        type="primary" if st.session_state.menu_principal == "🏠 Inicio" else "secondary",
+        key="nav_inicio"
+    ):
+        st.session_state.menu_principal = "🏠 Inicio"
+        st.rerun()
 
-    st.markdown("---")
-
-    st.info(
-        "Utilice este menú para navegar por las distintas "
-        "etapas de orientación técnica y normativa."
+    # RUTA 1: FUTURA AMPLIACIÓN
+    st.markdown(
+        '''<div class="nav-ruta-ampliacion">
+            <div class="nav-ruta-titulo">🧱 RUTA 1 · FUTURA AMPLIACIÓN</div>
+            <div class="nav-ruta-desc">Primero registre el predio y luego desarrolle la propuesta de ampliación.</div>
+        </div>''',
+        unsafe_allow_html=True
     )
+    if st.button(
+        "🏡 Datos del Terreno",
+        use_container_width=True,
+        type="primary" if st.session_state.menu_principal == "🏡 Datos del Terreno" else "secondary",
+        key="nav_datos_terreno"
+    ):
+        st.session_state.menu_principal = "🏡 Datos del Terreno"
+        st.rerun()
+
+    if st.button(
+        "🧱 Futura Ampliación",
+        use_container_width=True,
+        type="primary" if st.session_state.menu_principal == "🧱 Futura Ampliación" else "secondary",
+        key="nav_futura_ampliacion"
+    ):
+        st.session_state.menu_principal = "🧱 Futura Ampliación"
+        st.rerun()
+
+    # RUTA 2: REGULARIZACIÓN
+    st.markdown(
+        '''<div class="nav-ruta-regularizacion">
+            <div class="nav-ruta-titulo">📋 RUTA 2 · LEY DEL MONO</div>
+            <div class="nav-ruta-desc">Orientación para una edificación existente que podría acogerse a la Ley N.º 20.898.</div>
+        </div>''',
+        unsafe_allow_html=True
+    )
+    if st.button(
+        "📋 Regularización Ley 20.898",
+        use_container_width=True,
+        type="primary" if st.session_state.menu_principal == "📋 Regularización Ley 20.898" else "secondary",
+        key="nav_regularizacion"
+    ):
+        st.session_state.menu_principal = "📋 Regularización Ley 20.898"
+        st.rerun()
+
+    st.markdown('<div class="nav-estado">Estado del proyecto</div>', unsafe_allow_html=True)
 
     if st.session_state.datos_propiedad is not None:
         st.success("✅ Datos de la propiedad guardados")
@@ -3179,6 +3295,8 @@ with st.sidebar:
 
     if st.session_state.resultado_regularizacion is not None:
         st.success("✅ Orientación de regularización guardada")
+
+menu_seleccionado = st.session_state.menu_principal
 
 
 # ==========================================
