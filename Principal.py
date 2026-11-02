@@ -1,4 +1,4 @@
-# VERSION: PASO9_ALTURA_VANOS_DISTANCIAMIENTOS_ADOSAMIENTO_2026_10_19
+# VERSION: PASO10_MURO_F60_ADOSAMIENTO_SIN_CROQUIS_PRELIMINAR_2026_11_02
 # BASE: PASO8_PUZZLE_FRENTE_IMAGENES_2026_10_19
 # VERSION: PASO6_RESULTADO_FINAL_REGULARIZACION_2026_10_19
 import streamlit as st
@@ -215,6 +215,9 @@ def cargar_soluciones_muros():
         "Compatibilidad_Zona_D",
         "Fuente",
         "Observacion",
+        "Uso_Especial",
+        "Resistencia_Fuego",
+        "Fuente_Fuego",
     ]
 
     for columna in columnas_texto:
@@ -415,6 +418,7 @@ IMAGENES_SOLUCIONES = {
     "muro_madera": "detalle_muro_madera.png",
     "muro_acero": "detalle_muro_acero.png",
     "muro_albanileria": "detalle_muro_albanileria_eifs.png",
+    "muro_f60": "detalle_muro_f60.png",
     "piso_radier": "detalle_radier.png",
     "piso_ventilado": "detalle_piso_ventilado.png",
     "techumbre_madera": "detalle_techumbre_madera.png",
@@ -437,8 +441,11 @@ def mostrar_imagen_solucion(clave, caption=None, ancho=None):
     st.image(str(ruta), **kwargs)
     return True
 
-def clave_imagen_muro(sistema):
+def clave_imagen_muro(sistema, codigo=""):
     sistema = str(sistema or "").strip().lower()
+    codigo = str(codigo or "").strip().lower()
+    if "asim.1.60.24" in codigo or "f-60" in sistema or "f60" in sistema or "resistencia al fuego" in sistema:
+        return "muro_f60"
     if "madera" in sistema:
         return "muro_madera"
     if "acero" in sistema:
@@ -3408,204 +3415,12 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
         st.markdown("---")
 
         # ==========================================
-        # 5. CROQUIS PRELIMINAR AUTOMÁTICO
+        # 5. CROQUIS INTERACTIVO / EDITOR TIPO PUZLE
         # ==========================================
-        st.markdown("### 🗺️ 5. Croquis Preliminar de la Propuesta")
+        st.markdown("### 🧩 5. Croquis Interactivo de la Ampliación")
 
         st.info(
-            "🧩 El croquis representa de forma **preliminar y esquemática** el terreno, "
-            "la vivienda existente y los módulos de ampliación. Puedes cambiar entre "
-            "la planta de **Piso 1**, **Piso 2** o visualizar **Ambos** al mismo tiempo."
-        )
-
-        st.warning(
-            "⚠️ Como todavía no se ha definido gráficamente la posición exacta de cada sector de la vivienda, "
-            "las plantas utilizan envolventes aproximadas. La próxima etapa será el editor tipo puzle."
-        )
-
-        # Selector solicitado para no tener que bajar entre croquis grandes.
-        vista_croquis = st.selectbox(
-            "👁️ Vista del croquis:",
-            ["Piso 1", "Piso 2", "Ambos"],
-            key="vista_croquis"
-        )
-
-        distancias_sin_definir = (
-            datos.get("antejardin_actual", 0) == 0
-            and datos.get("distancia_izquierda", 0) == 0
-            and datos.get("distancia_derecha", 0) == 0
-            and datos.get("distancia_posterior", 0) == 0
-            and not datos.get("adosado_izquierdo", False)
-            and not datos.get("adosado_derecho", False)
-            and not datos.get("adosado_posterior", False)
-        )
-
-        if distancias_sin_definir:
-            st.warning(
-                "📏 Todas las distancias de emplazamiento están en 0,00 m. El croquis se puede mostrar, "
-                "pero será mucho más útil si primero ingresas el antejardín y las distancias reales a los deslindes."
-            )
-
-        modulos_para_croquis = [
-            modulo
-            for modulo in modulos_ampliacion
-            if modulo["superficie"] > 0
-        ]
-
-        figura_piso1, validaciones_piso1, imagen_piso1 = crear_croquis_preliminar(
-            datos,
-            modulos_para_croquis
-        )
-
-        figura_piso2, validaciones_piso2, imagen_piso2 = crear_croquis_piso2(
-            datos,
-            modulos_para_croquis
-        )
-
-        def mostrar_validaciones_croquis(validaciones, piso):
-            if not validaciones:
-                return
-
-            st.markdown(f"#### 🔎 Revisión geométrica automática – {piso}")
-
-            for revision in validaciones:
-                if revision["cumple"]:
-                    st.success(
-                        f"✅ **Módulo {revision['numero']}:** {revision['mensaje']}"
-                    )
-                else:
-                    st.error(
-                        f"❌ **Módulo {revision['numero']}:** {revision['mensaje']}"
-                    )
-
-        if figura_piso1 is None or figura_piso2 is None:
-            st.error(
-                "❌ No fue posible generar los croquis porque faltan las dimensiones del terreno."
-            )
-
-        elif vista_croquis == "Piso 1":
-            st.pyplot(figura_piso1)
-
-            st.caption(
-                "Piso 1: la calle se representa en la parte inferior y el deslinde posterior en la parte superior."
-            )
-
-            mostrar_validaciones_croquis(
-                validaciones_piso1,
-                "Piso 1"
-            )
-
-            if imagen_piso1 is not None:
-                st.download_button(
-                    "📥 Descargar croquis Piso 1",
-                    data=imagen_piso1,
-                    file_name="Croquis_Preliminar_Piso_1.png",
-                    mime="image/png",
-                    key="descargar_croquis_piso1"
-                )
-
-        elif vista_croquis == "Piso 2":
-            st.pyplot(figura_piso2)
-
-            st.caption(
-                "Piso 2: se muestra la huella del primer piso como referencia. "
-                "La ubicación de la ampliación es todavía esquemática y requiere revisión estructural."
-            )
-
-            modulos_piso2 = [
-                m for m in modulos_para_croquis
-                if m.get("piso") == "Piso 2"
-            ]
-
-            if not modulos_piso2:
-                st.info(
-                    "🏘️ Aún no has agregado módulos de ampliación en Piso 2. "
-                    "Puedes igualmente visualizar la planta de referencia."
-                )
-
-            mostrar_validaciones_croquis(
-                validaciones_piso2,
-                "Piso 2"
-            )
-
-            if imagen_piso2 is not None:
-                st.download_button(
-                    "📥 Descargar croquis Piso 2",
-                    data=imagen_piso2,
-                    file_name="Croquis_Preliminar_Piso_2.png",
-                    mime="image/png",
-                    key="descargar_croquis_piso2"
-                )
-
-        else:
-            st.caption(
-                "Vista comparativa: ambos croquis se muestran en tamaño reducido para revisarlos sin desplazarse tanto."
-            )
-
-            columna_croquis1, columna_croquis2 = st.columns(2)
-
-            with columna_croquis1:
-                st.markdown("#### 🏠 Piso 1")
-                st.pyplot(figura_piso1)
-
-                if imagen_piso1 is not None:
-                    st.download_button(
-                        "📥 Descargar Piso 1",
-                        data=imagen_piso1,
-                        file_name="Croquis_Preliminar_Piso_1.png",
-                        mime="image/png",
-                        key="descargar_croquis_piso1_ambos"
-                    )
-
-            with columna_croquis2:
-                st.markdown("#### 🏘️ Piso 2")
-                st.pyplot(figura_piso2)
-
-                if imagen_piso2 is not None:
-                    st.download_button(
-                        "📥 Descargar Piso 2",
-                        data=imagen_piso2,
-                        file_name="Croquis_Preliminar_Piso_2.png",
-                        mime="image/png",
-                        key="descargar_croquis_piso2_ambos"
-                    )
-
-            # Las validaciones se dejan debajo de la comparación para que
-            # los dos croquis permanezcan alineados y compactos.
-            if validaciones_piso1 or validaciones_piso2:
-                with st.expander("🔎 Ver revisión geométrica de ambos croquis"):
-                    if validaciones_piso1:
-                        st.markdown("**Piso 1**")
-                        for revision in validaciones_piso1:
-                            simbolo = "✅" if revision["cumple"] else "❌"
-                            st.write(
-                                f"{simbolo} Módulo {revision['numero']}: {revision['mensaje']}"
-                            )
-
-                    if validaciones_piso2:
-                        st.markdown("**Piso 2**")
-                        for revision in validaciones_piso2:
-                            simbolo = "✅" if revision["cumple"] else "❌"
-                            st.write(
-                                f"{simbolo} Módulo {revision['numero']}: {revision['mensaje']}"
-                            )
-
-        # Cerrar las figuras para no acumular memoria entre reruns.
-        if figura_piso1 is not None:
-            plt.close(figura_piso1)
-
-        if figura_piso2 is not None:
-            plt.close(figura_piso2)
-
-        st.markdown("---")
-
-        # ==========================================
-        # 6. EDITOR TIPO PUZLE MEJORADO
-        # ==========================================
-        st.markdown("### 🧩 6. Editor Tipo Puzle Mejorado")
-
-        st.info(
-            "Ahora puedes editar tanto la **vivienda existente** como la **futura ampliación**. "
+            "Este es el **único croquis de emplazamiento** de la propuesta. Puedes editar tanto la **vivienda existente** como la **futura ampliación**. "
             "Esto permite representar mejor una casa en L, un segundo piso ubicado al fondo o a un costado, "
             "y luego hacer que las ampliaciones encajen con las piezas reales de la vivienda."
         )
@@ -4018,9 +3833,9 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
         st.markdown("---")
 
         # ==========================================
-        # 6.1 ALTURA, VANOS, DISTANCIAMIENTOS Y ADOSAMIENTO
+        # 5.1 ALTURA, VANOS, DISTANCIAMIENTOS Y ADOSAMIENTO
         # ==========================================
-        st.markdown("### 📐 6.1 Altura, Vanos, Distanciamientos y Adosamiento")
+        st.markdown("### 📐 5.1 Altura, Vanos, Distanciamientos y Adosamiento")
         st.info(
             "Esta revisión usa la posición actual de cada módulo en el puzle. Para las partes aisladas se compara "
             "la distancia a los deslindes laterales y posterior con la tabla del **art. 2.6.3 OGUC**, considerando "
@@ -4040,6 +3855,8 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
             "observaciones": [],
             "criterio_rasante_rm_grados": 70.0,
         }
+        ados_futuro = {"Izquierdo": 0.0, "Derecho": 0.0, "Posterior": 0.0}
+        hay_adosamiento_futuro = False
 
         g_empl = obtener_geometria_referencia(datos)
         modulos_validos_empl = [
@@ -4260,6 +4077,7 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
             )
 
             ados_futuro = calcular_adosamiento_futuro(datos, modulos_validos_empl, tolerancia=0.05)
+            hay_adosamiento_futuro = any(float(v or 0) > 0.0 for v in ados_futuro.values())
             existentes_adicionales = {"Izquierdo": 0.0, "Derecho": 0.0, "Posterior": 0.0}
 
             lados_config = [
@@ -4319,7 +4137,7 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
 
             st.dataframe(pd.DataFrame(filas_adosamiento), use_container_width=True, hide_index=True)
 
-            if any(float(v) > 0.0 for v in ados_futuro.values()):
+            if hay_adosamiento_futuro:
                 st.warning(
                     "🔥 **Hay futura ampliación en contacto con uno o más deslindes.** Además de longitud y altura, debe verificarse "
                     "la envolvente de adosamiento de 45°, la solución de aguas lluvia y la resistencia al fuego que corresponda. "
@@ -4341,9 +4159,9 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
         st.markdown("---")
 
         # ==========================================
-        # 7. SOLUCIONES CONSTRUCTIVAS DE LA FUTURA AMPLIACIÓN
+        # 6. SOLUCIONES CONSTRUCTIVAS DE LA FUTURA AMPLIACIÓN
         # ==========================================
-        st.markdown("### 🧰 7. Soluciones Constructivas de la Futura Ampliación")
+        st.markdown("### 🧰 6. Soluciones Constructivas de la Futura Ampliación")
         st.info(
             "Seleccione soluciones de referencia para **muros, pisos y techumbre** de la ampliación. "
             "Las alternativas provienen de la base técnica incorporada al prototipo y se muestran con "
@@ -4352,6 +4170,7 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
         )
 
         solucion_muro_futura = None
+        solucion_muro_adosamiento_futura = None
         solucion_piso1_futura = None
         solucion_piso2_futura = None
         solucion_techumbre_futura = None
@@ -4379,9 +4198,9 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
             return resultado
 
         # ------------------------------------------
-        # 7.1 MURO
+        # 6.1 MURO
         # ------------------------------------------
-        st.markdown("#### 🧱 7.1 Solución de Muro")
+        st.markdown("#### 🧱 6.1 Soluciones de Muros")
 
         try:
             base_muros_futura = cargar_soluciones_muros()
@@ -4398,6 +4217,10 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
             mapa_muros_futura = {}
 
             for _, fila_muro in base_muros_futura.iterrows():
+                uso_especial = str(fila_muro.get("Uso_Especial", "") or "").strip().lower()
+                resistencia_fuego = str(fila_muro.get("Resistencia_Fuego", "") or "").strip().upper()
+                if "adosamiento" in uso_especial or resistencia_fuego == "F-60":
+                    continue
                 etiqueta = f"{fila_muro['Codigo_Solucion']} — {fila_muro['Sistema']}"
                 opciones_muros_futura.append(etiqueta)
                 mapa_muros_futura[etiqueta] = fila_muro
@@ -4412,7 +4235,7 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
                 fila_muro = mapa_muros_futura[muro_elegido_futura]
                 solucion_muro_futura = _fila_a_dict_seguro(fila_muro)
 
-                clave_img_muro = clave_imagen_muro(fila_muro.get("Sistema", ""))
+                clave_img_muro = clave_imagen_muro(fila_muro.get("Sistema", ""), fila_muro.get("Codigo_Solucion", ""))
                 if clave_img_muro:
                     with st.expander("🖼️ Ver detalle visual de la solución de muro", expanded=True):
                         mostrar_imagen_solucion(
@@ -4485,12 +4308,100 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
                     "estabilidad estructural ni condiciones de encuentro**. Esas materias deben revisarse por separado."
                 )
 
+        # ------------------------------------------
+        # 6.1 B MURO ESPECIAL DE ADOSAMIENTO F-60
+        # ------------------------------------------
+        st.markdown("##### 🔥 Muro especial de adosamiento F-60")
+
+        if hay_adosamiento_futuro:
+            st.warning(
+                "El croquis detectó **uno o más tramos de la futura ampliación adosados al deslinde**. "
+                "Para esos tramos debe acreditarse una resistencia al fuego mínima **F-60**. "
+                "Los muros térmicos generales seleccionados arriba no acreditan automáticamente esta condición."
+            )
+
+            filas_f60 = pd.DataFrame()
+            if base_muros_futura is not None and not base_muros_futura.empty:
+                mascara_f60 = base_muros_futura.apply(
+                    lambda r: (
+                        "adosamiento" in str(r.get("Uso_Especial", "") or "").lower()
+                        or str(r.get("Resistencia_Fuego", "") or "").strip().upper() == "F-60"
+                        or str(r.get("Codigo_Solucion", "") or "").strip().upper() == "ASIM.1.60.24"
+                    ),
+                    axis=1
+                )
+                filas_f60 = base_muros_futura[mascara_f60]
+
+            if filas_f60.empty:
+                st.error(
+                    "❌ No se encontró la solución **ASIM.1.60.24** en la hoja `Soluciones_Muros`. "
+                    "Actualiza también la base Excel que acompaña esta versión del software."
+                )
+                revision_emplazamiento_futura["pendientes"].append(
+                    "Definir/acreditar solución F-60 para el muro de adosamiento."
+                )
+            else:
+                fila_f60 = filas_f60.iloc[0]
+                solucion_muro_adosamiento_futura = _fila_a_dict_seguro(fila_f60)
+
+                st.success(
+                    f"✅ **Solución de referencia para el tramo adosado:** "
+                    f"{fila_f60.get('Codigo_Solucion', '')} — {fila_f60.get('Sistema', '')}. "
+                    f"Clasificación: **{fila_f60.get('Resistencia_Fuego', 'F-60')}**."
+                )
+
+                with st.expander("🖼️ Ver detalle constructivo del muro F-60", expanded=True):
+                    mostrar_imagen_solucion(
+                        "muro_f60",
+                        caption=(
+                            "Muro N.º 4 — Entramado de madera para adosamiento. "
+                            "Referencia ASIM.1.60.24 · resistencia al fuego F-60."
+                        )
+                    )
+
+                c_f1, c_f2, c_f3 = st.columns(3)
+                with c_f1:
+                    st.metric("Resistencia al fuego", str(fila_f60.get("Resistencia_Fuego", "F-60")))
+                with c_f2:
+                    st.metric("Altura mínima muro", "2,00 m")
+                with c_f3:
+                    st.metric("Uso", "Adosamiento")
+
+                with st.expander("🔎 Ver composición de la solución F-60"):
+                    st.write(f"**Código:** {fila_f60.get('Codigo_Solucion', '')}")
+                    st.write(f"**Estructura:** {fila_f60.get('Estructura_Principal', '')}")
+                    st.write(
+                        f"**Cara expuesta al fuego:** {fila_f60.get('Revestimiento_Interior', '')} "
+                        f"({_texto_valor_futuro(fila_f60.get('Espesor_Rev_Int_mm'), 1, ' mm')})"
+                    )
+                    st.write(
+                        f"**Aislación interior:** {fila_f60.get('Aislante_Entre_Estructura', '')} "
+                        f"({_texto_valor_futuro(fila_f60.get('Espesor_Aislante_mm'), 1, ' mm')}; "
+                        f"densidad nominal {_texto_valor_futuro(fila_f60.get('Densidad_Aislante_kg_m3'), 0, ' kg/m³')})"
+                    )
+                    st.write(
+                        f"**Cara no expuesta:** {fila_f60.get('Placa_Estructural', '')} "
+                        f"({_texto_valor_futuro(fila_f60.get('Espesor_Placa_mm'), 1, ' mm')})"
+                    )
+                    st.caption(f"Fuente fuego: {fila_f60.get('Fuente_Fuego') or fila_f60.get('Fuente', '')}")
+
+                st.info(
+                    "🌡️ **Importante:** la clasificación F-60 acredita el comportamiento frente al fuego. "
+                    "Esta ficha **no asigna automáticamente U ni Rt**; si el muro forma parte de la envolvente térmica, "
+                    "su desempeño para Zona D debe verificarse separadamente."
+                )
+        else:
+            st.info(
+                "ℹ️ En la posición actual del croquis no se detecta ampliación adosada al deslinde, por lo que "
+                "la solución especial F-60 no se activa. Si acercas un módulo hasta el deslinde, esta revisión aparecerá automáticamente."
+            )
+
         st.markdown("---")
 
         # ------------------------------------------
-        # 7.2 PISO
+        # 6.2 PISO
         # ------------------------------------------
-        st.markdown("#### ⬛ 7.2 Solución de Piso")
+        st.markdown("#### ⬛ 6.2 Solución de Piso")
         st.caption(
             "La condición del piso se revisa de manera distinta según se trate de una ampliación apoyada sobre terreno, "
             "un piso expuesto/ventilado o un entrepiso interior."
@@ -4649,9 +4560,9 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
         st.markdown("---")
 
         # ------------------------------------------
-        # 7.3 TECHUMBRE
+        # 6.3 TECHUMBRE
         # ------------------------------------------
-        st.markdown("#### 🏠 7.3 Solución de Techumbre")
+        st.markdown("#### 🏠 6.3 Solución de Techumbre")
 
         try:
             base_techumbres_futura = cargar_soluciones_techumbres()
@@ -4730,9 +4641,9 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
                 )
 
         # ------------------------------------------
-        # 7.4 RESUMEN TÉCNICO
+        # 6.4 RESUMEN TÉCNICO
         # ------------------------------------------
-        st.markdown("#### 📋 7.4 Especificación Técnica Preliminar")
+        st.markdown("#### 📋 6.4 Especificación Técnica Preliminar")
 
         nombre_muro_futura = (
             f"{solucion_muro_futura.get('Codigo_Solucion')} — {solucion_muro_futura.get('Sistema')}"
@@ -4758,6 +4669,14 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
         resumen_soluciones_futura = pd.DataFrame(
             [
                 {"Elemento": "Muro perimetral", "Solución propuesta": nombre_muro_futura},
+                {
+                    "Elemento": "Muro de adosamiento F-60",
+                    "Solución propuesta": (
+                        f"{solucion_muro_adosamiento_futura.get('Codigo_Solucion')} — {solucion_muro_adosamiento_futura.get('Sistema')}"
+                        if solucion_muro_adosamiento_futura
+                        else ("No aplica" if not hay_adosamiento_futuro else "Pendiente de acreditación")
+                    )
+                },
                 {"Elemento": "Piso ampliación Piso 1", "Solución propuesta": nombre_piso1_futura},
                 {"Elemento": "Piso ampliación Piso 2", "Solución propuesta": nombre_piso2_futura},
                 {"Elemento": "Techumbre", "Solución propuesta": nombre_tech_futura},
@@ -4767,7 +4686,9 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
 
         pendientes_tecnicos_futura = []
         if solucion_muro_futura is None:
-            pendientes_tecnicos_futura.append("muro")
+            pendientes_tecnicos_futura.append("muro perimetral")
+        if hay_adosamiento_futuro and solucion_muro_adosamiento_futura is None:
+            pendientes_tecnicos_futura.append("muro de adosamiento F-60")
         if superficie_ampliacion_piso1 > 0 and solucion_piso1_futura is None:
             pendientes_tecnicos_futura.append("piso de la ampliación en Piso 1")
         if superficie_ampliacion_piso2 > 0 and solucion_piso2_futura is None:
@@ -4851,6 +4772,8 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
                             for clave, valor in st.session_state.posiciones_vivienda.items()
                         },
                         "solucion_muro": solucion_muro_futura,
+                        "solucion_muro_adosamiento_f60": solucion_muro_adosamiento_futura,
+                        "hay_adosamiento_futuro": bool(hay_adosamiento_futuro),
                         "solucion_piso1": solucion_piso1_futura,
                         "solucion_piso2": solucion_piso2_futura,
                         "solucion_techumbre": solucion_techumbre_futura,
