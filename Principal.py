@@ -1,4 +1,4 @@
-# VERSION: PASO11_AJUSTES_PISO_ADOSAMIENTO_2026_11_02
+# VERSION: PASO12_RESUMEN_FINAL_FUTURA_AMPLIACION_2026_11_02
 # BASE: PASO8_PUZZLE_FRENTE_IMAGENES_2026_10_19
 # VERSION: PASO6_RESULTADO_FINAL_REGULARIZACION_2026_10_19
 import streamlit as st
@@ -4764,6 +4764,302 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
         st.markdown("---")
 
         # ==========================================
+        # 7. RESULTADO FINAL DE FUTURA AMPLIACIÓN
+        # ==========================================
+        st.markdown("### 📋 7. Resultado Final de la Revisión Preliminar")
+        st.write(
+            "Este resumen reúne los principales resultados urbanísticos, geométricos y constructivos "
+            "de la propuesta. Su resultado es **preliminar** y no constituye permiso, aprobación municipal "
+            "ni reemplaza la revisión de un profesional competente."
+        )
+
+        incompatibilidades_finales_futura = []
+        observaciones_finales_futura = []
+        pendientes_finales_futura = []
+        filas_resultado_final_futura = []
+
+        # ------------------------------
+        # Superficies / parámetros PRC
+        # ------------------------------
+        if superficie_maxima_ocupacion_guardada is None:
+            estado_ocupacion = "⚠️ Pendiente"
+            detalle_ocupacion = "No existe un valor PRC disponible para validar la ocupación de suelo."
+            pendientes_finales_futura.append("Validar ocupación de suelo con un coeficiente PRC disponible.")
+        elif margen_ocupacion_proyectada is not None and margen_ocupacion_proyectada >= -1e-9:
+            estado_ocupacion = "✅ Compatible"
+            detalle_ocupacion = (
+                f"Piso 1 proyectado: {piso1_proyectado:.2f} m² / máximo preliminar: "
+                f"{superficie_maxima_ocupacion_guardada:.2f} m²."
+            )
+        else:
+            estado_ocupacion = "❌ Revisar"
+            detalle_ocupacion = (
+                f"Piso 1 proyectado: {piso1_proyectado:.2f} m² / máximo preliminar: "
+                f"{superficie_maxima_ocupacion_guardada:.2f} m²."
+            )
+            incompatibilidades_finales_futura.append(
+                f"La ocupación de suelo proyectada excede el máximo preliminar en {abs(float(margen_ocupacion_proyectada or 0)):.2f} m²."
+            )
+
+        filas_resultado_final_futura.append({
+            "Área revisada": "Ocupación de suelo",
+            "Estado": estado_ocupacion,
+            "Detalle": detalle_ocupacion,
+        })
+
+        if superficie_maxima_construible_guardada is None:
+            estado_construct = "⚠️ Pendiente"
+            detalle_construct = "No existe un valor PRC disponible para validar la constructibilidad."
+            pendientes_finales_futura.append("Validar constructibilidad con un coeficiente PRC disponible.")
+        elif margen_constructibilidad_proyectada is not None and margen_constructibilidad_proyectada >= -1e-9:
+            estado_construct = "✅ Compatible"
+            detalle_construct = (
+                f"Vivienda total proyectada: {vivienda_total_proyectada:.2f} m² / máximo preliminar: "
+                f"{superficie_maxima_construible_guardada:.2f} m²."
+            )
+        else:
+            estado_construct = "❌ Revisar"
+            detalle_construct = (
+                f"Vivienda total proyectada: {vivienda_total_proyectada:.2f} m² / máximo preliminar: "
+                f"{superficie_maxima_construible_guardada:.2f} m²."
+            )
+            incompatibilidades_finales_futura.append(
+                f"La superficie total proyectada excede la constructibilidad preliminar en {abs(float(margen_constructibilidad_proyectada or 0)):.2f} m²."
+            )
+
+        filas_resultado_final_futura.append({
+            "Área revisada": "Constructibilidad",
+            "Estado": estado_construct,
+            "Detalle": detalle_construct,
+        })
+
+        # ------------------------------
+        # Emplazamiento: distancias, rasante y antejardín
+        # ------------------------------
+        errores_emplazamiento = []
+        observaciones_emplazamiento = []
+        pendientes_emplazamiento = list(revision_emplazamiento_futura.get("pendientes", []))
+        antejardin_ref_resumen = float(g_empl.get("antejardin_minimo", 0.0) or 0.0)
+        invade_antejardin = False
+
+        for modulo_rev in revision_emplazamiento_futura.get("modulos", []):
+            numero_rev = modulo_rev.get("numero")
+            piso_rev = modulo_rev.get("piso")
+            if piso_rev == "Piso 1":
+                frente_rev = float(modulo_rev.get("distancias", {}).get("frente", 0.0) or 0.0)
+                if frente_rev + 1e-9 < antejardin_ref_resumen:
+                    invade_antejardin = True
+                    errores_emplazamiento.append(
+                        f"Módulo {numero_rev}: invade la franja de antejardín de referencia "
+                        f"({frente_rev:.2f} m < {antejardin_ref_resumen:.2f} m)."
+                    )
+
+            for lado_rev in modulo_rev.get("resultados_lados", []):
+                estado_lado = lado_rev.get("estado")
+                if estado_lado == "error":
+                    lado_txt = str(lado_rev.get("lado", "deslinde")).lower()
+                    errores_emplazamiento.append(
+                        f"Módulo {numero_rev}: revisar distanciamiento/rasante hacia el {lado_txt}."
+                    )
+                elif estado_lado == "observacion":
+                    observaciones_emplazamiento.append(
+                        f"Módulo {numero_rev}: condición especial de adosamiento que requiere revisión adicional."
+                    )
+                elif estado_lado == "pendiente":
+                    pendientes_emplazamiento.append(
+                        f"Módulo {numero_rev}: completar altura para revisar emplazamiento."
+                    )
+
+        if errores_emplazamiento:
+            estado_emplazamiento = "❌ Revisar"
+            detalle_emplazamiento = "Se detectaron incompatibilidades preliminares de antejardín, distanciamiento o rasante."
+            incompatibilidades_finales_futura.extend(errores_emplazamiento)
+        elif pendientes_emplazamiento:
+            estado_emplazamiento = "⚠️ Pendiente"
+            detalle_emplazamiento = "Faltan antecedentes para cerrar la revisión de uno o más módulos."
+            pendientes_finales_futura.extend(pendientes_emplazamiento)
+        else:
+            estado_emplazamiento = "✅ Compatible"
+            detalle_emplazamiento = "No se detectaron conflictos preliminares de antejardín, distanciamiento o rasante simplificada."
+
+        filas_resultado_final_futura.append({
+            "Área revisada": "Emplazamiento",
+            "Estado": estado_emplazamiento,
+            "Detalle": detalle_emplazamiento,
+        })
+
+        # ------------------------------
+        # Adosamiento y F-60
+        # ------------------------------
+        adosamientos_fuera_40 = []
+        for lado_ados, info_ados in revision_emplazamiento_futura.get("adosamientos", {}).items():
+            if float(info_ados.get("longitud_futura_m", 0.0) or 0.0) > 0 and not bool(info_ados.get("cumple_limite_general_40", True)):
+                adosamientos_fuera_40.append(
+                    f"{lado_ados}: {float(info_ados.get('porcentaje_preliminar', 0.0) or 0.0):.1f}%"
+                )
+
+        if not hay_adosamiento_futuro:
+            estado_adosamiento = "✅ No aplica"
+            detalle_adosamiento = "No se detectaron tramos futuros en contacto con deslindes."
+        elif solucion_muro_adosamiento_futura is None:
+            estado_adosamiento = "⚠️ Pendiente"
+            detalle_adosamiento = "Existe adosamiento futuro y falta acreditar/definir el muro F-60."
+            pendientes_finales_futura.append("Definir o acreditar la solución F-60 del muro de adosamiento.")
+        elif adosamientos_fuera_40:
+            estado_adosamiento = "⚠️ Revisión especial"
+            detalle_adosamiento = (
+                "El muro F-60 está identificado, pero el porcentaje general de adosamiento supera 40% en: "
+                + ", ".join(adosamientos_fuera_40)
+                + ". Debe revisarse si procede una excepción."
+            )
+            observaciones_finales_futura.append(detalle_adosamiento)
+        else:
+            estado_adosamiento = "✅ Referencia F-60 incorporada"
+            detalle_adosamiento = (
+                f"Se detectó adosamiento y se incorporó {solucion_muro_adosamiento_futura.get('Codigo_Solucion') or 'solución de referencia'} "
+                f"con clasificación {solucion_muro_adosamiento_futura.get('Resistencia_Fuego') or 'F-60'}. "
+                "La envolvente de 45° y aguas lluvia quedan para revisión profesional."
+            )
+            observaciones_finales_futura.append(
+                "El adosamiento requiere verificar profesionalmente la envolvente de 45° y la evacuación de aguas lluvia."
+            )
+
+        filas_resultado_final_futura.append({
+            "Área revisada": "Adosamiento / fuego",
+            "Estado": estado_adosamiento,
+            "Detalle": detalle_adosamiento,
+        })
+
+        # ------------------------------
+        # Soluciones constructivas
+        # ------------------------------
+        def _estado_solucion_resumen(solucion, aplica=True):
+            if not aplica:
+                return "✅ No aplica", "No corresponde para esta propuesta."
+            if solucion is None:
+                return "⚠️ Pendiente", "No se ha seleccionado una solución."
+            compat = str(solucion.get("Compatibilidad_Zona_D", "") or "").lower()
+            if "pendiente" in compat:
+                return "⚠️ Pendiente", str(solucion.get("Observacion", "Requiere acreditación técnica adicional."))
+            codigo = solucion.get("Codigo_Solucion") or "Sin código"
+            sistema = solucion.get("Sistema") or "Solución seleccionada"
+            return "✅ Definida", f"{codigo} — {sistema}"
+
+        estado_muro_res, detalle_muro_res = _estado_solucion_resumen(solucion_muro_futura, True)
+        estado_p1_res, detalle_p1_res = _estado_solucion_resumen(
+            solucion_piso1_futura, superficie_ampliacion_piso1 > 0
+        )
+        estado_p2_res, detalle_p2_res = _estado_solucion_resumen(
+            solucion_piso2_futura, superficie_ampliacion_piso2 > 0
+        )
+        estado_tech_res, detalle_tech_res = _estado_solucion_resumen(solucion_techumbre_futura, True)
+
+        soluciones_resumen = [
+            ("Muro perimetral", estado_muro_res, detalle_muro_res),
+            ("Piso ampliación Piso 1", estado_p1_res, detalle_p1_res),
+            ("Piso ampliación Piso 2", estado_p2_res, detalle_p2_res),
+            ("Techumbre", estado_tech_res, detalle_tech_res),
+        ]
+        for area_sol, estado_sol, detalle_sol in soluciones_resumen:
+            filas_resultado_final_futura.append({
+                "Área revisada": area_sol,
+                "Estado": estado_sol,
+                "Detalle": detalle_sol,
+            })
+            if estado_sol.startswith("⚠️"):
+                pendientes_finales_futura.append(f"Completar/acreditar {area_sol.lower()}.")
+
+        # ------------------------------
+        # Alertas estructurales y antecedentes generales
+        # ------------------------------
+        if vivienda_total_proyectada >= 100:
+            observaciones_finales_futura.append(
+                f"La vivienda proyectada alcanza {vivienda_total_proyectada:.2f} m²; debe verificarse si corresponde proyecto de cálculo estructural."
+            )
+        if superficie_ampliacion_piso2 > 0 and datos.get("superficie_piso2", 0) <= 0:
+            observaciones_finales_futura.append(
+                "La propuesta incorpora un nuevo segundo piso; debe revisarse la capacidad resistente de la vivienda existente."
+            )
+
+        ubicaciones_faltantes_resumen = [
+            m.get("numero") for m in modulos_ampliacion
+            if float(m.get("superficie", 0) or 0) > 0
+            and m.get("piso") == "Piso 1"
+            and m.get("ubicacion") == "Seleccione una ubicación..."
+        ]
+        if ubicaciones_faltantes_resumen:
+            pendientes_finales_futura.append(
+                "Definir ubicación referencial de los módulos de Piso 1: "
+                + ", ".join(str(n) for n in ubicaciones_faltantes_resumen)
+                + "."
+            )
+
+        # Evitar duplicados conservando el orden.
+        incompatibilidades_finales_futura = list(dict.fromkeys(incompatibilidades_finales_futura))
+        observaciones_finales_futura = list(dict.fromkeys(observaciones_finales_futura))
+        pendientes_finales_futura = list(dict.fromkeys(pendientes_finales_futura))
+
+        # ------------------------------
+        # Presentación del resumen
+        # ------------------------------
+        resumen_col1, resumen_col2, resumen_col3, resumen_col4 = st.columns(4)
+        with resumen_col1:
+            st.metric("Vivienda actual", f"{datos['superficie_total_vivienda']:.2f} m²")
+        with resumen_col2:
+            st.metric("Ampliación propuesta", f"{superficie_total_ampliacion:.2f} m²")
+        with resumen_col3:
+            st.metric("Total proyectado", f"{vivienda_total_proyectada:.2f} m²")
+        with resumen_col4:
+            st.metric("Módulos", str(len([m for m in modulos_ampliacion if float(m.get('superficie', 0) or 0) > 0])))
+
+        st.dataframe(
+            pd.DataFrame(filas_resultado_final_futura),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+        if incompatibilidades_finales_futura:
+            resultado_global_futura = "❌ Presenta incompatibilidades preliminares"
+            st.error(
+                "❌ **La propuesta presenta una o más incompatibilidades preliminares.** "
+                "Conviene modificar el diseño o revisar los antecedentes antes de avanzar con una definición formal."
+            )
+        elif pendientes_finales_futura or observaciones_finales_futura:
+            resultado_global_futura = "⚠️ Compatible preliminarmente con observaciones"
+            st.warning(
+                "⚠️ **La propuesta es compatible preliminarmente en los parámetros evaluados, pero mantiene observaciones, "
+                "antecedentes pendientes o revisiones profesionales que deben resolverse.**"
+            )
+        else:
+            resultado_global_futura = "✅ Compatible preliminarmente"
+            st.success(
+                "✅ **Con los antecedentes ingresados, no se detectaron incompatibilidades preliminares en los parámetros "
+                "automatizados por el prototipo.**"
+            )
+
+        if incompatibilidades_finales_futura:
+            with st.expander("❌ Ver incompatibilidades detectadas", expanded=True):
+                for item in incompatibilidades_finales_futura:
+                    st.write(f"• {item}")
+
+        if observaciones_finales_futura:
+            with st.expander("⚠️ Ver observaciones y revisiones complementarias", expanded=False):
+                for item in observaciones_finales_futura:
+                    st.write(f"• {item}")
+
+        if pendientes_finales_futura:
+            with st.expander("📝 Ver antecedentes pendientes", expanded=False):
+                for item in pendientes_finales_futura:
+                    st.write(f"• {item}")
+
+        st.caption(
+            "El resultado resume únicamente las reglas incorporadas al prototipo. No constituye un permiso de edificación, "
+            "una aprobación de la DOM ni una certificación estructural, térmica o de resistencia al fuego del proyecto ejecutado."
+        )
+
+        st.markdown("---")
+
+        # ==========================================
         # GUARDAR PROPUESTA
         # ==========================================
         if st.button("💾 Guardar Propuesta de Ampliación", type="primary"):
@@ -4826,6 +5122,11 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
                         "solucion_techumbre": solucion_techumbre_futura,
                         "revision_emplazamiento": revision_emplazamiento_futura,
                         "pendientes_tecnicos": list(pendientes_tecnicos_futura),
+                        "resultado_global": resultado_global_futura,
+                        "resumen_final": list(filas_resultado_final_futura),
+                        "incompatibilidades_finales": list(incompatibilidades_finales_futura),
+                        "observaciones_finales": list(observaciones_finales_futura),
+                        "pendientes_finales": list(pendientes_finales_futura),
                     }
 
                     st.success("✅ **Propuesta de ampliación guardada correctamente.**")
@@ -4850,6 +5151,8 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
                 st.write(
                     f"**Vivienda total proyectada:** {propuesta['vivienda_total_proyectada']:.2f} m²"
                 )
+                if propuesta.get("resultado_global"):
+                    st.write(f"**Resultado global:** {propuesta.get('resultado_global')}")
 
                 st.markdown("**Módulos:**")
 
