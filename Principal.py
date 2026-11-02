@@ -1,4 +1,4 @@
-# VERSION: PASO17_FUTURA_AMPLIACION_COLOR_2026_11_02
+# VERSION: PASO18_LEY_MONO_COLOR_2026_11_02
 # BASE: PASO8_PUZZLE_FRENTE_IMAGENES_2026_10_19
 # VERSION: PASO6_RESULTADO_FINAL_REGULARIZACION_2026_10_19
 import streamlit as st
@@ -462,6 +462,167 @@ st.markdown("""
     @media (max-width: 900px) {
         .amp-pasos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
+
+
+    /* ==========================================
+       REGULARIZACION LEY 20.898 - PASO 18
+       ========================================== */
+    .reg-hero {
+        background: linear-gradient(135deg, #6B3428 0%, #8B4B36 55%, #AA6549 100%);
+        color: white;
+        padding: 25px 27px;
+        border-radius: 14px;
+        margin-bottom: 14px;
+        box-shadow: 0 7px 18px rgba(107, 52, 40, 0.21);
+    }
+
+    .reg-hero h2 {
+        margin: 0 0 7px 0;
+        font-size: 29px;
+        font-weight: 800;
+        color: white;
+    }
+
+    .reg-hero p {
+        margin: 0;
+        color: #FFF1EB;
+        font-size: 15px;
+        line-height: 1.55;
+    }
+
+    .reg-pasos {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 9px;
+        margin: 5px 0 22px 0;
+    }
+
+    .reg-paso {
+        background: white;
+        border: 1px solid #E4DAD6;
+        border-radius: 10px;
+        padding: 9px 10px;
+        font-size: 12px;
+        font-weight: 750;
+        color: #51433E;
+        box-shadow: 0 2px 7px rgba(0,0,0,0.035);
+    }
+
+    .reg-paso span {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 23px;
+        height: 23px;
+        border-radius: 50%;
+        color: white;
+        margin-right: 5px;
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+    .reg-p1 span { background: #2878A0; }
+    .reg-p2 span { background: #C57A16; }
+    .reg-p3 span { background: #7952A3; }
+    .reg-p4 span { background: #2E7D32; }
+    .reg-p5 span { background: #A74832; }
+    .reg-p6 span { background: #A45A00; }
+    .reg-p7 span { background: #526D82; }
+    .reg-p8 span { background: #16869A; }
+    .reg-p9 span { background: #73558E; }
+    .reg-p10 span { background: #14532D; }
+
+    .reg-section {
+        padding: 14px 18px;
+        border-radius: 12px;
+        margin: 13px 0 14px 0;
+        border-left: 7px solid;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.045);
+    }
+
+    .reg-section .numero {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        color: white;
+        font-weight: 800;
+        margin-right: 8px;
+    }
+
+    .reg-section .titulo {
+        font-size: 20px;
+        font-weight: 800;
+        vertical-align: middle;
+    }
+
+    .reg-section .descripcion {
+        display: block;
+        margin: 5px 0 0 40px;
+        font-size: 13px;
+        line-height: 1.45;
+        color: #615B58;
+    }
+
+    .reg-datos { background: linear-gradient(90deg, #E9F4FA 0%, #F8FCFE 100%); border-left-color: #2878A0; }
+    .reg-datos .numero { background: #2878A0; } .reg-datos .titulo { color: #1B5C7B; }
+    .reg-condiciones { background: linear-gradient(90deg, #FFF3DF 0%, #FFFDF8 100%); border-left-color: #C57A16; }
+    .reg-condiciones .numero { background: #C57A16; } .reg-condiciones .titulo { color: #8A5700; }
+    .reg-ruta { background: linear-gradient(90deg, #F2ECF8 0%, #FCFAFE 100%); border-left-color: #7952A3; }
+    .reg-ruta .numero { background: #7952A3; } .reg-ruta .titulo { color: #593B7B; }
+    .reg-urbana { background: linear-gradient(90deg, #EAF6ED 0%, #F8FCF9 100%); border-left-color: #2E7D32; }
+    .reg-urbana .numero { background: #2E7D32; } .reg-urbana .titulo { color: #205B26; }
+    .reg-tecnica { background: linear-gradient(90deg, #FCECE8 0%, #FFF9F7 100%); border-left-color: #A74832; }
+    .reg-tecnica .numero { background: #A74832; } .reg-tecnica .titulo { color: #813524; }
+    .reg-muros { background: linear-gradient(90deg, #FFF2E0 0%, #FFFCF8 100%); border-left-color: #A45A00; }
+    .reg-muros .numero { background: #A45A00; } .reg-muros .titulo { color: #7B4300; }
+    .reg-piso { background: linear-gradient(90deg, #EDF2F5 0%, #FAFCFD 100%); border-left-color: #526D82; }
+    .reg-piso .numero { background: #526D82; } .reg-piso .titulo { color: #3E5669; }
+    .reg-techumbre { background: linear-gradient(90deg, #E6F6F8 0%, #F8FCFD 100%); border-left-color: #16869A; }
+    .reg-techumbre .numero { background: #16869A; } .reg-techumbre .titulo { color: #0E6877; }
+    .reg-documentos { background: linear-gradient(90deg, #F1ECF5 0%, #FCFAFD 100%); border-left-color: #73558E; }
+    .reg-documentos .numero { background: #73558E; } .reg-documentos .titulo { color: #563D6B; }
+    .reg-resultado { background: linear-gradient(90deg, #E7F1EA 0%, #F8FBF9 100%); border-left-color: #14532D; }
+    .reg-resultado .numero { background: #14532D; } .reg-resultado .titulo { color: #14532D; }
+
+    .reg-subtitulo {
+        font-size: 16.5px;
+        font-weight: 800;
+        margin: 13px 0 8px 0;
+        padding: 8px 12px;
+        border-radius: 8px;
+        background: #FAF8F7;
+        border-left: 4px solid #9B6B5A;
+        color: #543F37;
+    }
+
+    .reg-aviso {
+        background: linear-gradient(90deg, #FFF4E8 0%, #FFF9F4 100%);
+        border: 1px solid #E9C7AD;
+        border-left: 6px solid #B9683E;
+        color: #55382A;
+        padding: 14px 16px;
+        border-radius: 9px;
+        margin: 8px 0 20px 0;
+        font-size: 14px;
+        line-height: 1.55;
+    }
+
+    .reg-cierre {
+        background: linear-gradient(135deg, #EDF7F1 0%, #FAFCFB 100%);
+        border: 1px solid #CFE3D6;
+        border-top: 5px solid #1E7B44;
+        border-radius: 13px;
+        padding: 13px 16px 4px 16px;
+        margin: 18px 0 10px 0;
+    }
+
+    @media (max-width: 1050px) {
+        .reg-pasos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
 
 </style>
 """, unsafe_allow_html=True)
@@ -6448,18 +6609,27 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
 # ==========================================
 elif menu_seleccionado == "📋 Regularización Ley 20.898":
 
-    st.markdown("## 📋 Orientación para Edificación Existente – Ley N.º 20.898")
-    st.write(
-        "Este módulo está destinado a **edificaciones existentes sin regularizar**. "
-        "Su función es organizar los antecedentes del inmueble y entregar una orientación preliminar "
-        "respecto de los procedimientos especiales considerados en la Ley N.º 20.898 y sus modificaciones."
-    )
-
-    st.warning(
-        "⚠️ **Importante:** este resultado es únicamente orientativo. No constituye una aprobación, "
-        "permiso, recepción definitiva ni certificación de cumplimiento. La procedencia definitiva "
-        "debe ser revisada por el profesional competente y por la Dirección de Obras Municipales."
-    )
+    st.markdown("""
+    <div class="reg-hero">
+        <h2>📋 Regularización de Edificación Existente — Ley N.º 20.898</h2>
+        <p>Ruta orientativa para viviendas existentes sin regularizar · evaluación preliminar de requisitos, condiciones técnicas y antecedentes para revisión profesional.</p>
+    </div>
+    <div class="reg-pasos">
+        <div class="reg-paso reg-p1"><span>1</span>Datos del inmueble</div>
+        <div class="reg-paso reg-p2"><span>2</span>Condiciones generales</div>
+        <div class="reg-paso reg-p3"><span>3</span>Vía orientativa</div>
+        <div class="reg-paso reg-p4"><span>4</span>Revisión urbana</div>
+        <div class="reg-paso reg-p5"><span>5</span>Condiciones técnicas</div>
+        <div class="reg-paso reg-p6"><span>6</span>Muro existente</div>
+        <div class="reg-paso reg-p7"><span>7</span>Piso existente</div>
+        <div class="reg-paso reg-p8"><span>8</span>Techumbre</div>
+        <div class="reg-paso reg-p9"><span>9</span>Documentos</div>
+        <div class="reg-paso reg-p10"><span>10</span>Resultado</div>
+    </div>
+    <div class="reg-aviso">
+        <strong>⚠️ Alcance de esta ruta:</strong> el resultado es únicamente orientativo. No constituye aprobación, permiso, recepción definitiva ni certificación de cumplimiento. La procedencia del procedimiento debe ser revisada por un profesional competente y por la Dirección de Obras Municipales.
+    </div>
+    """, unsafe_allow_html=True)
 
     opciones_si_no = ["Seleccione una opción...", "Sí", "No", "No estoy seguro/a"]
 
@@ -6538,8 +6708,12 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
     # ==========================================
     # 1. DATOS DEL INMUEBLE A REGULARIZAR
     # ==========================================
-    st.markdown("---")
-    st.markdown("### 🏠 1. Datos del Inmueble a Regularizar")
+    st.markdown("""
+    <div class="reg-section reg-datos">
+        <span class="numero">1</span><span class="titulo">🏠 Datos del Inmueble a Regularizar</span>
+        <span class="descripcion">Reúne la geometría, superficie, zona PRC y avalúo fiscal de la edificación existente.</span>
+    </div>
+    """, unsafe_allow_html=True)
     st.caption(
         "Estos datos permiten calcular la ocupación real del predio y la constructibilidad de la edificación existente. "
         "Si ya completaste 'Datos del Terreno', puedes reutilizar esa información."
@@ -6592,7 +6766,7 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
 
     else:
         fuente_datos_regularizacion = "Ingreso manual"
-        st.markdown("#### 📐 Geometría existente")
+        st.markdown('<div class="reg-subtitulo">📐 Geometría existente</div>', unsafe_allow_html=True)
 
         man_col1, man_col2 = st.columns(2)
         with man_col1:
@@ -6678,7 +6852,7 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
         if zona_regularizacion.startswith("ZU-"):
             zona_codigo_reg = zona_regularizacion.split(" - ")[0]
 
-    st.markdown("#### 💰 Avalúo fiscal")
+    st.markdown('<div class="reg-subtitulo">💰 Avalúo fiscal</div>', unsafe_allow_html=True)
     avaluo_fiscal_uf = st.number_input(
         "Avalúo fiscal de la vivienda (UF):",
         min_value=0.0,
@@ -6778,8 +6952,12 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
     # ==========================================
     # 2. CONDICIONES GENERALES
     # ==========================================
-    st.markdown("---")
-    st.markdown("### 🧭 2. Condiciones Generales de la Edificación Existente")
+    st.markdown("""
+    <div class="reg-section reg-condiciones">
+        <span class="numero">2</span><span class="titulo">🧭 Condiciones Generales de la Edificación Existente</span>
+        <span class="descripcion">Revisa antecedentes básicos que permiten orientar si la vivienda puede continuar por una vía especial de regularización.</span>
+    </div>
+    """, unsafe_allow_html=True)
     st.caption(
         "Responde según los antecedentes disponibles. Cuando no tengas certeza, selecciona "
         "'No estoy seguro/a' para que el sistema mantenga la condición como pendiente de revisión."
@@ -6835,8 +7013,12 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
     # ==========================================
     # 3. EVALUACIÓN DE ACCESO
     # ==========================================
-    st.markdown("---")
-    st.markdown("### 🌳 3. Árbol de Orientación del Procedimiento")
+    st.markdown("""
+    <div class="reg-section reg-ruta">
+        <span class="numero">3</span><span class="titulo">🌳 Árbol de Orientación del Procedimiento</span>
+        <span class="descripcion">Relaciona los antecedentes ingresados con los umbrales del artículo 1° o artículo 3°, sin constituir una calificación definitiva.</span>
+    </div>
+    """, unsafe_allow_html=True)
 
     respuestas_obligatorias = [
         sin_recepcion,
@@ -6952,8 +7134,12 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
     # ==========================================
     # 4. REVISIÓN URBANÍSTICA ESPECIAL ARTÍCULO 3
     # ==========================================
-    st.markdown("---")
-    st.markdown("### 📐 4. Revisión Urbanística Especial")
+    st.markdown("""
+    <div class="reg-section reg-urbana">
+        <span class="numero">4</span><span class="titulo">📐 Revisión Urbanística Especial</span>
+        <span class="descripcion">Presenta las condiciones urbanísticas especiales consideradas para la vía del artículo 3° y las compara con los datos existentes.</span>
+    </div>
+    """, unsafe_allow_html=True)
 
     if procedimiento_orientativo == "Artículo 3°":
         st.caption(
@@ -6966,7 +7152,7 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
                 "⚠️ No es posible calcular los coeficientes porque falta la superficie del terreno."
             )
         else:
-            st.markdown("#### 📍 Coeficiente de ocupación")
+            st.markdown('<div class="reg-subtitulo">📍 Coeficiente de ocupación</div>', unsafe_allow_html=True)
 
             ocup_col1, ocup_col2, ocup_col3 = st.columns(3)
             with ocup_col1:
@@ -6999,7 +7185,7 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
                         "Con estos antecedentes no puede asumirse la excepción especial de ocupación del artículo 3°."
                     )
 
-            st.markdown("#### 🏗️ Coeficiente de constructibilidad")
+            st.markdown('<div class="reg-subtitulo">🏗️ Coeficiente de constructibilidad</div>', unsafe_allow_html=True)
             cons_col1, cons_col2, cons_col3 = st.columns(3)
             with cons_col1:
                 st.metric("Constructibilidad real", f"{coef_constructibilidad_real:.2f}")
@@ -7075,8 +7261,12 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
     # ==========================================
     # 5. REVISIÓN TÉCNICA ARTÍCULO 1
     # ==========================================
-    st.markdown("---")
-    st.markdown("### 🧱 5. Revisión Técnica Orientativa")
+    st.markdown("""
+    <div class="reg-section reg-tecnica">
+        <span class="numero">5</span><span class="titulo">🧱 Revisión Técnica Orientativa</span>
+        <span class="descripcion">Organiza condiciones de habitabilidad, seguridad, resistencia al fuego y antecedentes estructurales de la vivienda existente.</span>
+    </div>
+    """, unsafe_allow_html=True)
 
     if procedimiento_orientativo == "Artículo 1°":
         st.caption(
@@ -7291,7 +7481,7 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
                 "observaciones": observaciones_est,
             }
 
-        st.markdown("#### 🔎 Resultado técnico preliminar")
+        st.markdown('<div class="reg-subtitulo">🔎 Resultado técnico preliminar</div>', unsafe_allow_html=True)
 
         if altura_cielo >= 2.00:
             st.success(
@@ -7330,7 +7520,7 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
             else:
                 st.info("ℹ️ La condición F-60 del muro de adosamiento quedó pendiente de verificar.")
 
-        st.markdown("#### 🏗️ Orientación sobre proyecto de cálculo estructural")
+        st.markdown('<div class="reg-subtitulo">🏗️ Orientación sobre proyecto de cálculo estructural</div>', unsafe_allow_html=True)
         orientacion_calculo = "Debe verificarse según OGUC y antecedentes del proyecto."
 
         if materialidad_estructura == "Estructura de madera" and luz_maxima > 0:
@@ -7396,8 +7586,12 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
     # ==========================================
     # 6. REVISIÓN CONSTRUCTIVA Y TÉRMICA DE MUROS
     # ==========================================
-    st.markdown("---")
-    st.markdown("### 🧱 6. Revisión Constructiva y Térmica del Muro Existente")
+    st.markdown("""
+    <div class="reg-section reg-muros">
+        <span class="numero">6</span><span class="titulo">🧱 Revisión Constructiva y Térmica del Muro Existente</span>
+        <span class="descripcion">Compara la composición informada por el usuario con las soluciones de referencia seleccionadas para Zona Térmica D.</span>
+    </div>
+    """, unsafe_allow_html=True)
     st.caption(
         "Describe el muro perimetral predominante de la vivienda. El prototipo comparará la configuración "
         "ingresada con las soluciones de referencia seleccionadas desde LOSCAT para la Zona Térmica D. "
@@ -7459,7 +7653,7 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
                     )
 
         if sistema_muro_reg == "Entramado de madera":
-            st.markdown("#### 🪵 Composición informada – entramado de madera")
+            st.markdown('<div class="reg-subtitulo">🪵 Composición informada – entramado de madera</div>', unsafe_allow_html=True)
             muro_col1, muro_col2 = st.columns(2)
 
             with muro_col1:
@@ -7536,7 +7730,7 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
             }
 
         elif sistema_muro_reg == "Entramado de acero galvanizado":
-            st.markdown("#### 🔩 Composición informada – entramado de acero galvanizado")
+            st.markdown('<div class="reg-subtitulo">🔩 Composición informada – entramado de acero galvanizado</div>', unsafe_allow_html=True)
             muro_col1, muro_col2 = st.columns(2)
 
             with muro_col1:
@@ -7613,7 +7807,7 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
             }
 
         elif sistema_muro_reg == "Albañilería con EIFS":
-            st.markdown("#### 🧱 Composición informada – albañilería con aislación exterior")
+            st.markdown('<div class="reg-subtitulo">🧱 Composición informada – albañilería con aislación exterior</div>', unsafe_allow_html=True)
             muro_col1, muro_col2 = st.columns(2)
 
             with muro_col1:
@@ -7666,7 +7860,7 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
             }
 
         if fila_ref_muro is not None and datos_muro_ingresados:
-            st.markdown("#### 🔎 Comparación con solución de referencia")
+            st.markdown('<div class="reg-subtitulo">🔎 Comparación con solución de referencia</div>', unsafe_allow_html=True)
 
             # Funciones auxiliares locales para comparar sin atribuir prestaciones cuando faltan datos.
             def _texto_igual(valor_ingresado, valor_ref):
@@ -7893,8 +8087,12 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
     # ==========================================
     # 7. REVISIÓN CONSTRUCTIVA Y TÉRMICA DEL PISO
     # ==========================================
-    st.markdown("---")
-    st.markdown("### ⬛ 7. Revisión Constructiva y Térmica del Piso Existente")
+    st.markdown("""
+    <div class="reg-section reg-piso">
+        <span class="numero">7</span><span class="titulo">⬛ Revisión Constructiva y Térmica del Piso Existente</span>
+        <span class="descripcion">Distingue entre piso apoyado sobre terreno y piso ventilado para orientar su revisión constructiva y térmica.</span>
+    </div>
+    """, unsafe_allow_html=True)
     st.caption(
         "Selecciona la condición predominante del piso. Para un piso apoyado sobre terreno, el prototipo revisa "
         "el criterio constructivo de referencia y la aislación exterior del sobrecimiento. Para un piso ventilado, "
@@ -7930,7 +8128,7 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
             ]
             fila_ref_piso = referencia_piso.iloc[0] if not referencia_piso.empty else None
 
-            st.markdown("#### 🧱 Piso apoyado directamente sobre terreno")
+            st.markdown('<div class="reg-subtitulo">🧱 Piso apoyado directamente sobre terreno</div>', unsafe_allow_html=True)
             with st.expander("🖼️ Ver detalle visual de referencia del radier", expanded=False):
                 mostrar_imagen_solucion(
                     "piso_radier",
@@ -8055,7 +8253,7 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
             ]
             fila_ref_piso = referencia_piso.iloc[0] if not referencia_piso.empty else None
 
-            st.markdown("#### 🪵 Piso ventilado – entramado de madera")
+            st.markdown('<div class="reg-subtitulo">🪵 Piso ventilado – entramado de madera</div>', unsafe_allow_html=True)
             piso_col1, piso_col2 = st.columns(2)
 
             with piso_col1:
@@ -8286,8 +8484,12 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
     # ==========================================
     # 8. REVISIÓN CONSTRUCTIVA Y TÉRMICA DE TECHUMBRE
     # ==========================================
-    st.markdown("---")
-    st.markdown("### 🏠 8. Revisión Constructiva y Térmica de la Techumbre Existente")
+    st.markdown("""
+    <div class="reg-section reg-techumbre">
+        <span class="numero">8</span><span class="titulo">🏠 Revisión Constructiva y Térmica de la Techumbre Existente</span>
+        <span class="descripcion">Compara la techumbre informada con la solución de referencia utilizada en la tesis para Zona Térmica D.</span>
+    </div>
+    """, unsafe_allow_html=True)
     st.caption(
         "Describe la techumbre predominante. El prototipo compara los parámetros térmicos críticos ingresados "
         "con la solución LOSCAT de referencia seleccionada en la tesis para Zona Térmica D."
@@ -8325,7 +8527,7 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
                 st.caption(
                     "La imagen es una ayuda de reconocimiento; la verificación se realiza comparando la composición y espesores informados."
                 )
-            st.markdown("#### 🏠 Composición informada – techumbre liviana")
+            st.markdown('<div class="reg-subtitulo">🏠 Composición informada – techumbre liviana</div>', unsafe_allow_html=True)
             tech_col1, tech_col2 = st.columns(2)
 
             with tech_col1:
@@ -8551,8 +8753,12 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
     # ==========================================
     # 9. CHECKLIST DOCUMENTAL
     # ==========================================
-    st.markdown("---")
-    st.markdown("### 📑 9. Checklist Orientativo de Antecedentes")
+    st.markdown("""
+    <div class="reg-section reg-documentos">
+        <span class="numero">9</span><span class="titulo">📑 Checklist Orientativo de Antecedentes</span>
+        <span class="descripcion">Permite organizar los principales documentos y antecedentes que deberán revisarse para la tramitación correspondiente.</span>
+    </div>
+    """, unsafe_allow_html=True)
     st.caption(
         "Este listado sirve únicamente para organizar antecedentes. No valida documentos ni reemplaza "
         "la elaboración, firma o revisión profesional correspondiente."
@@ -8597,8 +8803,12 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
     # ==========================================
     # 10. RESULTADO FINAL Y GUARDADO
     # ==========================================
-    st.markdown("---")
-    st.markdown("### 📋 10. Resultado Final de la Revisión Preliminar")
+    st.markdown("""
+    <div class="reg-section reg-resultado">
+        <span class="numero">10</span><span class="titulo">📋 Resultado Final de la Revisión Preliminar</span>
+        <span class="descripcion">Consolida la vía orientativa, revisión urbanística, condiciones técnicas, envolvente existente y documentación pendiente.</span>
+    </div>
+    """, unsafe_allow_html=True)
     st.caption(
         "La síntesis reúne los antecedentes ingresados durante toda la evaluación. "
         "Los estados indican compatibilidad preliminar, observaciones o información pendiente; "
@@ -8631,7 +8841,7 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
     pendientes_finales = []
 
     # ---------- A. Ruta y datos generales ----------
-    st.markdown("#### 🧭 A. Vía preliminar identificada")
+    st.markdown('<div class="reg-subtitulo">🧭 A. Vía preliminar identificada</div>', unsafe_allow_html=True)
     if procedimiento_orientativo in ["Artículo 1°", "Artículo 3°"]:
         _mostrar_estado("Procedimiento", "ok", procedimiento_orientativo)
     elif procedimiento_orientativo in ["No se identifica acceso preliminar", "Fuera de los umbrales analizados"]:
@@ -8687,7 +8897,7 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
                 observaciones_finales.append(f"{nombre}: la respuesta ingresada requiere revisión.")
 
     # ---------- B. Revisión urbanística ----------
-    st.markdown("#### 📐 B. Revisión urbanística")
+    st.markdown('<div class="reg-subtitulo">📐 B. Revisión urbanística</div>', unsafe_allow_html=True)
     if procedimiento_orientativo == "Artículo 3°":
         if evaluacion_ocupacion_art3 == "Dentro del límite especial de 0,80":
             _mostrar_estado("Ocupación de suelo/pisos", "ok", evaluacion_ocupacion_art3)
@@ -8720,7 +8930,7 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
         _mostrar_estado("Revisión urbanística", "pendiente", "Se habilita una vez identificada una vía preliminar.")
 
     # ---------- C. Habitabilidad, seguridad y estabilidad ----------
-    st.markdown("#### 🧱 C. Habitabilidad, seguridad y estabilidad")
+    st.markdown('<div class="reg-subtitulo">🧱 C. Habitabilidad, seguridad y estabilidad</div>', unsafe_allow_html=True)
 
     def _tipo_estado_tecnico(estado):
         est = str(estado).lower()
@@ -8750,7 +8960,7 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
                     st.write(f"• {obs}")
 
     # ---------- D. Envolvente existente ----------
-    st.markdown("#### 🌡️ D. Envolvente constructiva existente")
+    st.markdown('<div class="reg-subtitulo">🌡️ D. Envolvente constructiva existente</div>', unsafe_allow_html=True)
     envolventes = [
         ("Muro", resultado_muro_regularizacion),
         ("Piso", resultado_piso_regularizacion),
@@ -8783,7 +8993,7 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
     )
 
     # ---------- E. Documentación ----------
-    st.markdown("#### 📑 E. Antecedentes documentales")
+    st.markdown('<div class="reg-subtitulo">📑 E. Antecedentes documentales</div>', unsafe_allow_html=True)
     docs_col_a, docs_col_b = st.columns(2)
     with docs_col_a:
         st.metric("Antecedentes identificados", f"{cantidad_docs} de {total_docs}")
@@ -8808,7 +9018,7 @@ elif menu_seleccionado == "📋 Regularización Ley 20.898":
     pendientes_finales = list(dict.fromkeys([x for x in pendientes_finales if x]))
 
     # ---------- F. Conclusión global ----------
-    st.markdown("#### 🧾 F. Conclusión preliminar")
+    st.markdown('<div class="reg-subtitulo">🧾 F. Conclusión preliminar</div>', unsafe_allow_html=True)
 
     if procedimiento_orientativo not in ["Artículo 1°", "Artículo 3°"]:
         if procedimiento_orientativo in ["No se identifica acceso preliminar", "Fuera de los umbrales analizados"]:
