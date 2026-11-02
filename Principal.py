@@ -1,6 +1,4 @@
-# VERSION: PASO19_PANEL_RUTAS_2026_11_02
-# BASE: PASO8_PUZZLE_FRENTE_IMAGENES_2026_10_19
-# VERSION: PASO6_RESULTADO_FINAL_REGULARIZACION_2026_10_19
+# VERSION: PASO20_REVISION_FINAL_2026_11_02
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -26,7 +24,6 @@ try:
 except Exception:
     REPORTLAB_DISPONIBLE = False
 
-# VERSION: PASO5_ENVOLVENTE_EXISTENTE_PISOS_TECHUMBRES_2026_10_19
 
 # ==========================================
 # CONFIGURACIÓN DE LA PÁGINA
@@ -2884,7 +2881,7 @@ def _encabezado_pagina_pdf(canvas, doc):
 
     canvas.setFillColor(azul)
     canvas.setFont('Helvetica-Bold', 11)
-    canvas.drawString(39 * mm, h - 14.2 * mm, 'VALIDADOR NORMATIVO DE AMPLIACIONES')
+    canvas.drawString(39 * mm, h - 14.2 * mm, 'ORIENTACIÓN TÉCNICA Y NORMATIVA')
     canvas.setFont('Helvetica', 7.5)
     canvas.setFillColor(colors.HexColor('#5B6B64'))
     canvas.drawString(39 * mm, h - 18.2 * mm, 'Prototipo de apoyo preliminar - Caso de estudio: San Miguel')
@@ -2912,7 +2909,7 @@ def generar_informe_pdf_futura_ampliacion(datos, propuesta):
         topMargin=31 * mm,
         bottomMargin=18 * mm,
         title='Informe preliminar de futura ampliación',
-        author='Validador Normativo de Ampliaciones',
+        author='Prototipo de Orientación Técnica y Normativa',
     )
 
     estilos_base = getSampleStyleSheet()
@@ -2966,7 +2963,7 @@ def generar_informe_pdf_futura_ampliacion(datos, propuesta):
     story.append(_tabla_datos_pdf(cabecera, estilos['small'], anchos=[43 * mm, 124 * mm]))
     story.append(Spacer(1, 5 * mm))
     story.append(_parrafo_pdf(
-        'Este documento resume los antecedentes ingresados al prototipo y sus verificaciones automatizadas. '
+        'Este documento resume los antecedentes ingresados al prototipo y sus revisiones preliminares automatizadas. '
         'No constituye permiso de edificación, aprobación de la Dirección de Obras Municipales ni certificación '
         'estructural, térmica o de resistencia al fuego.', estilos['nota']))
 
@@ -6154,7 +6151,7 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
             key="estacionamientos_disponibles_futura_input",
             help=(
                 "Indique cuántos espacios de estacionamiento podrán seguir utilizándose una vez construida la ampliación. "
-                "El prototipo compara la cantidad, pero no valida automáticamente sus dimensiones, accesos ni maniobras."
+                "El prototipo compara la cantidad, pero no verifica automáticamente sus dimensiones, accesos ni maniobras."
             ),
         )
         st.session_state.estacionamientos_disponibles_futura = int(estacionamientos_disponibles)
@@ -6719,7 +6716,7 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
         st.info(
             "✅ **Ruta de Futura Ampliación consolidada.** La propuesta integra geometría, ocupación y constructibilidad, "
             "emplazamiento, adosamiento, soluciones constructivas y dotación preliminar de estacionamientos. "
-            "Las siguientes etapas se orientan al diseño visual y a los casos de prueba del prototipo."
+            "El resultado debe interpretarse como orientación preliminar y complementarse con revisión profesional y municipal cuando corresponda."
         )
 
 # ==========================================
