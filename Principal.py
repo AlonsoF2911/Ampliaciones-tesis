@@ -1,4 +1,4 @@
-# VERSION: PASO13_ESTACIONAMIENTOS_PRC_2026_11_02
+# VERSION: PASO14_INFORME_PDF_PROFESIONAL_2026_11_02
 # BASE: PASO8_PUZZLE_FRENTE_IMAGENES_2026_10_19
 # VERSION: PASO6_RESULTADO_FINAL_REGULARIZACION_2026_10_19
 import streamlit as st
@@ -8,6 +8,23 @@ from matplotlib.patches import Rectangle, Patch
 from pathlib import Path
 from io import BytesIO
 import math
+import html
+from datetime import datetime
+
+try:
+    from reportlab.lib import colors
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import mm
+    from reportlab.lib.utils import ImageReader
+    from reportlab.platypus import (
+        SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
+        Image as PDFImage, PageBreak, KeepTogether
+    )
+    REPORTLAB_DISPONIBLE = True
+except Exception:
+    REPORTLAB_DISPONIBLE = False
 
 # VERSION: PASO5_ENVOLVENTE_EXISTENTE_PISOS_TECHUMBRES_2026_10_19
 
@@ -2061,6 +2078,553 @@ def calcular_adosamiento_futuro(datos, modulos, tolerancia=0.05):
     intervalos = obtener_intervalos_adosamiento_futuro(datos, modulos, tolerancia)
     return {lado: unir_longitudes_intervalos(tramos) for lado, tramos in intervalos.items()}
 
+
+
+# ==========================================
+# INFORME PDF PARA REVISIÓN PROFESIONAL
+# ==========================================
+def _limpiar_texto_pdf(valor):
+    """Normaliza texto para las fuentes estándar de ReportLab."""
+    if valor is None:
+        return "-"
+    texto = str(valor)
+    reemplazos = {
+        "✅": "OK -",
+        "⚠️": "OBS -",
+        "⚠": "OBS -",
+        "❌": "REVISAR -",
+        "🟨": "ADOSAMIENTO -",
+        "🔥": "",
+        "🧱": "",
+        "🏠": "",
+        "📐": "",
+        "🚗": "",
+        "📋": "",
+        "⬛": "",
+        "→": "->",
+        "≤": "<=",
+        "≥": ">=",
+        "×": "x",
+        "²": "2",
+        "–": "-",
+        "—": "-",
+        "•": "-",
+    }
+    for a, b in reemplazos.items():
+        texto = texto.replace(a, b)
+    return " ".join(texto.split())
+
+
+def _parrafo_pdf(texto, estilo):
+    return Paragraph(html.escape(_limpiar_texto_pdf(texto)), estilo)
+
+
+def _imagen_pdf_ajustada(origen, max_ancho, max_alto):
+    """Crea una imagen Platypus manteniendo proporción."""
+    try:
+        if hasattr(origen, "getvalue"):
+            contenido = origen.getvalue()
+            fuente_lector = BytesIO(contenido)
+            fuente_pdf = BytesIO(contenido)
+        else:
+            fuente_lector = origen
+            fuente_pdf = origen
+
+        lector = ImageReader(fuente_lector)
+        ancho_px, alto_px = lector.getSize()
+        if ancho_px <= 0 or alto_px <= 0:
+            return None
+        escala = min(float(max_ancho) / float(ancho_px), float(max_alto) / float(alto_px))
+        ancho = ancho_px * escala
+        alto = alto_px * escala
+        return PDFImage(fuente_pdf, width=ancho, height=alto)
+    except Exception:
+        return None
+
+
+def _tabla_datos_pdf(filas, estilo_celda, anchos=None, encabezado=False):
+    data = []
+    for fila in filas:
+        data.append([_parrafo_pdf(celda, estilo_celda) for celda in fila])
+    tabla = Table(data, colWidths=anchos, repeatRows=1 if encabezado else 0, hAlign='LEFT')
+    estilo = [
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('GRID', (0, 0), (-1, -1), 0.35, colors.HexColor('#CDD6D2')),
+        ('LEFTPADDING', (0, 0), (-1, -1), 5),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+    ]
+    if encabezado and data:
+        estilo += [
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#E8F1EC')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#174B36')),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ]
+    else:
+        for i in range(len(data)):
+            if i % 2 == 1:
+                estilo.append(('BACKGROUND', (0, i), (-1, i), colors.HexColor('#F7F9F8')))
+    tabla.setStyle(TableStyle(estilo))
+    return tabla
+
+
+def _filas_solucion_pdf(solucion, tipo):
+    if not solucion:
+        return [["Estado", "Pendiente / no seleccionada"]]
+
+    if tipo == 'muro':
+        campos = [
+            ('Código', 'Codigo_Solucion'),
+            ('Sistema', 'Sistema'),
+            ('Estructura principal', 'Estructura_Principal'),
+            ('Revestimiento interior', 'Revestimiento_Interior'),
+            ('Barrera de vapor', 'Barrera_Vapor'),
+            ('Aislación entre estructura', 'Aislante_Entre_Estructura'),
+            ('Placa estructural', 'Placa_Estructural'),
+            ('Aislación exterior', 'Aislacion_Exterior'),
+            ('Barrera de humedad', 'Barrera_Humedad'),
+            ('Revestimiento exterior', 'Revestimiento_Exterior'),
+            ('Transmitancia U', 'U_W_m2K'),
+            ('Resistencia térmica Rt', 'Rt_m2K_W'),
+            ('Compatibilidad Zona D', 'Compatibilidad_Zona_D'),
+            ('Resistencia al fuego', 'Resistencia_Fuego'),
+            ('Uso especial', 'Uso_Especial'),
+            ('Fuente', 'Fuente'),
+            ('Fuente fuego', 'Fuente_Fuego'),
+            ('Observación', 'Observacion'),
+        ]
+    elif tipo == 'piso':
+        campos = [
+            ('Código', 'Codigo_Solucion'),
+            ('Condición', 'Condicion_Piso'),
+            ('Sistema', 'Sistema'),
+            ('Pavimento', 'Pavimento_Terminacion'),
+            ('Placa estructural', 'Placa_Estructural'),
+            ('Estructura principal', 'Estructura_Principal'),
+            ('Aislante', 'Aislante'),
+            ('Barrera humedad/viento', 'Barrera_Humedad_Viento'),
+            ('Revestimiento inferior', 'Revestimiento_Inferior'),
+            ('Cama de ripio', 'Cama_Ripio_mm'),
+            ('Radier hormigón', 'Radier_Hormigon_mm'),
+            ('R100 mínimo sobrecimiento', 'R100_Min_Sobrecimiento'),
+            ('Transmitancia U', 'U_W_m2K'),
+            ('Resistencia térmica Rt', 'Rt_m2K_W'),
+            ('Compatibilidad Zona D', 'Compatibilidad_Zona_D'),
+            ('Fuente', 'Fuente'),
+            ('Observación', 'Observacion'),
+        ]
+    else:
+        campos = [
+            ('Código', 'Codigo_Solucion'),
+            ('Sistema', 'Sistema'),
+            ('Geometría', 'Geometria'),
+            ('Cielo interior', 'Cielo_Interior'),
+            ('Barrera de vapor', 'Barrera_Vapor'),
+            ('Listoneado', 'Listoneado_Cielo'),
+            ('Aislante', 'Aislante'),
+            ('Estructura principal', 'Estructura_Principal'),
+            ('Entretecho', 'Espacio_Entretecho'),
+            ('Ventilación', 'Ventilacion_Entretecho'),
+            ('Cubierta exterior', 'Cubierta_Exterior'),
+            ('Transmitancia U', 'U_W_m2K'),
+            ('Resistencia térmica Rt', 'Rt_m2K_W'),
+            ('Compatibilidad Zona D', 'Compatibilidad_Zona_D'),
+            ('Fuente', 'Fuente'),
+            ('Observación', 'Observacion'),
+        ]
+
+    filas = []
+    for etiqueta, clave in campos:
+        valor = solucion.get(clave)
+        if valor is None:
+            continue
+        try:
+            if pd.isna(valor):
+                continue
+        except Exception:
+            pass
+        texto = str(valor).strip()
+        if not texto or texto.lower() == 'nan':
+            continue
+        if clave in {'U_W_m2K', 'Rt_m2K_W'}:
+            try:
+                texto = f"{float(valor):.2f}"
+            except Exception:
+                pass
+        elif clave in {'Cama_Ripio_mm', 'Radier_Hormigon_mm'}:
+            try:
+                texto = f"{float(valor):.0f} mm"
+            except Exception:
+                pass
+        filas.append([etiqueta, texto])
+    return filas or [["Información", "Sin antecedentes adicionales"]]
+
+
+def _clave_imagen_piso_pdf(solucion):
+    if not solucion:
+        return None
+    codigo = str(solucion.get('Codigo_Solucion', '') or '').lower()
+    sistema = str(solucion.get('Sistema', '') or '').lower()
+    condicion = str(solucion.get('Condicion_Piso', '') or '').lower()
+    if 'radier' in codigo or 'radier' in sistema or 'terreno' in condicion:
+        return 'piso_radier'
+    if 'pv' in codigo or 'ventil' in sistema or 'ventil' in condicion:
+        return 'piso_ventilado'
+    return None
+
+
+def _encabezado_pagina_pdf(canvas, doc):
+    canvas.saveState()
+    w, h = A4
+    verde = colors.HexColor('#1E7B44')
+    azul = colors.HexColor('#23445C')
+
+    # Logo vectorial propio del prototipo: casa + bloques.
+    x0, y0 = 18 * mm, h - 22 * mm
+    canvas.setFillColor(verde)
+    canvas.roundRect(x0, y0, 17 * mm, 12 * mm, 2.2 * mm, fill=1, stroke=0)
+    canvas.setFillColor(colors.white)
+    canvas.rect(x0 + 4.0 * mm, y0 + 2.5 * mm, 8.5 * mm, 5.5 * mm, fill=0, stroke=1)
+    canvas.line(x0 + 3.2 * mm, y0 + 8.0 * mm, x0 + 8.3 * mm, y0 + 10.7 * mm)
+    canvas.line(x0 + 8.3 * mm, y0 + 10.7 * mm, x0 + 13.4 * mm, y0 + 8.0 * mm)
+    canvas.rect(x0 + 5.4 * mm, y0 + 3.0 * mm, 2.0 * mm, 3.0 * mm, fill=1, stroke=0)
+
+    canvas.setFillColor(azul)
+    canvas.setFont('Helvetica-Bold', 11)
+    canvas.drawString(39 * mm, h - 14.2 * mm, 'VALIDADOR NORMATIVO DE AMPLIACIONES')
+    canvas.setFont('Helvetica', 7.5)
+    canvas.setFillColor(colors.HexColor('#5B6B64'))
+    canvas.drawString(39 * mm, h - 18.2 * mm, 'Prototipo de apoyo preliminar - Caso de estudio: San Miguel')
+    canvas.setStrokeColor(colors.HexColor('#B9C7C0'))
+    canvas.line(18 * mm, h - 25 * mm, w - 18 * mm, h - 25 * mm)
+
+    canvas.setFont('Helvetica', 7)
+    canvas.setFillColor(colors.HexColor('#68746F'))
+    canvas.drawString(18 * mm, 10 * mm, 'Documento orientativo generado por el prototipo. Requiere revisión profesional y municipal.')
+    canvas.drawRightString(w - 18 * mm, 10 * mm, f'Página {doc.page}')
+    canvas.restoreState()
+
+
+def generar_informe_pdf_futura_ampliacion(datos, propuesta):
+    """Genera un informe PDF preliminar de la futura ampliación para revisión profesional."""
+    if not REPORTLAB_DISPONIBLE:
+        return None
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=18 * mm,
+        leftMargin=18 * mm,
+        topMargin=31 * mm,
+        bottomMargin=18 * mm,
+        title='Informe preliminar de futura ampliación',
+        author='Validador Normativo de Ampliaciones',
+    )
+
+    estilos_base = getSampleStyleSheet()
+    estilos = {
+        'titulo': ParagraphStyle(
+            'TituloInforme', parent=estilos_base['Title'], fontName='Helvetica-Bold',
+            fontSize=17, leading=20, textColor=colors.HexColor('#23445C'), spaceAfter=4,
+            alignment=TA_CENTER,
+        ),
+        'subtitulo': ParagraphStyle(
+            'SubtituloInforme', parent=estilos_base['Normal'], fontName='Helvetica',
+            fontSize=9.5, leading=13, textColor=colors.HexColor('#5B6B64'), spaceAfter=12,
+            alignment=TA_CENTER,
+        ),
+        'h1': ParagraphStyle(
+            'Seccion', parent=estilos_base['Heading2'], fontName='Helvetica-Bold',
+            fontSize=12.5, leading=15, textColor=colors.HexColor('#1E7B44'),
+            spaceBefore=10, spaceAfter=6,
+        ),
+        'h2': ParagraphStyle(
+            'Subseccion', parent=estilos_base['Heading3'], fontName='Helvetica-Bold',
+            fontSize=10.5, leading=13, textColor=colors.HexColor('#23445C'),
+            spaceBefore=7, spaceAfter=4,
+        ),
+        'normal': ParagraphStyle(
+            'NormalInforme', parent=estilos_base['Normal'], fontName='Helvetica',
+            fontSize=8.5, leading=11.2, textColor=colors.HexColor('#25332D'), spaceAfter=4,
+        ),
+        'small': ParagraphStyle(
+            'SmallInforme', parent=estilos_base['Normal'], fontName='Helvetica',
+            fontSize=7.3, leading=9.4, textColor=colors.HexColor('#25332D'),
+        ),
+        'nota': ParagraphStyle(
+            'NotaInforme', parent=estilos_base['Normal'], fontName='Helvetica-Oblique',
+            fontSize=7.5, leading=10, textColor=colors.HexColor('#5B6B64'),
+            leftIndent=5, rightIndent=5, spaceBefore=4, spaceAfter=6,
+        ),
+    }
+
+    story = []
+    story.append(_parrafo_pdf('INFORME PRELIMINAR PARA REVISIÓN PROFESIONAL', estilos['titulo']))
+    story.append(_parrafo_pdf('Futura ampliación domiciliaria - San Miguel', estilos['subtitulo']))
+
+    fecha = datetime.now().strftime('%d-%m-%Y %H:%M')
+    cabecera = [
+        ['Fecha de emisión', fecha],
+        ['Dirección informada', datos.get('direccion') or 'No informada'],
+        ['Zona PRC', datos.get('zona_completa') or datos.get('zona_codigo') or 'No informada'],
+        ['Resultado global', propuesta.get('resultado_global') or 'No evaluado'],
+    ]
+    story.append(_tabla_datos_pdf(cabecera, estilos['small'], anchos=[43 * mm, 124 * mm]))
+    story.append(Spacer(1, 5 * mm))
+    story.append(_parrafo_pdf(
+        'Este documento resume los antecedentes ingresados al prototipo y sus verificaciones automatizadas. '
+        'No constituye permiso de edificación, aprobación de la Dirección de Obras Municipales ni certificación '
+        'estructural, térmica o de resistencia al fuego.', estilos['nota']))
+
+    # 1. Datos del predio y vivienda existente
+    story.append(_parrafo_pdf('1. Datos del predio y vivienda existente', estilos['h1']))
+    filas_predio = [
+        ['Superficie del terreno', f"{float(datos.get('superficie_terreno', 0) or 0):.2f} m2"],
+        ['Dimensiones del terreno', f"{float(datos.get('ancho_terreno', 0) or 0):.2f} m x {float(datos.get('largo_terreno', 0) or 0):.2f} m"],
+        ['Frente predial', f"{float(datos.get('frente_predio', 0) or 0):.2f} m"],
+        ['Vía que enfrenta', datos.get('via_frente') or 'No informada'],
+        ['Superficie existente Piso 1', f"{float(datos.get('superficie_piso1', 0) or 0):.2f} m2"],
+        ['Superficie existente Piso 2', f"{float(datos.get('superficie_piso2', 0) or 0):.2f} m2"],
+        ['Superficie total existente', f"{float(datos.get('superficie_total_vivienda', 0) or 0):.2f} m2"],
+        ['Antejardín informado', f"{float(datos.get('antejardin_actual', 0) or 0):.2f} m"],
+        ['Deslinde izquierdo', 'Adosado' if datos.get('adosado_izquierdo') else f"{float(datos.get('distancia_izquierda', 0) or 0):.2f} m"],
+        ['Deslinde derecho', 'Adosado' if datos.get('adosado_derecho') else f"{float(datos.get('distancia_derecha', 0) or 0):.2f} m"],
+        ['Deslinde posterior', 'Adosado' if datos.get('adosado_posterior') else f"{float(datos.get('distancia_posterior', 0) or 0):.2f} m"],
+    ]
+    story.append(_tabla_datos_pdf(filas_predio, estilos['small'], anchos=[57 * mm, 110 * mm]))
+
+    story.append(_parrafo_pdf('Parámetros urbanísticos utilizados', estilos['h2']))
+    filas_urbanas = [
+        ['Coeficiente de ocupación', f"{float(datos.get('coef_ocupacion')):.2f}" if datos.get('coef_ocupacion') is not None else 'No disponible'],
+        ['Coeficiente de constructibilidad', f"{float(datos.get('coef_constructibilidad')):.2f}" if datos.get('coef_constructibilidad') is not None else 'No disponible'],
+        ['Máxima ocupación preliminar', f"{float(datos.get('superficie_maxima_ocupacion')):.2f} m2" if datos.get('superficie_maxima_ocupacion') is not None else 'No disponible'],
+        ['Máxima superficie construible', f"{float(datos.get('superficie_maxima_construible')):.2f} m2" if datos.get('superficie_maxima_construible') is not None else 'No disponible'],
+    ]
+    story.append(_tabla_datos_pdf(filas_urbanas, estilos['small'], anchos=[57 * mm, 110 * mm]))
+
+    # 2. Propuesta
+    story.append(_parrafo_pdf('2. Futura ampliación propuesta', estilos['h1']))
+    filas_sup = [
+        ['Ampliación Piso 1', f"{float(propuesta.get('superficie_ampliacion_piso1', 0) or 0):.2f} m2"],
+        ['Ampliación Piso 2', f"{float(propuesta.get('superficie_ampliacion_piso2', 0) or 0):.2f} m2"],
+        ['Ampliación total', f"{float(propuesta.get('superficie_total_ampliacion', 0) or 0):.2f} m2"],
+        ['Piso 1 proyectado', f"{float(propuesta.get('piso1_proyectado', 0) or 0):.2f} m2"],
+        ['Piso 2 proyectado', f"{float(propuesta.get('piso2_proyectado', 0) or 0):.2f} m2"],
+        ['Vivienda total proyectada', f"{float(propuesta.get('vivienda_total_proyectada', 0) or 0):.2f} m2"],
+    ]
+    story.append(_tabla_datos_pdf(filas_sup, estilos['small'], anchos=[57 * mm, 110 * mm]))
+
+    rev_mods = {}
+    for r in propuesta.get('revision_emplazamiento', {}).get('modulos', []):
+        rev_mods[(r.get('numero'), r.get('piso'))] = r
+    filas_modulos = [['Módulo', 'Piso', 'Dimensiones', 'Superficie', 'Ubicación', 'Altura']]
+    for m in propuesta.get('modulos', []):
+        rev = rev_mods.get((m.get('numero'), m.get('piso')), {})
+        altura = rev.get('altura_total_m')
+        filas_modulos.append([
+            str(m.get('numero', '')),
+            m.get('piso', ''),
+            f"{float(m.get('largo', 0) or 0):.2f} x {float(m.get('ancho', 0) or 0):.2f} m",
+            f"{float(m.get('superficie', 0) or 0):.2f} m2",
+            m.get('ubicacion', ''),
+            f"{float(altura):.2f} m" if altura is not None else 'Pendiente',
+        ])
+    story.append(Spacer(1, 2 * mm))
+    story.append(_tabla_datos_pdf(
+        filas_modulos, estilos['small'], encabezado=True,
+        anchos=[12 * mm, 20 * mm, 30 * mm, 23 * mm, 58 * mm, 24 * mm]
+    ))
+
+    # Croquis del puzle guardado
+    story.append(_parrafo_pdf('Croquis de emplazamiento guardado', estilos['h2']))
+    posiciones_puzzle_original = dict(st.session_state.get('posiciones_puzzle', {}))
+    posiciones_vivienda_original = dict(st.session_state.get('posiciones_vivienda', {}))
+    try:
+        st.session_state.posiciones_puzzle = {
+            k: dict(v) for k, v in propuesta.get('posiciones_puzzle', {}).items()
+        }
+        st.session_state.posiciones_vivienda = {
+            k: dict(v) for k, v in propuesta.get('posiciones_vivienda', {}).items()
+        }
+        pisos_reporte = ['Piso 1']
+        if float(propuesta.get('superficie_ampliacion_piso2', 0) or 0) > 0 or bool(datos.get('tiene_piso2')):
+            pisos_reporte.append('Piso 2')
+        for piso_rep in pisos_reporte:
+            fig_rep, _, img_rep = crear_croquis_puzzle(datos, propuesta.get('modulos', []), piso_rep)
+            if img_rep is not None:
+                bytes_img = img_rep.getvalue()
+                img_pdf = _imagen_pdf_ajustada(BytesIO(bytes_img), 155 * mm, 105 * mm)
+                if img_pdf is not None:
+                    story.append(_parrafo_pdf(piso_rep, estilos['h2']))
+                    story.append(img_pdf)
+                    story.append(Spacer(1, 2 * mm))
+            if fig_rep is not None:
+                plt.close(fig_rep)
+    except Exception as exc:
+        story.append(_parrafo_pdf(f'Croquis no disponible en el informe: {exc}', estilos['nota']))
+    finally:
+        st.session_state.posiciones_puzzle = posiciones_puzzle_original
+        st.session_state.posiciones_vivienda = posiciones_vivienda_original
+
+    # 3. Revisión normativa
+    story.append(PageBreak())
+    story.append(_parrafo_pdf('3. Resumen de verificaciones preliminares', estilos['h1']))
+    filas_resumen = [['Área revisada', 'Estado', 'Detalle']]
+    for fila in propuesta.get('resumen_final', []):
+        filas_resumen.append([
+            fila.get('Área revisada', ''),
+            fila.get('Estado', ''),
+            fila.get('Detalle', ''),
+        ])
+    story.append(_tabla_datos_pdf(
+        filas_resumen, estilos['small'], encabezado=True,
+        anchos=[37 * mm, 38 * mm, 92 * mm]
+    ))
+
+    # Detalle de vanos, distancias y rasante
+    story.append(_parrafo_pdf('Altura, vanos, distanciamientos y rasante', estilos['h2']))
+    for r in propuesta.get('revision_emplazamiento', {}).get('modulos', []):
+        story.append(_parrafo_pdf(
+            f"Módulo {r.get('numero')} - {r.get('piso')} - altura declarada: {float(r.get('altura_total_m', 0) or 0):.2f} m",
+            estilos['normal']))
+        filas_lados = [['Deslinde', 'Distancia', 'Vano', 'Mínimo', 'Rasante aprox.', 'Resultado']]
+        for lado in r.get('resultados_lados', []):
+            dist = lado.get('distancia')
+            minimo = lado.get('distancia_minima')
+            hmax = lado.get('altura_maxima_rasante_aprox')
+            if lado.get('tipo') == 'adosado':
+                minimo_txt = 'Adosamiento'
+                hmax_txt = 'No aplica a tramo adosado'
+                resultado = 'Adosamiento detectado' if lado.get('estado') == 'ok' else 'Revisar condición especial'
+            elif lado.get('estado') == 'pendiente':
+                minimo_txt = 'Pendiente'
+                hmax_txt = 'Pendiente'
+                resultado = 'Pendiente'
+            else:
+                minimo_txt = f"{float(minimo):.2f} m" if minimo is not None else '-'
+                hmax_txt = f"{float(hmax):.2f} m" if hmax is not None else '-'
+                resultado = 'Compatible' if lado.get('estado') == 'ok' else 'Revisar'
+            filas_lados.append([
+                lado.get('lado', ''),
+                f"{float(dist):.2f} m" if dist is not None else '-',
+                'Sí' if lado.get('vano') else 'No',
+                minimo_txt,
+                hmax_txt,
+                resultado,
+            ])
+        story.append(_tabla_datos_pdf(
+            filas_lados, estilos['small'], encabezado=True,
+            anchos=[25 * mm, 25 * mm, 16 * mm, 27 * mm, 42 * mm, 32 * mm]
+        ))
+        story.append(Spacer(1, 3 * mm))
+
+    # Adosamientos
+    ados = propuesta.get('revision_emplazamiento', {}).get('adosamientos', {})
+    if ados:
+        story.append(_parrafo_pdf('Revisión global de adosamiento', estilos['h2']))
+        filas_ados = [['Deslinde', 'Existente', 'Futuro', 'Total unión', '%', 'Resultado']]
+        for lado, info in ados.items():
+            filas_ados.append([
+                lado,
+                f"{float(info.get('longitud_existente_detectada_m', 0) or 0):.2f} m",
+                f"{float(info.get('longitud_futura_m', 0) or 0):.2f} m",
+                f"{float(info.get('longitud_total_union_m', 0) or 0):.2f} m",
+                f"{float(info.get('porcentaje_preliminar', 0) or 0):.1f}%",
+                'Dentro 40%' if info.get('cumple_limite_general_40') else 'Revisar / supera 40%',
+            ])
+        story.append(_tabla_datos_pdf(
+            filas_ados, estilos['small'], encabezado=True,
+            anchos=[28 * mm, 27 * mm, 27 * mm, 30 * mm, 20 * mm, 35 * mm]
+        ))
+
+    # Estacionamientos
+    story.append(_parrafo_pdf('Estacionamientos', estilos['h2']))
+    filas_est = [
+        ['Tramo PRC', propuesta.get('tramo_estacionamiento_prc', '-')],
+        ['Regla utilizada', propuesta.get('regla_estacionamiento_prc', '-')],
+        ['Requeridos preliminarmente', str(propuesta.get('estacionamientos_requeridos', '-'))],
+        ['Disponibles declarados', str(propuesta.get('estacionamientos_disponibles', '-'))],
+    ]
+    story.append(_tabla_datos_pdf(filas_est, estilos['small'], anchos=[57 * mm, 110 * mm]))
+
+    # 4. Soluciones constructivas
+    story.append(PageBreak())
+    story.append(_parrafo_pdf('4. Especificaciones técnicas de soluciones seleccionadas', estilos['h1']))
+
+    soluciones = [
+        ('Muro perimetral', propuesta.get('solucion_muro'), 'muro', None),
+    ]
+    if propuesta.get('hay_adosamiento_futuro'):
+        soluciones.append(('Muro especial de adosamiento F-60', propuesta.get('solucion_muro_adosamiento_f60'), 'muro', 'muro_f60'))
+    if float(propuesta.get('superficie_ampliacion_piso1', 0) or 0) > 0:
+        soluciones.append(('Piso ampliación - Piso 1', propuesta.get('solucion_piso1'), 'piso', None))
+    if float(propuesta.get('superficie_ampliacion_piso2', 0) or 0) > 0:
+        soluciones.append(('Piso ampliación - Piso 2', propuesta.get('solucion_piso2'), 'piso', None))
+    soluciones.append(('Techumbre', propuesta.get('solucion_techumbre'), 'techumbre', 'techumbre_madera'))
+
+    for titulo_sol, sol, tipo_sol, clave_img_forzada in soluciones:
+        story.append(_parrafo_pdf(titulo_sol, estilos['h2']))
+        story.append(_tabla_datos_pdf(
+            _filas_solucion_pdf(sol, tipo_sol), estilos['small'], anchos=[52 * mm, 115 * mm]
+        ))
+
+        clave_img = clave_img_forzada
+        if tipo_sol == 'muro' and clave_img is None and sol:
+            clave_img = clave_imagen_muro(sol.get('Sistema', ''), sol.get('Codigo_Solucion', ''))
+        elif tipo_sol == 'piso' and clave_img is None:
+            clave_img = _clave_imagen_piso_pdf(sol)
+
+        nombre_img = IMAGENES_SOLUCIONES.get(clave_img) if clave_img else None
+        if nombre_img:
+            ruta_img = CARPETA_PROYECTO / nombre_img
+            if ruta_img.exists():
+                img_pdf = _imagen_pdf_ajustada(str(ruta_img), 145 * mm, 90 * mm)
+                if img_pdf is not None:
+                    story.append(Spacer(1, 2 * mm))
+                    story.append(img_pdf)
+        story.append(Spacer(1, 5 * mm))
+
+    # 5. Observaciones y espacio para revisión
+    story.append(PageBreak())
+    story.append(_parrafo_pdf('5. Observaciones finales', estilos['h1']))
+    grupos = [
+        ('Incompatibilidades detectadas', propuesta.get('incompatibilidades_finales', [])),
+        ('Observaciones / revisiones complementarias', propuesta.get('observaciones_finales', [])),
+        ('Antecedentes pendientes', propuesta.get('pendientes_finales', [])),
+    ]
+    hay_items = False
+    for nombre_grupo, items in grupos:
+        if items:
+            hay_items = True
+            story.append(_parrafo_pdf(nombre_grupo, estilos['h2']))
+            for item in items:
+                story.append(_parrafo_pdf(f"- {item}", estilos['normal']))
+    if not hay_items:
+        story.append(_parrafo_pdf('No se registran observaciones adicionales en los parámetros automatizados.', estilos['normal']))
+
+    story.append(Spacer(1, 7 * mm))
+    story.append(_parrafo_pdf('Espacio para revisión profesional', estilos['h1']))
+    filas_revision_prof = [
+        ['Profesional revisor', '____________________________________________'],
+        ['Profesión / especialidad', '____________________________________________'],
+        ['Fecha de revisión', '____________________________________________'],
+        ['Observación 1', '____________________________________________'],
+        ['Observación 2', '____________________________________________'],
+        ['Observación 3', '____________________________________________'],
+    ]
+    tabla_prof = _tabla_datos_pdf(filas_revision_prof, estilos['small'], anchos=[48 * mm, 119 * mm])
+    story.append(tabla_prof)
+    story.append(Spacer(1, 5 * mm))
+    story.append(_parrafo_pdf(
+        'Nota: el informe está diseñado para facilitar una revisión preliminar. La definición final del proyecto, '
+        'sus cálculos, especificaciones y antecedentes para permiso deben ser desarrollados o validados por los '
+        'profesionales competentes y revisados por la Dirección de Obras Municipales según corresponda.', estilos['nota']))
+
+    doc.build(story, onFirstPage=_encabezado_pagina_pdf, onLaterPages=_encabezado_pagina_pdf)
+    buffer.seek(0)
+    return buffer.getvalue()
 
 # ==========================================
 # BARRA LATERAL
@@ -5340,6 +5904,40 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
                         "⚠️ Pendientes técnicos guardados: "
                         + ", ".join(propuesta.get("pendientes_tecnicos", []))
                     )
+
+            st.markdown("### 📄 Informe PDF para revisión profesional")
+            st.write(
+                "Descarga una ficha técnica preliminar con los datos del predio, la futura ampliación, "
+                "el croquis del puzle, verificaciones normativas, estacionamientos y las especificaciones "
+                "de las soluciones constructivas seleccionadas."
+            )
+            st.caption(
+                "El PDF está pensado como antecedente de apoyo para que un profesional pueda revisar la propuesta con mayor facilidad."
+            )
+
+            if REPORTLAB_DISPONIBLE:
+                try:
+                    pdf_informe = generar_informe_pdf_futura_ampliacion(datos, propuesta)
+                    if pdf_informe:
+                        st.download_button(
+                            label="📥 Descargar informe preliminar en PDF",
+                            data=pdf_informe,
+                            file_name="Informe_Preliminar_Futura_Ampliacion_San_Miguel.pdf",
+                            mime="application/pdf",
+                            type="primary",
+                            use_container_width=True,
+                            key="descargar_pdf_futura_ampliacion",
+                        )
+                except Exception as error_pdf:
+                    st.error(
+                        "No fue posible generar el PDF en esta sesión. Verifica que `reportlab` esté instalado "
+                        "y vuelve a intentar. Detalle: " + str(error_pdf)
+                    )
+            else:
+                st.warning(
+                    "⚠️ Para habilitar la descarga PDF en Streamlit debe instalarse la dependencia `reportlab`. "
+                    "Sube también el archivo `requirements.txt` entregado con esta versión."
+                )
 
         st.markdown("---")
         st.info(
