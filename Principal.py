@@ -1,4 +1,4 @@
-# VERSION: PASO12_RESUMEN_FINAL_FUTURA_AMPLIACION_2026_11_02
+# VERSION: PASO13_ESTACIONAMIENTOS_PRC_2026_11_02
 # BASE: PASO8_PUZZLE_FRENTE_IMAGENES_2026_10_19
 # VERSION: PASO6_RESULTADO_FINAL_REGULARIZACION_2026_10_19
 import streamlit as st
@@ -4764,9 +4764,109 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
         st.markdown("---")
 
         # ==========================================
-        # 7. RESULTADO FINAL DE FUTURA AMPLIACIÓN
+        # 7. ESTACIONAMIENTOS SEGÚN PRC SAN MIGUEL
         # ==========================================
-        st.markdown("### 📋 7. Resultado Final de la Revisión Preliminar")
+        st.markdown("### 🚗 7. Estacionamientos según PRC de San Miguel")
+        st.write(
+            "El PRC establece una dotación de estacionamientos para uso vivienda según la superficie "
+            "de cada unidad. Para este prototipo se considera **una vivienda unifamiliar** y la superficie "
+            "total proyectada después de la ampliación."
+        )
+
+        # Estándares residenciales del art. 14 del PRC. Las Zonas C y E poseen los mismos
+        # estándares para vivienda dentro del alcance de este prototipo. Las cifras intermedias
+        # resultantes deben aproximarse al entero superior.
+        if vivienda_total_proyectada <= 35:
+            factor_estacionamiento = 1 / 5
+            tramo_estacionamiento = "0 a 35 m²"
+            regla_estacionamiento = "1 estacionamiento por cada 5 viviendas"
+        elif vivienda_total_proyectada <= 50:
+            factor_estacionamiento = 1 / 4
+            tramo_estacionamiento = "Más de 35 y hasta 50 m²"
+            regla_estacionamiento = "1 estacionamiento por cada 4 viviendas"
+        elif vivienda_total_proyectada <= 100:
+            factor_estacionamiento = 1 / 3
+            tramo_estacionamiento = "Más de 50 y hasta 100 m²"
+            regla_estacionamiento = "1 estacionamiento por cada 3 viviendas"
+        elif vivienda_total_proyectada <= 150:
+            factor_estacionamiento = 1.0
+            tramo_estacionamiento = "Más de 100 y hasta 150 m²"
+            regla_estacionamiento = "1 estacionamiento por vivienda"
+        else:
+            factor_estacionamiento = 2.0
+            tramo_estacionamiento = "Más de 150 m²"
+            regla_estacionamiento = "2 estacionamientos por vivienda"
+
+        numero_viviendas_estacionamiento = 1
+        estacionamientos_requeridos = int(math.ceil(factor_estacionamiento * numero_viviendas_estacionamiento - 1e-12))
+
+        est_col1, est_col2, est_col3 = st.columns(3)
+        with est_col1:
+            st.metric("Superficie final vivienda", f"{vivienda_total_proyectada:.2f} m²")
+        with est_col2:
+            st.metric("Tramo PRC", tramo_estacionamiento)
+        with est_col3:
+            st.metric("Dotación preliminar", f"{estacionamientos_requeridos} estacionamiento" + ("" if estacionamientos_requeridos == 1 else "s"))
+
+        st.info(
+            f"📘 **Regla utilizada:** {regla_estacionamiento}. Como el proyecto corresponde a una sola vivienda, "
+            f"el cálculo da {factor_estacionamiento * numero_viviendas_estacionamiento:.2f} y el PRC indica que las "
+            "cifras intermedias deben aproximarse al entero superior."
+        )
+
+        estacionamientos_disponibles = st.number_input(
+            "¿Cuántos estacionamientos utilizables quedarán dentro del predio después de ejecutar la ampliación?",
+            min_value=0,
+            max_value=10,
+            value=int(st.session_state.get("estacionamientos_disponibles_futura", 1)),
+            step=1,
+            key="estacionamientos_disponibles_futura_input",
+            help=(
+                "Indique cuántos espacios de estacionamiento podrán seguir utilizándose una vez construida la ampliación. "
+                "El prototipo compara la cantidad, pero no valida automáticamente sus dimensiones, accesos ni maniobras."
+            ),
+        )
+        st.session_state.estacionamientos_disponibles_futura = int(estacionamientos_disponibles)
+
+        if estacionamientos_disponibles >= estacionamientos_requeridos:
+            estado_estacionamientos = "✅ Compatible en cantidad"
+            detalle_estacionamientos = (
+                f"Se requieren preliminarmente {estacionamientos_requeridos} y se declaran "
+                f"{int(estacionamientos_disponibles)} disponibles después de la ampliación."
+            )
+            st.success(
+                f"✅ **Cantidad compatible preliminarmente:** se requieren {estacionamientos_requeridos} y quedarán "
+                f"{int(estacionamientos_disponibles)} estacionamiento(s) utilizable(s)."
+            )
+        else:
+            estado_estacionamientos = "❌ Revisar"
+            detalle_estacionamientos = (
+                f"Se requieren preliminarmente {estacionamientos_requeridos}, pero se declaran "
+                f"{int(estacionamientos_disponibles)} disponibles después de la ampliación."
+            )
+            st.error(
+                f"❌ **Falta dotación de estacionamientos:** el PRC arroja {estacionamientos_requeridos} "
+                f"estacionamiento(s) y quedarían {int(estacionamientos_disponibles)}."
+            )
+
+        with st.expander("ℹ️ ¿Qué revisa y qué no revisa este cálculo?"):
+            st.write(
+                "• **Sí revisa:** la cantidad preliminar de estacionamientos según la superficie final de la vivienda.\n"
+                "• **No revisa automáticamente:** dimensiones del cajón, radios de giro, ancho de acceso, rebajes de solera, "
+                "pendientes de rampas ni otras condiciones particulares del proyecto.\n"
+                "• Para vivienda, los estándares indicados por el PRC son equivalentes en las Zonas C y E consideradas para estacionamientos."
+            )
+
+        st.caption(
+            "La revisión de estacionamientos es orientativa y se limita a la dotación cuantitativa incorporada al prototipo."
+        )
+
+        st.markdown("---")
+
+        # ==========================================
+        # 8. RESULTADO FINAL DE FUTURA AMPLIACIÓN
+        # ==========================================
+        st.markdown("### 📋 8. Resultado Final de la Revisión Preliminar")
         st.write(
             "Este resumen reúne los principales resultados urbanísticos, geométricos y constructivos "
             "de la propuesta. Su resultado es **preliminar** y no constituye permiso, aprobación municipal "
@@ -4832,6 +4932,20 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
             "Estado": estado_construct,
             "Detalle": detalle_construct,
         })
+
+        # ------------------------------
+        # Estacionamientos
+        # ------------------------------
+        filas_resultado_final_futura.append({
+            "Área revisada": "Estacionamientos",
+            "Estado": estado_estacionamientos,
+            "Detalle": detalle_estacionamientos,
+        })
+        if estacionamientos_disponibles < estacionamientos_requeridos:
+            incompatibilidades_finales_futura.append(
+                f"La vivienda proyectada requiere preliminarmente {estacionamientos_requeridos} estacionamiento(s), "
+                f"pero se declararon {int(estacionamientos_disponibles)} disponibles después de la ampliación."
+            )
 
         # ------------------------------
         # Emplazamiento: distancias, rasante y antejardín
@@ -5106,6 +5220,10 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
                             if margen_constructibilidad_proyectada is not None
                             else None
                         ),
+                        "estacionamientos_requeridos": int(estacionamientos_requeridos),
+                        "estacionamientos_disponibles": int(estacionamientos_disponibles),
+                        "tramo_estacionamiento_prc": tramo_estacionamiento,
+                        "regla_estacionamiento_prc": regla_estacionamiento,
                         "posiciones_puzzle": {
                             clave: dict(valor)
                             for clave, valor in st.session_state.posiciones_puzzle.items()
@@ -5153,6 +5271,11 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
                 )
                 if propuesta.get("resultado_global"):
                     st.write(f"**Resultado global:** {propuesta.get('resultado_global')}")
+                if propuesta.get("estacionamientos_requeridos") is not None:
+                    st.write(
+                        f"**Estacionamientos:** {propuesta.get('estacionamientos_disponibles', 0)} disponibles / "
+                        f"{propuesta.get('estacionamientos_requeridos', 0)} requeridos preliminarmente"
+                    )
 
                 st.markdown("**Módulos:**")
 
@@ -5220,9 +5343,9 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
 
         st.markdown("---")
         st.info(
-            "✅ **Soluciones constructivas incorporadas.** La propuesta ahora puede guardar muro, piso y techumbre "
-            "junto con la geometría del editor. La siguiente etapa puede profundizar la revisión de altura, vanos, "
-            "distanciamientos y rasantes de la futura ampliación."
+            "✅ **Ruta de Futura Ampliación consolidada.** La propuesta integra geometría, ocupación y constructibilidad, "
+            "emplazamiento, adosamiento, soluciones constructivas y dotación preliminar de estacionamientos. "
+            "Las siguientes etapas se orientan al diseño visual y a los casos de prueba del prototipo."
         )
 
 # ==========================================
