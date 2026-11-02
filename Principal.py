@@ -1,4 +1,4 @@
-# VERSION: PASO16_DATOS_TERRENO_COLOR_2026_11_02
+# VERSION: PASO17_FUTURA_AMPLIACION_COLOR_2026_11_02
 # BASE: PASO8_PUZZLE_FRENTE_IMAGENES_2026_10_19
 # VERSION: PASO6_RESULTADO_FINAL_REGULARIZACION_2026_10_19
 import streamlit as st
@@ -301,6 +301,168 @@ st.markdown("""
     @media (max-width: 900px) {
         .datos-pasos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
+
+    /* ==========================================
+       FUTURA AMPLIACION - PASO 17
+       ========================================== */
+    .amp-hero {
+        background: linear-gradient(135deg, #173B57 0%, #1F5D78 58%, #2F7894 100%);
+        color: white;
+        padding: 25px 27px;
+        border-radius: 14px;
+        margin-bottom: 14px;
+        box-shadow: 0 7px 18px rgba(23, 59, 87, 0.20);
+    }
+
+    .amp-hero h2 {
+        margin: 0 0 7px 0;
+        font-size: 29px;
+        font-weight: 800;
+        color: white;
+    }
+
+    .amp-hero p {
+        margin: 0;
+        color: #EAF5FA;
+        font-size: 15px;
+        line-height: 1.55;
+    }
+
+    .amp-pasos {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 9px;
+        margin: 5px 0 22px 0;
+    }
+
+    .amp-paso {
+        background: white;
+        border: 1px solid #D6E0E6;
+        border-radius: 10px;
+        padding: 9px 11px;
+        font-size: 12.5px;
+        font-weight: 750;
+        color: #354955;
+        box-shadow: 0 2px 7px rgba(0,0,0,0.035);
+    }
+
+    .amp-paso span {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 23px;
+        height: 23px;
+        border-radius: 50%;
+        color: white;
+        margin-right: 6px;
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+    .amp-p1 span { background: #2878A0; }
+    .amp-p2 span { background: #D97706; }
+    .amp-p3 span { background: #0F766E; }
+    .amp-p4 span { background: #2E7D32; }
+    .amp-p5 span { background: #6D4C91; }
+    .amp-p6 span { background: #A45A00; }
+    .amp-p7 span { background: #16869A; }
+    .amp-p8 span { background: #14532D; }
+
+    .amp-section {
+        padding: 14px 18px;
+        border-radius: 12px;
+        margin: 13px 0 14px 0;
+        border-left: 7px solid;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.045);
+    }
+
+    .amp-section .numero {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        color: white;
+        font-weight: 800;
+        margin-right: 8px;
+    }
+
+    .amp-section .titulo {
+        font-size: 20px;
+        font-weight: 800;
+        vertical-align: middle;
+    }
+
+    .amp-section .descripcion {
+        display: block;
+        margin: 5px 0 0 40px;
+        font-size: 13px;
+        line-height: 1.45;
+        color: #56656D;
+    }
+
+    .amp-base { background: linear-gradient(90deg, #E9F4FA 0%, #F8FCFE 100%); border-left-color: #2878A0; }
+    .amp-base .numero { background: #2878A0; } .amp-base .titulo { color: #1B5C7B; }
+    .amp-modulos { background: linear-gradient(90deg, #FFF1DF 0%, #FFFDF8 100%); border-left-color: #D97706; }
+    .amp-modulos .numero { background: #D97706; } .amp-modulos .titulo { color: #985005; }
+    .amp-resumen { background: linear-gradient(90deg, #E7F7F4 0%, #F8FCFB 100%); border-left-color: #0F766E; }
+    .amp-resumen .numero { background: #0F766E; } .amp-resumen .titulo { color: #0C5F58; }
+    .amp-revision { background: linear-gradient(90deg, #EAF6ED 0%, #F8FCF9 100%); border-left-color: #2E7D32; }
+    .amp-revision .numero { background: #2E7D32; } .amp-revision .titulo { color: #205B26; }
+    .amp-croquis { background: linear-gradient(90deg, #F0EBF7 0%, #FCFAFE 100%); border-left-color: #6D4C91; }
+    .amp-croquis .numero { background: #6D4C91; } .amp-croquis .titulo { color: #52356F; }
+    .amp-soluciones { background: linear-gradient(90deg, #FFF2E0 0%, #FFFCF8 100%); border-left-color: #A45A00; }
+    .amp-soluciones .numero { background: #A45A00; } .amp-soluciones .titulo { color: #7B4300; }
+    .amp-estacionamientos { background: linear-gradient(90deg, #E6F6F8 0%, #F8FCFD 100%); border-left-color: #16869A; }
+    .amp-estacionamientos .numero { background: #16869A; } .amp-estacionamientos .titulo { color: #0E6877; }
+    .amp-resultado { background: linear-gradient(90deg, #E7F1EA 0%, #F8FBF9 100%); border-left-color: #14532D; }
+    .amp-resultado .numero { background: #14532D; } .amp-resultado .titulo { color: #14532D; }
+
+    .amp-subtitulo {
+        font-size: 17px;
+        font-weight: 800;
+        margin: 13px 0 8px 0;
+        padding: 8px 12px;
+        border-radius: 8px;
+        background: #F7FAFB;
+        border-left: 4px solid #5A879D;
+        color: #294D5D;
+    }
+
+    .amp-modulo-titulo {
+        display: inline-block;
+        background: #FFF3E4;
+        border: 1px solid #F0C991;
+        border-left: 5px solid #D97706;
+        color: #8A4A05;
+        font-size: 17px;
+        font-weight: 800;
+        padding: 8px 13px;
+        border-radius: 8px;
+        margin: 4px 0 8px 0;
+    }
+
+    .amp-pdf {
+        background: linear-gradient(135deg, #EEF5FA 0%, #F9FCFE 100%);
+        border: 1px solid #CCDDE8;
+        border-top: 5px solid #2878A0;
+        border-radius: 13px;
+        padding: 14px 17px 6px 17px;
+        margin: 18px 0 10px 0;
+    }
+
+    .amp-pdf-titulo {
+        color: #1B5C7B;
+        font-size: 21px;
+        font-weight: 800;
+        margin-bottom: 2px;
+    }
+
+    @media (max-width: 900px) {
+        .amp-pasos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -3912,11 +4074,25 @@ elif menu_seleccionado == "🏡 Datos del Terreno":
 # ==========================================
 elif menu_seleccionado == "🧱 Futura Ampliación":
 
-    st.markdown("## 🧱 Diseño Preliminar de Futura Ampliación")
-    st.write(
-        "Diseñe una propuesta preliminar agregando uno o más módulos rectangulares de ampliación."
+    st.markdown(
+        """
+        <div class="amp-hero">
+            <h2>🧱 Futura Ampliación</h2>
+            <p>Diseñe una propuesta preliminar, organice sus módulos y revise los principales criterios urbanísticos y técnico-constructivos antes de una evaluación profesional.</p>
+        </div>
+        <div class="amp-pasos">
+            <div class="amp-paso amp-p1"><span>1</span>Datos base</div>
+            <div class="amp-paso amp-p2"><span>2</span>Módulos</div>
+            <div class="amp-paso amp-p3"><span>3</span>Superficies</div>
+            <div class="amp-paso amp-p4"><span>4</span>Revisión normativa</div>
+            <div class="amp-paso amp-p5"><span>5</span>Croquis</div>
+            <div class="amp-paso amp-p6"><span>6</span>Soluciones</div>
+            <div class="amp-paso amp-p7"><span>7</span>Estacionamientos</div>
+            <div class="amp-paso amp-p8"><span>8</span>Resultado</div>
+        </div>
+        """,
+        unsafe_allow_html=True
     )
-    st.markdown("---")
 
     if st.session_state.datos_propiedad is None:
         st.warning("⚠️ **Aún no existen datos guardados de la propiedad.**")
@@ -3932,7 +4108,12 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
         # 1. DATOS BASE
         # ==========================================
         st.success("✅ Datos de la propiedad recuperados correctamente.")
-        st.markdown("### 📋 1. Datos Base de la Propiedad")
+        st.markdown("""
+        <div class="amp-section amp-base">
+            <span class="numero">1</span><span class="titulo">📋 Datos Base de la Propiedad</span>
+            <span class="descripcion">Recupera automáticamente los antecedentes guardados del terreno y la vivienda existente.</span>
+        </div>
+        """, unsafe_allow_html=True)
 
         dato_col1, dato_col2, dato_col3, dato_col4 = st.columns(4)
 
@@ -3994,7 +4175,12 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
         # ==========================================
         # 2. MÓDULOS DE AMPLIACIÓN
         # ==========================================
-        st.markdown("### 🧩 2. Módulos de Ampliación")
+        st.markdown("""
+        <div class="amp-section amp-modulos">
+            <span class="numero">2</span><span class="titulo">🧩 Módulos de Ampliación</span>
+            <span class="descripcion">Construya la propuesta mediante rectángulos simples y defina el piso y la ubicación referencial de cada módulo.</span>
+        </div>
+        """, unsafe_allow_html=True)
         st.info(
             "📐 Divida la ampliación que desea realizar en **rectángulos simples**. "
             "Puede agregar tantos módulos como sea necesario."
@@ -4005,7 +4191,10 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
         superficie_ampliacion_piso2 = 0.0
 
         for i in range(st.session_state.cantidad_modulos_ampliacion):
-            st.markdown(f"#### 🧱 Módulo de Ampliación {i + 1}")
+            st.markdown(
+                f'<div class="amp-modulo-titulo">🧱 Módulo de Ampliación {i + 1}</div>',
+                unsafe_allow_html=True
+            )
 
             piso_modulo = st.radio(
                 "¿Dónde se realizará este módulo?",
@@ -4141,7 +4330,12 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
             superficie_ampliacion_piso1 + superficie_ampliacion_piso2
         )
 
-        st.markdown("### 🧮 3. Resumen de la Ampliación Propuesta")
+        st.markdown("""
+        <div class="amp-section amp-resumen">
+            <span class="numero">3</span><span class="titulo">🧮 Resumen de la Ampliación Propuesta</span>
+            <span class="descripcion">Compare la superficie de la ampliación con la vivienda existente y revise el total proyectado.</span>
+        </div>
+        """, unsafe_allow_html=True)
         ampliacion_col1, ampliacion_col2, ampliacion_col3 = st.columns(3)
 
         with ampliacion_col1:
@@ -4157,7 +4351,7 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
         piso2_proyectado = datos["superficie_piso2"] + superficie_ampliacion_piso2
         vivienda_total_proyectada = datos["superficie_total_vivienda"] + superficie_total_ampliacion
 
-        st.markdown("#### 🏡 Vivienda después de la ampliación")
+        st.markdown('<div class="amp-subtitulo">🏡 Vivienda después de la ampliación</div>', unsafe_allow_html=True)
         proyectado_col1, proyectado_col2, proyectado_col3 = st.columns(3)
 
         with proyectado_col1:
@@ -4186,7 +4380,12 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
         # ==========================================
         # 4. VALIDACIÓN DE LA PROPUESTA
         # ==========================================
-        st.markdown("### ✅ 4. Validación Preliminar de la Ampliación")
+        st.markdown("""
+        <div class="amp-section amp-revision">
+            <span class="numero">4</span><span class="titulo">✅ Revisión Preliminar de la Ampliación</span>
+            <span class="descripcion">Orienta la compatibilidad de la propuesta con ocupación de suelo, constructibilidad y otros criterios aplicables.</span>
+        </div>
+        """, unsafe_allow_html=True)
 
         superficie_maxima_ocupacion_guardada = datos.get("superficie_maxima_ocupacion")
         superficie_maxima_construible_guardada = datos.get("superficie_maxima_construible")
@@ -4194,11 +4393,11 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
         margen_ocupacion_proyectada = None
         margen_constructibilidad_proyectada = None
 
-        st.markdown("#### 📍 Ocupación de Suelo")
+        st.markdown('<div class="amp-subtitulo">📍 Ocupación de Suelo</div>', unsafe_allow_html=True)
 
         if superficie_maxima_ocupacion_guardada is None:
             st.warning(
-                "⚠️ No existe un valor de ocupación de suelo disponible para validar esta propuesta."
+                "⚠️ No existe un valor de ocupación de suelo disponible para revisar preliminarmente esta propuesta."
             )
         else:
             margen_ocupacion_proyectada = (
@@ -4225,11 +4424,11 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
                     f"La propuesta excede el límite en **{abs(margen_ocupacion_proyectada):.2f} m²**."
                 )
 
-        st.markdown("#### 📐 Constructibilidad")
+        st.markdown('<div class="amp-subtitulo">📐 Constructibilidad</div>', unsafe_allow_html=True)
 
         if superficie_maxima_construible_guardada is None:
             st.warning(
-                "⚠️ No existe un valor de constructibilidad disponible para validar esta propuesta."
+                "⚠️ No existe un valor de constructibilidad disponible para revisar preliminarmente esta propuesta."
             )
         else:
             margen_constructibilidad_proyectada = (
@@ -4272,7 +4471,7 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
             )
 
         if superficie_ampliacion_piso1 > 0:
-            st.markdown("#### 📍 Ubicación Referencial")
+            st.markdown('<div class="amp-subtitulo">📍 Ubicación Referencial</div>', unsafe_allow_html=True)
 
             for modulo in modulos_ampliacion:
                 if modulo["piso"] == "Piso 1" and modulo["superficie"] > 0:
@@ -4287,7 +4486,12 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
         # ==========================================
         # 5. CROQUIS INTERACTIVO / EDITOR TIPO PUZLE
         # ==========================================
-        st.markdown("### 🧩 5. Croquis Interactivo de la Ampliación")
+        st.markdown("""
+        <div class="amp-section amp-croquis">
+            <span class="numero">5</span><span class="titulo">🧩 Croquis Interactivo de la Ampliación</span>
+            <span class="descripcion">Ubique la vivienda existente y los módulos propuestos para revisar su relación con el terreno y los deslindes.</span>
+        </div>
+        """, unsafe_allow_html=True)
 
         st.info(
             "Este es el **único croquis de emplazamiento** de la propuesta. Puedes editar tanto la **vivienda existente** como la **futura ampliación**. "
@@ -4705,7 +4909,7 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
         # ==========================================
         # 5.1 ALTURA, VANOS, DISTANCIAMIENTOS Y ADOSAMIENTO
         # ==========================================
-        st.markdown("### 📐 5.1 Altura, Vanos, Distanciamientos y Adosamiento")
+        st.markdown('<div class="amp-subtitulo">📐 Altura, Vanos, Distanciamientos y Adosamiento</div>', unsafe_allow_html=True)
         st.info(
             "Esta revisión usa la posición actual de cada módulo en el puzle. Para las partes aisladas se compara "
             "la distancia a los deslindes laterales y posterior con la tabla del **art. 2.6.3 OGUC**, considerando "
@@ -4940,7 +5144,7 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
                         )
 
             # Resumen de adosamiento de toda la futura ampliación.
-            st.markdown("#### 🧱 Revisión global de adosamiento")
+            st.markdown('<div class="amp-subtitulo">🧱 Revisión global de adosamiento</div>', unsafe_allow_html=True)
             st.caption(
                 "El sistema identifica como contacto con deslinde las piezas ubicadas a 5 cm o menos. "
                 "La longitud se calcula como unión de tramos para no duplicar módulos superpuestos entre pisos."
@@ -5031,7 +5235,12 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
         # ==========================================
         # 6. SOLUCIONES CONSTRUCTIVAS DE LA FUTURA AMPLIACIÓN
         # ==========================================
-        st.markdown("### 🧰 6. Soluciones Constructivas de la Futura Ampliación")
+        st.markdown("""
+        <div class="amp-section amp-soluciones">
+            <span class="numero">6</span><span class="titulo">🧰 Soluciones Constructivas</span>
+            <span class="descripcion">Seleccione soluciones de muro, piso y techumbre compatibles con los criterios técnicos incorporados al prototipo.</span>
+        </div>
+        """, unsafe_allow_html=True)
         st.info(
             "Seleccione soluciones de referencia para **muros, pisos y techumbre** de la ampliación. "
             "Las alternativas provienen de la base técnica incorporada al prototipo y se muestran con "
@@ -5070,7 +5279,7 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
         # ------------------------------------------
         # 6.1 MURO
         # ------------------------------------------
-        st.markdown("#### 🧱 6.1 Soluciones de Muros")
+        st.markdown('<div class="amp-subtitulo">🧱 Muros</div>', unsafe_allow_html=True)
 
         try:
             base_muros_futura = cargar_soluciones_muros()
@@ -5271,7 +5480,7 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
         # ------------------------------------------
         # 6.2 PISO
         # ------------------------------------------
-        st.markdown("#### ⬛ 6.2 Solución de Piso")
+        st.markdown('<div class="amp-subtitulo">⬛ Piso</div>', unsafe_allow_html=True)
         st.caption(
             "La condición del piso se revisa de manera distinta según se trate de una ampliación apoyada sobre terreno, "
             "un piso expuesto/ventilado o un entrepiso interior."
@@ -5447,7 +5656,7 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
         # ------------------------------------------
         # 6.3 TECHUMBRE
         # ------------------------------------------
-        st.markdown("#### 🏠 6.3 Solución de Techumbre")
+        st.markdown('<div class="amp-subtitulo">🏠 Techumbre</div>', unsafe_allow_html=True)
 
         try:
             base_techumbres_futura = cargar_soluciones_techumbres()
@@ -5528,7 +5737,7 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
         # ------------------------------------------
         # 6.4 RESUMEN TÉCNICO
         # ------------------------------------------
-        st.markdown("#### 📋 6.4 Especificación Técnica Preliminar")
+        st.markdown('<div class="amp-subtitulo">📋 Especificación Técnica Preliminar</div>', unsafe_allow_html=True)
 
         nombre_muro_futura = (
             f"{solucion_muro_futura.get('Codigo_Solucion')} — {solucion_muro_futura.get('Sistema')}"
@@ -5604,7 +5813,12 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
         # ==========================================
         # 7. ESTACIONAMIENTOS SEGÚN PRC SAN MIGUEL
         # ==========================================
-        st.markdown("### 🚗 7. Estacionamientos según PRC de San Miguel")
+        st.markdown("""
+        <div class="amp-section amp-estacionamientos">
+            <span class="numero">7</span><span class="titulo">🚗 Estacionamientos según PRC de San Miguel</span>
+            <span class="descripcion">Calcula la dotación preliminar de estacionamientos según la superficie total proyectada de la vivienda.</span>
+        </div>
+        """, unsafe_allow_html=True)
         st.write(
             "El PRC establece una dotación de estacionamientos para uso vivienda según la superficie "
             "de cada unidad. Para este prototipo se considera **una vivienda unifamiliar** y la superficie "
@@ -5704,7 +5918,12 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
         # ==========================================
         # 8. RESULTADO FINAL DE FUTURA AMPLIACIÓN
         # ==========================================
-        st.markdown("### 📋 8. Resultado Final de la Revisión Preliminar")
+        st.markdown("""
+        <div class="amp-section amp-resultado">
+            <span class="numero">8</span><span class="titulo">📋 Resultado Final de la Revisión Preliminar</span>
+            <span class="descripcion">Consolida compatibilidades, observaciones y antecedentes pendientes para facilitar una revisión profesional.</span>
+        </div>
+        """, unsafe_allow_html=True)
         st.write(
             "Este resumen reúne los principales resultados urbanísticos, geométricos y constructivos "
             "de la propuesta. Su resultado es **preliminar** y no constituye permiso, aprobación municipal "
@@ -5721,8 +5940,8 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
         # ------------------------------
         if superficie_maxima_ocupacion_guardada is None:
             estado_ocupacion = "⚠️ Pendiente"
-            detalle_ocupacion = "No existe un valor PRC disponible para validar la ocupación de suelo."
-            pendientes_finales_futura.append("Validar ocupación de suelo con un coeficiente PRC disponible.")
+            detalle_ocupacion = "No existe un valor PRC disponible para revisar preliminarmente la ocupación de suelo."
+            pendientes_finales_futura.append("Verificar ocupación de suelo con un coeficiente PRC disponible.")
         elif margen_ocupacion_proyectada is not None and margen_ocupacion_proyectada >= -1e-9:
             estado_ocupacion = "✅ Compatible"
             detalle_ocupacion = (
@@ -5747,8 +5966,8 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
 
         if superficie_maxima_construible_guardada is None:
             estado_construct = "⚠️ Pendiente"
-            detalle_construct = "No existe un valor PRC disponible para validar la constructibilidad."
-            pendientes_finales_futura.append("Validar constructibilidad con un coeficiente PRC disponible.")
+            detalle_construct = "No existe un valor PRC disponible para revisar preliminarmente la constructibilidad."
+            pendientes_finales_futura.append("Verificar constructibilidad con un coeficiente PRC disponible.")
         elif margen_constructibilidad_proyectada is not None and margen_constructibilidad_proyectada >= -1e-9:
             estado_construct = "✅ Compatible"
             detalle_construct = (
@@ -6179,7 +6398,11 @@ elif menu_seleccionado == "🧱 Futura Ampliación":
                         + ", ".join(propuesta.get("pendientes_tecnicos", []))
                     )
 
-            st.markdown("### 📄 Informe PDF para revisión profesional")
+            st.markdown("""
+            <div class="amp-pdf">
+                <div class="amp-pdf-titulo">📄 Informe PDF para revisión profesional</div>
+            </div>
+            """, unsafe_allow_html=True)
             st.write(
                 "Descarga una ficha técnica preliminar con los datos del predio, la futura ampliación, "
                 "el croquis del puzle, verificaciones normativas, estacionamientos y las especificaciones "
