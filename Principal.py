@@ -1,4 +1,4 @@
-# VERSION: PASO14_INFORME_PDF_PROFESIONAL_2026_11_02
+# VERSION: PASO15_INICIO_RED_DISENO_2026_11_02
 # BASE: PASO8_PUZZLE_FRENTE_IMAGENES_2026_10_19
 # VERSION: PASO6_RESULTADO_FINAL_REGULARIZACION_2026_10_19
 import streamlit as st
@@ -32,7 +32,7 @@ except Exception:
 # CONFIGURACIÓN DE LA PÁGINA
 # ==========================================
 st.set_page_config(
-    page_title="Validador Normativo de Ampliaciones",
+    page_title="Orientación Normativa de Ampliaciones",
     page_icon="🏗️",
     layout="wide"
 )
@@ -101,6 +101,51 @@ st.markdown("""
 
     .link-documento a:hover {
         text-decoration: underline;
+    }
+
+    /* Separación visual del panel lateral */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #DDEBE3 0%, #EEF5F1 100%);
+        border-right: 3px solid #1E7B44;
+    }
+
+    [data-testid="stSidebar"] > div:first-child {
+        padding-top: 1.2rem;
+    }
+
+    [data-testid="stSidebar"] h3 {
+        color: #14532D;
+        font-weight: 800;
+    }
+
+    [data-testid="stSidebar"] hr {
+        border-color: rgba(30, 123, 68, 0.28);
+    }
+
+    .aviso-orientativo {
+        background-color: #FFF8E1;
+        border: 1px solid #E8C56A;
+        border-left: 6px solid #E0A800;
+        color: #4B3A00;
+        padding: 14px 16px;
+        border-radius: 8px;
+        margin: 8px 0 22px 0;
+        font-size: 14px;
+        line-height: 1.55;
+    }
+
+    .subtitulo-inicio {
+        font-size: 18px;
+        color: #E8F8F5;
+        margin-top: 10px;
+        line-height: 1.45;
+    }
+
+    .titulo-glosario-grupo {
+        color: #1E7B44;
+        font-weight: 700;
+        font-size: 17px;
+        margin: 6px 0 10px 0;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -2646,7 +2691,7 @@ with st.sidebar:
 
     st.info(
         "Utilice este menú para navegar por las distintas "
-        "etapas de la validación normativa."
+        "etapas de orientación técnica y normativa."
     )
 
     if st.session_state.datos_propiedad is not None:
@@ -2664,60 +2709,58 @@ with st.sidebar:
 # ==========================================
 if menu_seleccionado == "🏠 Inicio":
 
-    # FRANJA SUPERIOR VERDE
+    # FRANJA SUPERIOR
     st.markdown("""
     <div class="franja-verde">
-        <h1 style="color: white; margin-bottom: 0px; font-size: 32px;">🏗️ Prototipo de Software para Validación Normativa de Ampliaciones Domiciliarias</h1>
-        <p style="font-size: 18px; color: #E8F8F5; margin-top: 10px;">Comuna de San Miguel | Aplicación de OGUC, Ley N° 20.898 y Plan Regulador Comunal</p>
+        <h1 style="color: white; margin-bottom: 0px; font-size: 32px;">🏗️ Prototipo de Orientación Técnica y Normativa para Ampliaciones Domiciliarias</h1>
+        <p class="subtitulo-inicio">Comuna de San Miguel · OGUC · Ley N.º 20.898 · Plan Regulador Comunal · criterios técnicos constructivos</p>
     </div>
     """, unsafe_allow_html=True)
 
     # PROPÓSITO ACADÉMICO
     st.markdown("""
     <div class="texto-justificado-chico">
-        <strong>Propósito Académico:</strong> Este software ha sido desarrollado como prototipo de titulación para la carrera de Ingeniería en Construcción. 
-        Su objetivo es actuar como un sistema de asistencia técnica y normativa en la etapa preliminar de diseño de ampliaciones 
-        residenciales, garantizando el cumplimiento de la reglamentación vigente en Chile y en la comuna de San Miguel.
+        <strong>Propósito académico:</strong> Este software fue desarrollado como prototipo de titulación para la carrera de Ingeniería en Construcción.
+        Su objetivo es <strong>orientar la revisión preliminar</strong> de futuras ampliaciones domiciliarias y de edificaciones existentes que puedan requerir regularización,
+        organizando antecedentes del predio, parámetros urbanísticos y criterios técnico-constructivos para identificar compatibilidades, observaciones y materias que requieren revisión profesional.
     </div>
-    <br>
+    <div class="aviso-orientativo">
+        <strong>⚠️ Alcance del prototipo:</strong> los resultados son orientativos y preliminares. La herramienta no aprueba proyectos, no emite permisos,
+        no reemplaza la intervención de los profesionales competentes y no sustituye la revisión de la Dirección de Obras Municipales.
+    </div>
     """, unsafe_allow_html=True)
 
     st.markdown("### 📜 Pilares Normativos Integrados")
 
-    # 1. OGUC
     st.markdown("""
     <div class="caja-blanca">
         <div class="titulo-ley">1. Ordenanza General de Urbanismo y Construcciones (OGUC)</div>
         <div class="texto-justificado">
-            Es el reglamento rector que complementa y hace operativa la Ley General de Urbanismo y Construcciones en Chile. 
-            Establece las disposiciones normativas a nivel nacional técnico y administrativo para la planificación urbana, 
-            la urbanización de terrenos y las exigencias mínimas de diseño, seguridad y habitabilidad que debe cumplir 
-            toda obra de construcción o ampliación en el país.
+            Reglamento de aplicación nacional que establece disposiciones técnicas y administrativas para la edificación, incluyendo condiciones de habitabilidad,
+            seguridad, acondicionamiento térmico, distanciamientos, rasantes, adosamientos y procedimientos asociados a permisos de construcción.
         </div>
         <div class="link-documento">🔗 <a href="https://www.bcn.cl/leychile/navegar?idNorma=13511" target="_blank">Ver documento oficial en la BCN</a></div>
     </div>
     """, unsafe_allow_html=True)
 
-    # 2. LEY 20.898
     st.markdown("""
     <div class="caja-blanca">
-        <div class="titulo-ley">2. Ley N° 20.898 (Procedimiento Simplificado)</div>
+        <div class="titulo-ley">2. Ley N.º 20.898 — Procedimiento especial de regularización</div>
         <div class="texto-justificado">
-            Conocida comúnmente como "Ley del Mono", es un cuerpo legal transitorio que establece un procedimiento simplificado 
-            para la regularización de viviendas de autoconstrucción y ampliaciones que cumplen con metrajes y avalúos específicos. 
-            Permite obtener la recepción definitiva acreditando condiciones mínimas de habitabilidad y seguridad estructural.
+            Conocida comúnmente como “Ley del Mono”, establece procedimientos especiales para determinadas edificaciones existentes sin recepción definitiva
+            que cumplan las condiciones indicadas por la ley. Dentro del prototipo se utiliza únicamente para orientar la revisión de edificaciones existentes,
+            separándola de la evaluación de una futura ampliación.
         </div>
         <div class="link-documento">🔗 <a href="https://www.bcn.cl/leychile/navegar?idNorma=1087285" target="_blank">Ver documento oficial en la BCN</a></div>
     </div>
     """, unsafe_allow_html=True)
 
-    # 3. PRC
     st.markdown("""
     <div class="caja-blanca">
-        <div class="titulo-ley">3. Plan Regulador Comunal (PRC) - San Miguel</div>
+        <div class="titulo-ley">3. Plan Regulador Comunal (PRC) de San Miguel</div>
         <div class="texto-justificado">
-            Es el instrumento de planificación territorial que regula el desarrollo físico de las áreas urbanas a nivel local. 
-            Define la zonificación de la comuna, los usos de suelo permitidos y las normas urbanísticas específicas.
+            Instrumento local que define la zonificación comunal, usos de suelo y normas urbanísticas aplicables al predio, como coeficientes de ocupación y constructibilidad,
+            antejardines, sistemas de agrupamiento y estándares de estacionamientos.
         </div>
         <div class="link-documento">🔗 <a href="https://web.sanmiguel.cl/doctos/ordenanzas/plan_regulador/2.pdf" target="_blank">Ver documento oficial en la Municipalidad de San Miguel</a></div>
     </div>
@@ -2726,43 +2769,79 @@ if menu_seleccionado == "🏠 Inicio":
     st.markdown("<br>", unsafe_allow_html=True)
 
     # GLOSARIO
-    st.markdown("### 📚 Glosario de Conceptos Urbanísticos")
-    st.write("Haz clic en cada concepto para desplegar su definición técnica:")
+    st.markdown("### 📚 Glosario de conceptos")
+    st.caption("Definiciones simples para comprender los términos que utiliza el prototipo. Haz clic en cada concepto para desplegarlo.")
 
-    with st.expander("📐 Coeficiente de Constructibilidad"):
-        st.write(
-            "Es el factor que, multiplicado por la superficie total "
-            "del predio, determina la cantidad máxima de metros cuadrados "
-            "que se permite construir en él. Las ampliaciones no deben "
-            "sobrepasar el volumen total permitido por este coeficiente."
-        )
+    glos_col1, glos_col2 = st.columns(2, gap="large")
 
-    with st.expander("📍 Coeficiente de Ocupación de Suelo"):
-        st.write(
-            "Es el porcentaje máximo de la superficie del terreno que "
-            "puede ser ocupado por la edificación en el primer piso. "
-            "Define cuánto \"patio\" o área libre debe quedar "
-            "obligatoriamente."
-        )
+    with glos_col1:
+        st.markdown('<div class="titulo-glosario-grupo">📍 Terreno y emplazamiento</div>', unsafe_allow_html=True)
 
-    with st.expander("📏 Rasante y Distanciamiento"):
-        st.write(
-            "**Rasante:** Línea imaginaria inclinada que nace desde los "
-            "deslindes del terreno e impone una envolvente máxima de altura "
-            "para la edificación. \n\n"
-            "**Distanciamiento:** Distancia mínima que debe existir entre "
-            "la edificación y los deslindes del predio, variando según la "
-            "altura de la construcción y si tiene o no ventanas."
-        )
+        with st.expander("🏡 Predio"):
+            st.write("Es el terreno o propiedad sobre el cual se emplaza la vivienda. Sus dimensiones y superficie sirven de base para aplicar las normas urbanísticas del PRC.")
 
-    with st.expander("🌡️ Zona Térmica"):
-        st.write(
-            "Clasificación geográfica que determina las exigencias mínimas "
-            "de acondicionamiento térmico (aislación en techumbres, muros y "
-            "pisos ventilados). La comuna de San Miguel se encuentra en la "
-            "**Zona Térmica D**, lo que exige materiales con una "
-            "Transmitancia Térmica (U) específica según la OGUC."
-        )
+        with st.expander("📏 Deslinde"):
+            st.write("Es el límite que separa el predio de las propiedades vecinas. En el prototipo se revisan principalmente los deslindes izquierdo, derecho y posterior.")
+
+        with st.expander("🌿 Antejardín"):
+            st.write("Es la franja ubicada entre la línea oficial del terreno y la edificación. Su profundidad mínima depende de las reglas del Plan Regulador Comunal y de ciertas excepciones asociadas a la vía o al predio.")
+
+        with st.expander("🛣️ Línea oficial"):
+            st.write("Es la línea que separa el espacio público del predio privado. Se utiliza como referencia para medir el antejardín y otras condiciones de emplazamiento.")
+
+        with st.expander("🏠 Línea de edificación"):
+            st.write("Es la línea a partir de la cual puede comenzar la edificación según las condiciones urbanísticas aplicables. No siempre coincide con la línea oficial, porque puede existir un antejardín obligatorio.")
+
+        with st.expander("🧱 Adosamiento"):
+            st.write("Situación en que una construcción se ubica directamente junto a un deslinde. Cuando existe adosamiento se aplican reglas especiales de longitud, altura, antejardín y resistencia al fuego del muro correspondiente.")
+
+        with st.expander("📐 Rasante"):
+            st.write("Línea imaginaria inclinada que nace desde los deslindes y limita el volumen o altura que puede alcanzar una edificación a medida que se aproxima al vecino.")
+
+        with st.expander("↔️ Distanciamiento"):
+            st.write("Separación mínima entre una edificación y el deslinde del terreno. La distancia exigible puede variar según la altura de la construcción y la presencia de vanos en la fachada.")
+
+        with st.expander("🪟 Vano"):
+            st.write("Abertura en un muro o fachada, por ejemplo una ventana o puerta. Su presencia puede modificar el distanciamiento mínimo exigible hacia un deslinde.")
+
+    with glos_col2:
+        st.markdown('<div class="titulo-glosario-grupo">🏗️ Normas urbanísticas y técnicas</div>', unsafe_allow_html=True)
+
+        with st.expander("📍 Coeficiente de Ocupación de Suelo"):
+            st.write("Factor que determina qué superficie máxima del terreno puede ser ocupada por la edificación en el nivel de suelo. En el prototipo se usa para estimar cuánto puede ocupar el primer piso después de la ampliación.")
+
+        with st.expander("📐 Coeficiente de Constructibilidad"):
+            st.write("Factor que, multiplicado por la superficie del predio, permite estimar la superficie edificable total máxima que corresponde al terreno según el PRC.")
+
+        with st.expander("🗺️ Zona PRC"):
+            st.write("Sector definido por el Plan Regulador Comunal al que pertenece el predio. Cada zona puede tener usos de suelo y condiciones de edificación diferentes.")
+
+        with st.expander("🏘️ Uso de suelo"):
+            st.write("Define qué actividades o destinos pueden desarrollarse en un sector, por ejemplo vivienda, comercio, equipamiento o actividad productiva. Antes de aplicar coeficientes residenciales debe verificarse que la zona admita vivienda.")
+
+        with st.expander("📏 Superficie construida / edificada"):
+            st.write("Corresponde a los metros cuadrados construidos de la vivienda. En el prototipo se diferencia la superficie existente, la ampliación propuesta y la superficie total proyectada.")
+
+        with st.expander("🚗 Dotación de estacionamientos"):
+            st.write("Cantidad de estacionamientos que debe considerarse según el destino y superficie de la edificación, de acuerdo con los estándares del PRC. El prototipo revisa de manera preliminar la cantidad para vivienda.")
+
+        with st.expander("🔥 Clasificación F-60"):
+            st.write("Clasificación de resistencia al fuego que indica que un elemento constructivo acreditado mantiene el desempeño exigido durante al menos 60 minutos bajo las condiciones del ensayo correspondiente. Es especialmente relevante en muros de adosamiento.")
+
+        with st.expander("🌡️ Zona Térmica D"):
+            st.write("Clasificación térmica vigente aplicable a San Miguel. Define exigencias de desempeño para distintos elementos de la envolvente, como muros, techumbres y pisos ventilados.")
+
+        with st.expander("🌡️ Transmitancia térmica U"):
+            st.write("Indicador de cuánto calor atraviesa un elemento constructivo. En términos simples, mientras menor sea el valor U, mayor es su capacidad de limitar las pérdidas o ganancias de calor.")
+
+        with st.expander("🧊 Resistencia térmica Rt"):
+            st.write("Indicador de la oposición de un elemento al paso del calor. En términos generales, mientras mayor sea Rt, mejor es su desempeño aislante.")
+
+        with st.expander("📄 Recepción definitiva"):
+            st.write("Acto mediante el cual la Dirección de Obras Municipales verifica formalmente, dentro de su competencia, que una obra ejecutada puede ser recibida conforme al procedimiento aplicable. No debe confundirse con el permiso para construir.")
+
+        with st.expander("🛠️ Permiso de Obra Menor"):
+            st.write("Procedimiento municipal que puede corresponder a determinadas ampliaciones u obras menores según la OGUC. La herramienta solo orienta sobre su posible aplicación; no tramita ni otorga el permiso.")
 
 
 # ==========================================
